@@ -60,9 +60,14 @@ export async function POST(request: Request) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 500,
+      max_tokens: 800,
       system: PARAGRAPH_REVIEW_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildParagraphUserMessage(priorText, paragraph) }],
+      messages: [
+        { role: "user", content: buildParagraphUserMessage(priorText, paragraph) },
+        // Prefilling the assistant turn with "{" forces the reply to start
+        // exactly at the JSON — no preamble it could get cut off before.
+        { role: "assistant", content: "{" },
+      ],
     });
 
     const textBlock = response.content.find((block) => block.type === "text");
@@ -70,7 +75,13 @@ export async function POST(request: Request) {
       throw new Error("모델이 텍스트 응답을 반환하지 않았습니다.");
     }
 
-    const parsed = extractJson(textBlock.text) as { comment?: string; suggestions?: unknown };
+    let parsed: { comment?: string; suggestions?: unknown };
+    try {
+      parsed = extractJson("{" + textBlock.text) as { comment?: string; suggestions?: unknown };
+    } catch (parseErr) {
+      console.error("Paragraph review: unparseable model output", textBlock.text);
+      throw parseErr;
+    }
     const comment =
       typeof parsed.comment === "string" && parsed.comment.trim()
         ? parsed.comment.trim()
