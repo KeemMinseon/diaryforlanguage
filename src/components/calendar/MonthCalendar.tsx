@@ -104,7 +104,17 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         ))}
       </div>
 
-      <div className={`grid flex-1 grid-cols-7 gap-1 sm:gap-1.5 ${loading ? "opacity-60" : ""}`}>
+      {/* content-start: the grid sits in a `flex-1` slot that's often taller
+          than 6 rows of square cells actually need — without this, Grid's
+          default align-content (~stretch) spreads that leftover height
+          into the auto-sized row tracks themselves, inflating the visual
+          gap between rows far past the declared `gap` value while leaving
+          the gap between columns alone (only the block axis has leftover
+          space to distribute). Pinning rows to the top keeps any leftover
+          space below the last row instead. */}
+      <div
+        className={`grid flex-1 content-start grid-cols-7 gap-1 sm:gap-1.5 ${loading ? "opacity-60" : ""}`}
+      >
         {weeks.flatMap((week) =>
           week.map((date) => {
             const key = toDateKey(date);

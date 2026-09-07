@@ -29,17 +29,32 @@ export default function DayCell({
         clickable ? "cursor-pointer hover:border-[var(--ink-soft)]" : "cursor-default opacity-50"
       }`}
     >
-      <span
-        className={`z-10 text-[11px] leading-none ${
-          isToday ? "font-bold text-[var(--ink)]" : "text-[var(--ink-soft)]"
-        }`}
-      >
-        {date.getDate()}
-      </span>
-      {entry && (
-        <div className="absolute inset-x-2 bottom-1 top-5 flex items-center justify-center">
-          <StampedDay entry={entry} photoUrl={photoUrl} className="h-full max-w-[85%]" />
-        </div>
+      {entry ? (
+        // With a stamp to show, the date number rides on top of it as a
+        // small corner badge instead of taking its own reserved strip —
+        // now that cells are square (not the old 1:2 rectangle) that
+        // strip ate a much bigger share of the cell, leaving the stamp
+        // itself looking tiny.
+        <>
+          <div className="absolute inset-1 flex items-center justify-center">
+            <StampedDay entry={entry} photoUrl={photoUrl} className="h-full max-w-full" />
+          </div>
+          <span
+            className={`absolute left-1 top-1 z-10 rounded bg-black/40 px-1 text-[9px] leading-tight text-white ${
+              isToday ? "font-bold" : ""
+            }`}
+          >
+            {date.getDate()}
+          </span>
+        </>
+      ) : (
+        <span
+          className={`z-10 text-[11px] leading-none ${
+            isToday ? "font-bold text-[var(--ink)]" : "text-[var(--ink-soft)]"
+          }`}
+        >
+          {date.getDate()}
+        </span>
       )}
     </div>
   );
