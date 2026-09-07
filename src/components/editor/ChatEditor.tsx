@@ -12,11 +12,18 @@ import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { parseDateKey } from "@/lib/utils/date";
 import type { Reading, Suggestion } from "@/types/diary";
 
-interface SentParagraph {
-  text: string;
+interface FeedbackRound {
   comment: string;
   suggestions: Suggestion[];
   readings: Reading[];
+}
+
+/** How much of `text` matches `prefix` from the start. */
+function commonPrefixLength(prefix: string, text: string): number {
+  const max = Math.min(prefix.length, text.length);
+  let i = 0;
+  while (i < max && prefix[i] === text[i]) i++;
+  return i;
 }
 
 export default function ChatEditor({ userId, dateKey }: { userId: string; dateKey: string }) {
@@ -25,8 +32,13 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
   const fileInputRef = useRef<HTMLInputElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
 
-  const [paragraphs, setParagraphs] = useState<SentParagraph[]>([]);
-  const [draft, setDraft] = useState("");
+  // The whole diary-so-far, one continuously editable box — never wiped
+  // after a review, so the learner never has to retype anything.
+  // `reviewedPrefix` marks how much of it has already been sent for review;
+  // only the part of `content` past that point counts as "new" next time.
+  const [content, setContent] = useState("");
+  const [reviewedPrefix, setReviewedPrefix] = useState("");
+  const [rounds, setRounds] = useState<FeedbackRound[]>([]);
   const [sending, setSending] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +55,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: "nearest" });
-  }, [paragraphs.length]);
+  }, [rounds.length]);
 
   const dateLabel = parseDateKey(dateKey).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -52,9 +64,12 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
     weekday: "long",
   });
 
-  const joinedContent = paragraphs.map((p) => p.text).join("\n\n");
+  // Text typed since the last successful review (based on where it stops
+  // matching what was already reviewed, not a fixed offset — so editing
+  // something earlier in the box doesn't desync the split point too badly).
+  const pendingText = content.slice(commonPrefixLength(reviewedPrefix, content));
   const hasPhoto = Boolean(croppedPreviewUrl);
-  const previewStampKey = hasPhoto ? null : pickStamp(joinedContent || draft);
+  const previewStampKey = hasPhoto ? null : pickStamp(content);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -77,29 +92,30 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
     setCroppedPreviewUrl(null);
   }
 
+  async function reviewChunk(chunk: string, priorText: string): Promise<FeedbackRound> {
+    const res = await fetch("/api/review-paragraph", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paragraph: chunk, priorText }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? "첨삭 요청에 실패했어요.");
+    return {
+      comment: data.comment,
+      suggestions: data.suggestions ?? [],
+      readings: data.readings ?? [],
+    };
+  }
+
   async function handleSend() {
-    const paragraph = draft.trim();
-    if (!paragraph || sending) return;
+    const chunk = pendingText.trim();
+    if (!chunk || sending) return;
     setError(null);
     setSending(true);
     try {
-      const res = await fetch("/api/review-paragraph", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paragraph, priorText: joinedContent }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "첨삭 요청에 실패했어요.");
-      setParagraphs((prev) => [
-        ...prev,
-        {
-          text: paragraph,
-          comment: data.comment,
-          suggestions: data.suggestions ?? [],
-          readings: data.readings ?? [],
-        },
-      ]);
-      setDraft("");
+      const round = await reviewChunk(chunk, reviewedPrefix);
+      setRounds((prev) => [...prev, round]);
+      setReviewedPrefix(content);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "첨삭 요청에 실패했어요. 다시 시도해 주세요.");
@@ -109,11 +125,23 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
   }
 
   async function handleFinish() {
-    if (paragraphs.length === 0 || finishing) return;
+    if (!content.trim() || finishing) return;
     setError(null);
     setFinishing(true);
     try {
-      const fullText = joinedContent;
+      // Anything typed but not yet reviewed gets one last pass so it's not
+      // saved without feedback/furigana just because the learner never
+      // hit "검토 요청" on it themselves.
+      let allRounds = rounds;
+      const chunk = pendingText.trim();
+      if (chunk) {
+        const round = await reviewChunk(chunk, reviewedPrefix);
+        allRounds = [...rounds, round];
+        setRounds(allRounds);
+        setReviewedPrefix(content);
+      }
+
+      const fullText = content;
 
       let photoPath: string | null = null;
       const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
@@ -129,8 +157,8 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
       const finalizeData = await finalizeRes.json();
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
-      const allSuggestions = paragraphs.flatMap((p) => p.suggestions);
-      const allReadings = paragraphs.flatMap((p) => p.readings);
+      const allSuggestions = allRounds.flatMap((r) => r.suggestions);
+      const allReadings = allRounds.flatMap((r) => r.readings);
 
       await saveEntry({
         userId,
@@ -184,38 +212,34 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         </p>
       </header>
 
-      {/* Top half: feedback so far, scrolls on its own. */}
+      {/* Top half: feedback so far, scrolls on its own. The learner's own
+          text stays only in the box below — it's never echoed back up here. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-        {paragraphs.length === 0 && (
+        {rounds.length === 0 && (
           <p className="text-sm text-[var(--ink-soft)]">
             오늘 있었던 일을 일본어로 한 문단씩 적어보세요. 보낼 때마다 바로 짧은 피드백이 올게요.
           </p>
         )}
-        {paragraphs.map((p, i) => (
-          <div key={i} className="flex flex-col gap-1.5">
-            <p className="font-[family-name:var(--font-diary)] text-[17px] leading-relaxed text-[var(--ink)]">
-              {p.text}
-            </p>
-            <div className="ml-2.5 flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
-              <div className="flex flex-col gap-1.5">
-                <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{p.comment}</p>
-                <ReadingsHint readings={p.readings} label="읽는 법" />
-                {p.suggestions.map((s, j) => (
-                  <span
-                    key={j}
-                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
-                  >
-                    <span className="text-[var(--ink-soft)] line-through">
-                      <FuriganaText text={s.original} readings={p.readings} />
-                    </span>
-                    <span aria-hidden="true">→</span>
-                    <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
-                      <FuriganaText text={s.suggestion} readings={p.readings} />
-                    </span>
+        {rounds.map((r, i) => (
+          <div key={i} className="flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>
+              <ReadingsHint readings={r.readings} label="읽는 법" />
+              {r.suggestions.map((s, j) => (
+                <span
+                  key={j}
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
+                >
+                  <span className="text-[var(--ink-soft)] line-through">
+                    <FuriganaText text={s.original} readings={r.readings} />
                   </span>
-                ))}
-              </div>
+                  <span aria-hidden="true">→</span>
+                  <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
+                    <FuriganaText text={s.suggestion} readings={r.readings} />
+                  </span>
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -263,10 +287,10 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
 
         <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
           <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleTextareaKeyDown}
-            placeholder="다음 문단을 이어서 적어보세요…"
+            placeholder="오늘 있었던 일을 이어서 적어보세요…"
             disabled={busy}
             rows={3}
             className="min-h-0 flex-1 resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
@@ -275,7 +299,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
             <button
               type="button"
               onClick={handleSend}
-              disabled={!draft.trim() || busy}
+              disabled={!pendingText.trim() || busy}
               className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
             >
               {sending ? "검토 중…" : "검토 요청"}
@@ -288,7 +312,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         <button
           type="button"
           onClick={handleFinish}
-          disabled={paragraphs.length === 0 || busy}
+          disabled={!content.trim() || busy}
           className="shrink-0 self-end rounded-full bg-[var(--ink)] px-7 py-3 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
         >
           {finishing ? "마무리하는 중…" : "오늘 일기 마치기"}
