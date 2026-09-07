@@ -23,7 +23,7 @@ const diaryFont = Shippori_Mincho({
 });
 
 export const metadata: Metadata = {
-  title: "言の葉日記 | 언어일기",
+  title: "우표일기",
   description: "일본어로 하루를 적으면, 우표가 찍히고 添削이 도착하는 학습 일기",
 };
 

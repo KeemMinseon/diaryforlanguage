@@ -1,4 +1,4 @@
-# 言の葉日記 (diaryforlanguage)
+# 우표일기 (diaryforlanguage)
 
 일본어로 하루를 짧게 적으면:
 

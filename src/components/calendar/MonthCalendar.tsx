@@ -95,7 +95,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
         <h1 className="font-[family-name:var(--font-heading)] text-xl text-[var(--ink)]">
-          言の葉日記
+          우표일기
         </h1>
         <form action="/auth/signout" method="post">
           <SignOutButton />
