@@ -2,13 +2,52 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { PARAGRAPH_REVIEW_SYSTEM_PROMPT, buildParagraphUserMessage } from "@/lib/review/paragraphPrompt";
-import { extractJson } from "@/lib/review/extractJson";
 import type { Suggestion } from "@/types/diary";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
+
+const TOOL_NAME = "submit_paragraph_feedback";
+
+// A forced tool call gets us a schema-validated object back directly (as
+// `input`) — no asking the model to hand-format JSON in plain text, which
+// is what actually made this reliable (that approach was failing: some
+// replies had preamble before the JSON, or got cut off before ever
+// reaching it). Assistant-message prefill was tried as a fix first, but
+// this model rejects prefill entirely ("must end with a user message"),
+// so tool use is both the fix and the more robust design either way.
+const TOOL: Anthropic.Tool = {
+  name: TOOL_NAME,
+  description: "학습자가 방금 보낸 한 문단에 대한 첨삭 피드백을 제출합니다.",
+  input_schema: {
+    type: "object",
+    properties: {
+      comment: {
+        type: "string",
+        description: "이번 문단에 대한 짧은 코멘트, 한국어 1~2문장.",
+      },
+      suggestions: {
+        type: "array",
+        description: "고치면 좋을 단어/표현 (최대 3개, 없으면 빈 배열).",
+        items: {
+          type: "object",
+          properties: {
+            original: {
+              type: "string",
+              description: "문단에 실제로 등장하는 일본어 단어/구절과 정확히 일치해야 함.",
+            },
+            suggestion: { type: "string", description: "자연스러운 대체 표현." },
+            note: { type: "string", description: "왜 그렇게 고치면 좋은지 한국어로 짧게 (1문장)." },
+          },
+          required: ["original", "suggestion", "note"],
+        },
+      },
+    },
+    required: ["comment", "suggestions"],
+  },
+};
 
 function sanitizeSuggestions(raw: unknown, paragraph: string): Suggestion[] {
   if (!Array.isArray(raw)) return [];
@@ -62,26 +101,19 @@ export async function POST(request: Request) {
       model: MODEL,
       max_tokens: 800,
       system: PARAGRAPH_REVIEW_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildParagraphUserMessage(priorText, paragraph) },
-        // Prefilling the assistant turn with "{" forces the reply to start
-        // exactly at the JSON — no preamble it could get cut off before.
-        { role: "assistant", content: "{" },
-      ],
+      messages: [{ role: "user", content: buildParagraphUserMessage(priorText, paragraph) }],
+      tools: [TOOL],
+      tool_choice: { type: "tool", name: TOOL_NAME },
     });
 
-    const textBlock = response.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("모델이 텍스트 응답을 반환하지 않았습니다.");
+    const toolUse = response.content.find(
+      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use" && block.name === TOOL_NAME
+    );
+    if (!toolUse) {
+      throw new Error("모델이 도구 호출 응답을 반환하지 않았습니다.");
     }
 
-    let parsed: { comment?: string; suggestions?: unknown };
-    try {
-      parsed = extractJson("{" + textBlock.text) as { comment?: string; suggestions?: unknown };
-    } catch (parseErr) {
-      console.error("Paragraph review: unparseable model output", textBlock.text);
-      throw parseErr;
-    }
+    const parsed = toolUse.input as { comment?: string; suggestions?: unknown };
     const comment =
       typeof parsed.comment === "string" && parsed.comment.trim()
         ? parsed.comment.trim()

@@ -2,12 +2,32 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { FINALIZE_SYSTEM_PROMPT, buildFinalizeUserMessage } from "@/lib/review/paragraphPrompt";
-import { extractJson } from "@/lib/review/extractJson";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
+
+const TOOL_NAME = "submit_overall_comment";
+
+// Same reasoning as /api/review-paragraph: a forced tool call gives a
+// schema-validated object back directly, rather than parsing JSON out of
+// plain text (fragile) or prefilling the assistant turn (this model
+// rejects prefill outright).
+const TOOL: Anthropic.Tool = {
+  name: TOOL_NAME,
+  description: "오늘 하루 전체 일기에 대한 총평을 제출합니다.",
+  input_schema: {
+    type: "object",
+    properties: {
+      overallComment: {
+        type: "string",
+        description: "일기 전체에 대한 총평. 한국어 2~4문장, 격려하는 톤.",
+      },
+    },
+    required: ["overallComment"],
+  },
+};
 
 /**
  * Called once, when the learner taps "오늘 일기 마치기". Each paragraph was
@@ -42,26 +62,19 @@ export async function POST(request: Request) {
       model: MODEL,
       max_tokens: 500,
       system: FINALIZE_SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: buildFinalizeUserMessage(fullText) },
-        // Prefilling the assistant turn with "{" forces the reply to start
-        // exactly at the JSON — no preamble it could get cut off before.
-        { role: "assistant", content: "{" },
-      ],
+      messages: [{ role: "user", content: buildFinalizeUserMessage(fullText) }],
+      tools: [TOOL],
+      tool_choice: { type: "tool", name: TOOL_NAME },
     });
 
-    const textBlock = response.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("모델이 텍스트 응답을 반환하지 않았습니다.");
+    const toolUse = response.content.find(
+      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use" && block.name === TOOL_NAME
+    );
+    if (!toolUse) {
+      throw new Error("모델이 도구 호출 응답을 반환하지 않았습니다.");
     }
 
-    let parsed: { overallComment?: string };
-    try {
-      parsed = extractJson("{" + textBlock.text) as { overallComment?: string };
-    } catch (parseErr) {
-      console.error("Finalize: unparseable model output", textBlock.text);
-      throw parseErr;
-    }
+    const parsed = toolUse.input as { overallComment?: string };
     const overallComment =
       typeof parsed.overallComment === "string" && parsed.overallComment.trim()
         ? parsed.overallComment.trim()
