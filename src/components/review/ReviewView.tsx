@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import HankoStamp from "@/components/stamps/HankoStamp";
+import FuriganaText from "@/components/review/FuriganaText";
 import { buildHighlightSegments } from "@/lib/review/highlight";
 import { parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry } from "@/types/diary";
@@ -73,7 +74,9 @@ export default function ReviewView({
           <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
             {segments.map((seg, i) =>
               seg.suggestionIndex === null ? (
-                <span key={i}>{seg.text}</span>
+                <span key={i}>
+                  <FuriganaText text={seg.text} readings={entry.readings} />
+                </span>
               ) : (
                 <button
                   key={i}
@@ -85,7 +88,7 @@ export default function ReviewView({
                     activeIndex === seg.suggestionIndex ? "bg-black/10" : "bg-black/5"
                   }`}
                 >
-                  {seg.text}
+                  <FuriganaText text={seg.text} readings={entry.readings} />
                 </button>
               )
             )}
@@ -119,11 +122,11 @@ export default function ReviewView({
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
-                      {s.original}
+                      <FuriganaText text={s.original} readings={entry.readings} />
                     </span>
                     <span aria-hidden="true">→</span>
                     <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
-                      {s.suggestion}
+                      <FuriganaText text={s.suggestion} readings={entry.readings} />
                     </span>
                   </div>
                   {s.note && <p className="mt-1.5 text-xs text-[var(--ink-soft)]">{s.note}</p>}

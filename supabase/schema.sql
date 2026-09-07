@@ -14,11 +14,17 @@ create table if not exists public.diary_entries (
   status text not null default 'pending' check (status in ('pending', 'reviewed', 'failed')),
   overall_comment text,
   suggestions jsonb not null default '[]'::jsonb,
+  readings jsonb not null default '[]'::jsonb,
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, entry_date)
 );
+
+-- Safe to re-run against an existing table created before this column
+-- existed (e.g. an already-deployed project) — this line alone is enough,
+-- no need to drop/recreate the table.
+alter table public.diary_entries add column if not exists readings jsonb not null default '[]'::jsonb;
 
 create index if not exists diary_entries_user_month_idx
   on public.diary_entries (user_id, entry_date);

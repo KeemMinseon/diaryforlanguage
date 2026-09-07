@@ -4,16 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PhotoCropModal from "@/components/editor/PhotoCropModal";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
+import FuriganaText from "@/components/review/FuriganaText";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { parseDateKey } from "@/lib/utils/date";
-import type { Suggestion } from "@/types/diary";
+import type { Reading, Suggestion } from "@/types/diary";
 
 interface SentParagraph {
   text: string;
   comment: string;
   suggestions: Suggestion[];
+  readings: Reading[];
 }
 
 export default function ChatEditor({ userId, dateKey }: { userId: string; dateKey: string }) {
@@ -87,7 +89,15 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "첨삭 요청에 실패했어요.");
-      setParagraphs((prev) => [...prev, { text: paragraph, comment: data.comment, suggestions: data.suggestions ?? [] }]);
+      setParagraphs((prev) => [
+        ...prev,
+        {
+          text: paragraph,
+          comment: data.comment,
+          suggestions: data.suggestions ?? [],
+          readings: data.readings ?? [],
+        },
+      ]);
       setDraft("");
     } catch (err) {
       console.error(err);
@@ -119,6 +129,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
       const allSuggestions = paragraphs.flatMap((p) => p.suggestions);
+      const allReadings = paragraphs.flatMap((p) => p.readings);
 
       await saveEntry({
         userId,
@@ -130,6 +141,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         status: "reviewed",
         overallComment: finalizeData.overallComment,
         suggestions: allSuggestions,
+        readings: allReadings,
       });
 
       toast("오늘 일기에 添削 도장이 찍혔어요! 📮");
@@ -212,7 +224,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         {paragraphs.map((p, i) => (
           <div key={i} className="flex flex-col gap-1.5">
             <p className="font-[family-name:var(--font-diary)] text-[17px] leading-relaxed text-[var(--ink)]">
-              {p.text}
+              <FuriganaText text={p.text} readings={p.readings} />
             </p>
             <div className="ml-2.5 flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
@@ -223,10 +235,12 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
                     key={j}
                     className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
                   >
-                    <span className="text-[var(--ink-soft)] line-through">{s.original}</span>
+                    <span className="text-[var(--ink-soft)] line-through">
+                      <FuriganaText text={s.original} readings={p.readings} />
+                    </span>
                     <span aria-hidden="true">→</span>
                     <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
-                      {s.suggestion}
+                      <FuriganaText text={s.suggestion} readings={p.readings} />
                     </span>
                   </span>
                 ))}

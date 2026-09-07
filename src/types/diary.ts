@@ -11,6 +11,16 @@ export interface Suggestion {
   note: string;
 }
 
+export type ReadingKind = "kanji" | "katakana";
+
+export interface Reading {
+  /** The kanji compound or katakana word as it appears in the diary text. */
+  text: string;
+  /** Hiragana reading (kanji) or romanized reading (katakana). */
+  reading: string;
+  kind: ReadingKind;
+}
+
 export interface DiaryEntry {
   id: string;
   user_id: string;
@@ -22,6 +32,8 @@ export interface DiaryEntry {
   status: EntryStatus;
   overall_comment: string | null;
   suggestions: Suggestion[];
+  /** Furigana (kanji) / romaji (katakana) readings collected while writing. */
+  readings: Reading[];
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;

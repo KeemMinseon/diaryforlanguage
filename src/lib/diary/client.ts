@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { DiaryEntry, Suggestion } from "@/types/diary";
+import type { DiaryEntry, Reading, Suggestion } from "@/types/diary";
 
 const PHOTO_BUCKET = "diary-photos";
 
@@ -70,6 +70,7 @@ interface SaveEntryInput {
   status?: "pending" | "reviewed" | "failed";
   overallComment?: string | null;
   suggestions?: Suggestion[];
+  readings?: Reading[];
   reviewedAt?: string | null;
 }
 
@@ -89,6 +90,7 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
         status,
         overall_comment: input.overallComment ?? null,
         suggestions: input.suggestions ?? [],
+        readings: input.readings ?? [],
         reviewed_at: status === "reviewed" ? (input.reviewedAt ?? new Date().toISOString()) : null,
       },
       { onConflict: "user_id,entry_date" }
