@@ -46,13 +46,15 @@ const TOOL: Anthropic.Tool = {
       },
       readings: {
         type: "array",
-        description: "한자 부분의 히라가나 읽는 법 + 가타카나 단어의 로마자 표기 (중복 단어는 한 번만).",
+        description:
+          "한자 부분의 히라가나 읽는 법 + 가타카나 단어의 로마자 표기 (중복 단어는 한 번만). 문단 원문뿐 아니라 suggestion 문장에 새로 나오는 한자/가타카나도 포함.",
         items: {
           type: "object",
           properties: {
             text: {
               type: "string",
-              description: "문단에 실제로 등장하는 표기와 정확히 일치해야 함 (한자는 오쿠리가나 제외).",
+              description:
+                "문단 또는 suggestion 문장에 실제로 등장하는 표기와 정확히 일치해야 함 (한자는 오쿠리가나 제외).",
             },
             reading: { type: "string", description: "한자는 히라가나, 가타카나는 로마자." },
             kind: { type: "string", enum: ["kanji", "katakana"] },
@@ -84,7 +86,12 @@ function sanitizeSuggestions(raw: unknown, paragraph: string): Suggestion[] {
     }));
 }
 
-function sanitizeReadings(raw: unknown, paragraph: string): Reading[] {
+// `scanText` is the paragraph plus every suggestion's replacement text —
+// readings aren't just for what the learner wrote, they also need to cover
+// any new kanji/katakana the model introduces when translating a Korean
+// phrase the learner mixed in (the learner has never seen that word, so it
+// needs a reading even more than stuff they already typed themselves).
+function sanitizeReadings(raw: unknown, scanText: string): Reading[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter(
@@ -94,7 +101,7 @@ function sanitizeReadings(raw: unknown, paragraph: string): Reading[] {
         typeof (r as Reading).text === "string" &&
         typeof (r as Reading).reading === "string" &&
         ((r as Reading).kind === "kanji" || (r as Reading).kind === "katakana") &&
-        paragraph.includes((r as Reading).text)
+        scanText.includes((r as Reading).text)
     )
     .map((r) => ({ text: r.text, reading: r.reading, kind: r.kind }));
 }
@@ -102,34 +109,34 @@ function sanitizeReadings(raw: unknown, paragraph: string): Reading[] {
 // The model is told to be exhaustive about readings, but in practice still
 // occasionally skips a kanji run or katakana word (observed: 事務所/行き
 // missing while everything else in the same paragraph was covered). Rather
-// than trust the prompt alone, scan the paragraph ourselves for every kanji
+// than trust the prompt alone, scan `scanText` ourselves for every kanji
 // run and katakana word and check it against what came back; anything left
 // uncovered gets one focused follow-up call asking only for those.
 const KANJI_RUN_RE = /[一-鿿㐀-䶿]+/gu;
 const KATAKANA_RUN_RE = /[゠-ヿ]+/gu;
 
-function coverageMask(paragraph: string, readings: Reading[], kind: Reading["kind"]): boolean[] {
-  const mask = new Array(paragraph.length).fill(false);
+function coverageMask(scanText: string, readings: Reading[], kind: Reading["kind"]): boolean[] {
+  const mask = new Array(scanText.length).fill(false);
   for (const r of readings) {
     if (r.kind !== kind || !r.text) continue;
-    let idx = paragraph.indexOf(r.text);
+    let idx = scanText.indexOf(r.text);
     while (idx !== -1) {
       for (let i = idx; i < idx + r.text.length; i++) mask[i] = true;
-      idx = paragraph.indexOf(r.text, idx + 1);
+      idx = scanText.indexOf(r.text, idx + 1);
     }
   }
   return mask;
 }
 
 function findMissingRuns(
-  paragraph: string,
+  scanText: string,
   readings: Reading[],
   re: RegExp,
   kind: Reading["kind"]
 ): string[] {
-  const mask = coverageMask(paragraph, readings, kind);
+  const mask = coverageMask(scanText, readings, kind);
   const missing = new Set<string>();
-  for (const m of paragraph.matchAll(re)) {
+  for (const m of scanText.matchAll(re)) {
     const start = m.index;
     if (start === undefined) continue;
     const end = start + m[0].length;
@@ -171,13 +178,13 @@ const MISSING_READINGS_TOOL: Anthropic.Tool = {
 /**
  * One narrow follow-up call for readings the main call missed. Restricting
  * the model to a fixed, already-known-correct list of texts (extracted from
- * the paragraph itself via regex, not by the model) makes this a much
- * easier, more reliable task than "find everything" — and the result can't
- * introduce a text that doesn't actually appear in the paragraph.
+ * `scanText` itself via regex, not by the model) makes this a much easier,
+ * more reliable task than "find everything" — and the result can't
+ * introduce a text that doesn't actually appear in the paragraph/suggestions.
  */
 async function fetchMissingReadings(
   anthropic: Anthropic,
-  paragraph: string,
+  scanText: string,
   missing: { text: string; kind: Reading["kind"] }[]
 ): Promise<Reading[]> {
   const list = missing.map((m) => `- ${m.text} (${m.kind === "kanji" ? "한자" : "가타카나"})`).join("\n");
@@ -189,7 +196,7 @@ async function fetchMissingReadings(
     messages: [
       {
         role: "user",
-        content: `문단 (읽기를 판단할 때 맥락으로 참고):\n${paragraph}\n\n다음 표기들의 읽기를 알려주세요:\n${list}`,
+        content: `문단과 제안 문장 (읽기를 판단할 때 맥락으로 참고):\n${scanText}\n\n다음 표기들의 읽기를 알려주세요:\n${list}`,
       },
     ],
     tools: [MISSING_READINGS_TOOL],
@@ -269,14 +276,19 @@ export async function POST(request: Request) {
         ? parsed.comment.trim()
         : "좋아요, 계속 이어서 써보세요!";
     const suggestions = sanitizeSuggestions(parsed.suggestions, paragraph);
-    let readings = sanitizeReadings(parsed.readings, paragraph);
+    // Readings must cover suggestion text too (e.g. a Korean phrase the
+    // learner mixed in gets translated into new Japanese in `suggestion` —
+    // that's kanji/katakana the learner never wrote, so it needs a reading
+    // more than anything they typed themselves).
+    const scanText = [paragraph, ...suggestions.map((s) => s.suggestion)].join("\n");
+    let readings = sanitizeReadings(parsed.readings, scanText);
 
     const missing = [
-      ...findMissingRuns(paragraph, readings, KANJI_RUN_RE, "kanji").map((text) => ({
+      ...findMissingRuns(scanText, readings, KANJI_RUN_RE, "kanji").map((text) => ({
         text,
         kind: "kanji" as const,
       })),
-      ...findMissingRuns(paragraph, readings, KATAKANA_RUN_RE, "katakana")
+      ...findMissingRuns(scanText, readings, KATAKANA_RUN_RE, "katakana")
         // A lone chouon mark (ー) can appear inside an otherwise-hiragana
         // word (e.g. casual "みーてぃんぐ") and matches the katakana range
         // on its own — not a real katakana word, so skip it.
@@ -285,7 +297,7 @@ export async function POST(request: Request) {
     ];
     if (missing.length > 0) {
       try {
-        const extra = await fetchMissingReadings(anthropic, paragraph, missing);
+        const extra = await fetchMissingReadings(anthropic, scanText, missing);
         readings = [...readings, ...extra];
       } catch (err) {
         console.error("Failed to backfill missing readings", err);
