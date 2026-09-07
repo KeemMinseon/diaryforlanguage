@@ -217,7 +217,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
         {rounds.length === 0 && !sending && (
           <p className="text-sm text-[var(--ink-soft)]">
-            오늘 있었던 일을 일본어로 한 문단씩 적어보세요. 보낼 때마다 바로 짧은 피드백이 올게요.
+            오늘 하루는 어땠나요? 편하게 적어보세요 — 한 문단씩 보낼 때마다 짧은 피드백을 드릴게요.
           </p>
         )}
         {rounds.map((r, i) => (
@@ -265,14 +265,18 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         <div ref={threadEndRef} />
       </div>
 
-      {/* Bottom half: everything about writing the next paragraph, pinned in place. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
+      {/* Bottom half: everything about writing the next paragraph, pinned in place.
+          Weighted heavier than the feed above — this half also carries the
+          stamp bar and the full-width finish button, so giving it the same
+          flex-1 as the feed left the actual textarea box visibly smaller
+          than the feed area even though the two halves were equal height. */}
+      <div className="flex min-h-0 flex-[1.4] flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
         <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleTextareaKeyDown}
-            placeholder="오늘 있었던 일을 이어서 적어보세요…"
+            placeholder="여기에 이어서 편하게 적어주세요…"
             disabled={busy}
             rows={3}
             className="min-h-0 flex-1 resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
