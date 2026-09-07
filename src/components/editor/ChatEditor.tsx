@@ -55,7 +55,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: "nearest" });
-  }, [rounds.length]);
+  }, [rounds.length, sending]);
 
   const dateLabel = parseDateKey(dateKey).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -215,7 +215,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
       {/* Top half: feedback so far, scrolls on its own. The learner's own
           text stays only in the box below — it's never echoed back up here. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-        {rounds.length === 0 && (
+        {rounds.length === 0 && !sending && (
           <p className="text-sm text-[var(--ink-soft)]">
             오늘 있었던 일을 일본어로 한 문단씩 적어보세요. 보낼 때마다 바로 짧은 피드백이 올게요.
           </p>
@@ -243,6 +243,12 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
             </div>
           </div>
         ))}
+        {sending && (
+          <div className="flex items-center gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
+            <p className="text-[12.5px] text-[var(--ink-soft)]">검토하고 있어요…</p>
+          </div>
+        )}
         <div ref={threadEndRef} />
       </div>
 
