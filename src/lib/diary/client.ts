@@ -100,3 +100,15 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
   if (error) throw error;
   return data as DiaryEntry;
 }
+
+/** Deletes an entry and its attached photo (if any). RLS keeps this to the owner's own row. */
+export async function deleteEntry(entryId: string, photoPath: string | null): Promise<void> {
+  const supabase = createClient();
+  if (photoPath) {
+    // Best-effort — a failed storage cleanup shouldn't block deleting the entry itself.
+    const { error: storageError } = await supabase.storage.from(PHOTO_BUCKET).remove([photoPath]);
+    if (storageError) console.error("Failed to remove diary photo", storageError);
+  }
+  const { error } = await supabase.from("diary_entries").delete().eq("id", entryId);
+  if (error) throw error;
+}

@@ -38,5 +38,5 @@ export default async function EntryPage({
       .publicUrl;
   }
 
-  return <ReviewView entry={typedEntry} photoUrl={photoUrl} />;
+  return <ReviewView userId={user.id} entry={typedEntry} photoUrl={photoUrl} />;
 }
