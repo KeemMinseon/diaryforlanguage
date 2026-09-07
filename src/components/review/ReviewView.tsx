@@ -6,6 +6,7 @@ import EditEntry from "@/components/editor/EditEntry";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import HankoStamp from "@/components/stamps/HankoStamp";
 import FuriganaText from "@/components/review/FuriganaText";
+import ReadingsHint from "@/components/review/ReadingsHint";
 import { deleteEntry } from "@/lib/diary/client";
 import { buildHighlightSegments } from "@/lib/review/highlight";
 import { parseDateKey } from "@/lib/utils/date";
@@ -156,9 +157,7 @@ export default function ReviewView({
               <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
                 {segments.map((seg, i) =>
                   seg.suggestionIndex === null ? (
-                    <span key={i}>
-                      <FuriganaText text={seg.text} readings={entry.readings} />
-                    </span>
+                    <span key={i}>{seg.text}</span>
                   ) : (
                     <button
                       key={i}
@@ -170,7 +169,7 @@ export default function ReviewView({
                         activeIndex === seg.suggestionIndex ? "bg-black/10" : "bg-black/5"
                       }`}
                     >
-                      <FuriganaText text={seg.text} readings={entry.readings} />
+                      {seg.text}
                     </button>
                   )
                 )}
@@ -180,6 +179,15 @@ export default function ReviewView({
 
           {isReviewed && (
             <>
+              {entry.readings.length > 0 && (
+                <section className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+                  <h2 className="mb-2 font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
+                    읽기 안내
+                  </h2>
+                  <ReadingsHint readings={entry.readings} />
+                </section>
+              )}
+
               <section className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
                 <h2 className="mb-2 font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
                   총평

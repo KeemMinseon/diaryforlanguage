@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PhotoCropModal from "@/components/editor/PhotoCropModal";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import FuriganaText from "@/components/review/FuriganaText";
+import ReadingsHint from "@/components/review/ReadingsHint";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
@@ -224,12 +225,13 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         {paragraphs.map((p, i) => (
           <div key={i} className="flex flex-col gap-1.5">
             <p className="font-[family-name:var(--font-diary)] text-[17px] leading-relaxed text-[var(--ink)]">
-              <FuriganaText text={p.text} readings={p.readings} />
+              {p.text}
             </p>
             <div className="ml-2.5 flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
               <div className="flex flex-col gap-1.5">
                 <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{p.comment}</p>
+                <ReadingsHint readings={p.readings} />
                 {p.suggestions.map((s, j) => (
                   <span
                     key={j}
