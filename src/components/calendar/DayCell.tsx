@@ -23,7 +23,7 @@ export default function DayCell({
 
   const content = (
     <div
-      className={`group relative flex aspect-[1/2] flex-col overflow-visible rounded-xl border p-1.5 transition ${
+      className={`group relative flex aspect-square flex-col overflow-visible rounded-xl border p-1.5 transition ${
         isToday ? "border-[1.5px] border-[var(--ink)]" : "border-[var(--paper-line)]"
       } ${inCurrentMonth ? "bg-[var(--paper-raised)]" : "bg-transparent opacity-40"} ${
         clickable ? "cursor-pointer hover:border-[var(--ink-soft)]" : "cursor-default opacity-50"

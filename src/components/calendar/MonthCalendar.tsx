@@ -96,7 +96,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5 text-center text-xs text-[var(--ink-soft)] sm:gap-2">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs text-[var(--ink-soft)] sm:gap-1.5">
         {WEEKDAY_LABELS_KO.map((label) => (
           <div key={label} className="py-1">
             {label}
@@ -104,7 +104,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         ))}
       </div>
 
-      <div className={`grid flex-1 grid-cols-7 gap-1.5 sm:gap-2 ${loading ? "opacity-60" : ""}`}>
+      <div className={`grid flex-1 grid-cols-7 gap-1 sm:gap-1.5 ${loading ? "opacity-60" : ""}`}>
         {weeks.flatMap((week) =>
           week.map((date) => {
             const key = toDateKey(date);
