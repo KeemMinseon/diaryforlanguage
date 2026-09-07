@@ -15,16 +15,23 @@ create table if not exists public.diary_entries (
   overall_comment text,
   suggestions jsonb not null default '[]'::jsonb,
   readings jsonb not null default '[]'::jsonb,
+  paragraphs jsonb not null default '[]'::jsonb,
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, entry_date)
 );
 
--- Safe to re-run against an existing table created before this column
--- existed (e.g. an already-deployed project) — this line alone is enough,
--- no need to drop/recreate the table.
+-- Safe to re-run against an existing table created before these columns
+-- existed (e.g. an already-deployed project) — these lines alone are
+-- enough, no need to drop/recreate the table.
 alter table public.diary_entries add column if not exists readings jsonb not null default '[]'::jsonb;
+-- Each paragraph as its own timestamped entry — {text, comment,
+-- suggestions, readings, savedAt} — so a day's entry can be reopened and
+-- added to later while still showing how it grew across sittings. An
+-- entry saved before this column existed just has an empty array; the
+-- review screen falls back to showing its `content` as one untimed block.
+alter table public.diary_entries add column if not exists paragraphs jsonb not null default '[]'::jsonb;
 
 create index if not exists diary_entries_user_month_idx
   on public.diary_entries (user_id, entry_date);

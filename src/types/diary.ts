@@ -21,6 +21,17 @@ export interface Reading {
   kind: ReadingKind;
 }
 
+/** One paragraph as sent for review, with the feedback it got and when it
+ * was saved — lets a day's entry be reopened and added to later while
+ * still showing how it grew across separate sittings. */
+export interface DiaryParagraph {
+  text: string;
+  comment: string;
+  suggestions: Suggestion[];
+  readings: Reading[];
+  savedAt: string; // ISO timestamp
+}
+
 export interface DiaryEntry {
   id: string;
   user_id: string;
@@ -34,6 +45,9 @@ export interface DiaryEntry {
   suggestions: Suggestion[];
   /** Furigana (kanji) / romaji (katakana) readings collected while writing. */
   readings: Reading[];
+  /** Empty for an entry saved before this existed — the review screen
+   * falls back to showing `content` as one untimed block in that case. */
+  paragraphs: DiaryParagraph[];
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;

@@ -12,6 +12,29 @@ import { buildHighlightSegments } from "@/lib/review/highlight";
 import { parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry } from "@/types/diary";
 
+function localDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Just the time when saved the same local day as the entry itself; full
+ * date + time when a paragraph was added on a later day ("이어서 쓰기"
+ * on a different day than the entry's own date), so that's not ambiguous. */
+function formatSavedAt(iso: string, entryDateKey: string): string {
+  const saved = new Date(iso);
+  if (localDateKey(saved) === entryDateKey) {
+    return saved.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+  }
+  return saved.toLocaleString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function ReviewView({
   userId,
   entry,
@@ -28,7 +51,9 @@ export default function ReviewView({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const segments = buildHighlightSegments(entry.content, entry.suggestions);
+  // An entry saved before per-paragraph history existed has none — fall
+  // back to the old single flat block instead of showing nothing.
+  const hasParagraphHistory = entry.paragraphs.length > 0;
   const isReviewed = entry.status === "reviewed";
   const isPending = entry.status === "pending";
   const isFailed = entry.status === "failed";
@@ -39,6 +64,27 @@ export default function ReviewView({
     day: "numeric",
     weekday: "long",
   });
+
+  function renderHighlighted(text: string, keyPrefix: string) {
+    return buildHighlightSegments(text, entry.suggestions).map((seg, i) =>
+      seg.suggestionIndex === null ? (
+        <span key={`${keyPrefix}-${i}`}>{seg.text}</span>
+      ) : (
+        <button
+          key={`${keyPrefix}-${i}`}
+          type="button"
+          onClick={() =>
+            setActiveIndex((cur) => (cur === seg.suggestionIndex ? null : seg.suggestionIndex))
+          }
+          className={`rounded px-0.5 underline decoration-[var(--ink)] decoration-2 underline-offset-4 transition ${
+            activeIndex === seg.suggestionIndex ? "bg-black/10" : "bg-black/5"
+          }`}
+        >
+          {seg.text}
+        </button>
+      )
+    );
+  }
 
   async function handleConfirmDelete() {
     setDeleting(true);
@@ -69,6 +115,15 @@ export default function ReviewView({
           </p>
           {!editing && !confirmingDelete && (
             <>
+              {isReviewed && (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/entry/${entry.entry_date}?continue=1`)}
+                  className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+                >
+                  이어서 쓰기
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -154,26 +209,24 @@ export default function ReviewView({
                 </p>
               )}
 
-              <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
-                {segments.map((seg, i) =>
-                  seg.suggestionIndex === null ? (
-                    <span key={i}>{seg.text}</span>
-                  ) : (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() =>
-                        setActiveIndex((cur) => (cur === seg.suggestionIndex ? null : seg.suggestionIndex))
-                      }
-                      className={`rounded px-0.5 underline decoration-[var(--ink)] decoration-2 underline-offset-4 transition ${
-                        activeIndex === seg.suggestionIndex ? "bg-black/10" : "bg-black/5"
-                      }`}
-                    >
-                      {seg.text}
-                    </button>
-                  )
-                )}
-              </p>
+              {hasParagraphHistory ? (
+                <div className="flex flex-col gap-4">
+                  {entry.paragraphs.map((p, pi) => (
+                    <div key={pi} className="flex flex-col gap-1">
+                      <p className="text-xs text-[var(--ink-soft)]">
+                        {formatSavedAt(p.savedAt, entry.entry_date)}
+                      </p>
+                      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
+                        {renderHighlighted(p.text, `p${pi}`)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
+                  {renderHighlighted(entry.content, "flat")}
+                </p>
+              )}
             </div>
           </div>
 

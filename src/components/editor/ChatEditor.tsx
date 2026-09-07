@@ -10,12 +10,14 @@ import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { parseDateKey } from "@/lib/utils/date";
-import type { Reading, Suggestion } from "@/types/diary";
+import type { DiaryEntry, DiaryParagraph, Reading, Suggestion } from "@/types/diary";
 
 interface FeedbackRound {
+  text: string;
   comment: string;
   suggestions: Suggestion[];
   readings: Reading[];
+  savedAt: string;
 }
 
 /** How much of `text` matches `prefix` from the start. */
@@ -26,7 +28,70 @@ function commonPrefixLength(prefix: string, text: string): number {
   return i;
 }
 
-export default function ChatEditor({ userId, dateKey }: { userId: string; dateKey: string }) {
+/** Rebuilds the rounds feed from a previously saved entry, so reopening it
+ * to add more shows the same per-paragraph history instead of starting
+ * blank. An entry saved before `paragraphs` existed has none — fall back
+ * to one untimed round covering everything already there, rather than
+ * losing that day's suggestions/readings from the feed entirely. */
+function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
+  if (!entry) return [];
+  if (entry.paragraphs.length > 0) {
+    return entry.paragraphs.map((p: DiaryParagraph) => ({
+      text: p.text,
+      comment: p.comment,
+      suggestions: p.suggestions,
+      readings: p.readings,
+      savedAt: p.savedAt,
+    }));
+  }
+  if (!entry.content.trim()) return [];
+  return [
+    {
+      text: entry.content,
+      comment: entry.overall_comment ?? "",
+      suggestions: entry.suggestions,
+      readings: entry.readings,
+      savedAt: entry.reviewed_at ?? entry.updated_at,
+    },
+  ];
+}
+
+function localDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Just the time (e.g. "오후 9:12") when saved the same local day as the
+ * entry itself; full date + time when it was added on a later day (the
+ * "이어서 쓰기" case), so that's not ambiguous. */
+function formatSavedAt(iso: string, entryDateKey: string): string {
+  const saved = new Date(iso);
+  if (localDateKey(saved) === entryDateKey) {
+    return saved.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+  }
+  return saved.toLocaleString("ko-KR", {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function ChatEditor({
+  userId,
+  dateKey,
+  initialEntry,
+  existingPhotoUrl,
+}: {
+  userId: string;
+  dateKey: string;
+  /** When reopening a day that already has an entry, to add more to it
+   * ("이어서 쓰기") — pre-fills the box and feed from what's already saved. */
+  initialEntry?: DiaryEntry;
+  existingPhotoUrl?: string | null;
+}) {
   const router = useRouter();
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,9 +101,9 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
   // after a review, so the learner never has to retype anything.
   // `reviewedPrefix` marks how much of it has already been sent for review;
   // only the part of `content` past that point counts as "new" next time.
-  const [content, setContent] = useState("");
-  const [reviewedPrefix, setReviewedPrefix] = useState("");
-  const [rounds, setRounds] = useState<FeedbackRound[]>([]);
+  const [content, setContent] = useState(initialEntry?.content ?? "");
+  const [reviewedPrefix, setReviewedPrefix] = useState(initialEntry?.content ?? "");
+  const [rounds, setRounds] = useState<FeedbackRound[]>(() => initialRoundsFrom(initialEntry));
   const [sending, setSending] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +111,9 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
   const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(null);
+  const [keepExistingPhoto, setKeepExistingPhoto] = useState(
+    Boolean(initialEntry && initialEntry.stamp_kind === "photo" && initialEntry.photo_path)
+  );
 
   useEffect(() => {
     return () => {
@@ -68,7 +136,8 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
   // matching what was already reviewed, not a fixed offset — so editing
   // something earlier in the box doesn't desync the split point too badly).
   const pendingText = content.slice(commonPrefixLength(reviewedPrefix, content));
-  const hasPhoto = Boolean(croppedPreviewUrl);
+  const hasPhoto = Boolean(croppedPreviewUrl) || keepExistingPhoto;
+  const previewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? (existingPhotoUrl ?? null) : null);
   const previewStampKey = hasPhoto ? null : pickStamp(content);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -82,6 +151,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
     if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
     setCroppedBlob(blob);
     setCroppedPreviewUrl(URL.createObjectURL(blob));
+    setKeepExistingPhoto(false);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
     setRawImageUrl(null);
   }
@@ -90,6 +160,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
     if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
     setCroppedBlob(null);
     setCroppedPreviewUrl(null);
+    setKeepExistingPhoto(false);
   }
 
   async function reviewChunk(chunk: string, priorText: string): Promise<FeedbackRound> {
@@ -101,9 +172,11 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "첨삭 요청에 실패했어요.");
     return {
+      text: chunk,
       comment: data.comment,
       suggestions: data.suggestions ?? [],
       readings: data.readings ?? [],
+      savedAt: new Date().toISOString(),
     };
   }
 
@@ -147,6 +220,8 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
       const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
       if (croppedBlob) {
         photoPath = await uploadStampPhoto(userId, dateKey, croppedBlob);
+      } else if (keepExistingPhoto) {
+        photoPath = initialEntry?.photo_path ?? null;
       }
 
       const finalizeRes = await fetch("/api/review-finalize", {
@@ -159,6 +234,13 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
 
       const allSuggestions = allRounds.flatMap((r) => r.suggestions);
       const allReadings = allRounds.flatMap((r) => r.readings);
+      const paragraphs: DiaryParagraph[] = allRounds.map((r) => ({
+        text: r.text,
+        comment: r.comment,
+        suggestions: r.suggestions,
+        readings: r.readings,
+        savedAt: r.savedAt,
+      }));
 
       await saveEntry({
         userId,
@@ -171,9 +253,14 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         overallComment: finalizeData.overallComment,
         suggestions: allSuggestions,
         readings: allReadings,
+        paragraphs,
       });
 
-      toast("오늘 일기에 添削 도장이 찍혔어요! 📮");
+      toast(
+        initialEntry
+          ? "이어서 쓴 내용까지 添削 도장이 다시 찍혔어요! 📮"
+          : "오늘 일기에 添削 도장이 찍혔어요! 📮"
+      );
       const month = dateKey.slice(0, 7);
       router.push(`/?month=${month}`);
     } catch (err) {
@@ -224,6 +311,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
           <div key={i} className="flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
             <div className="flex flex-col gap-1.5">
+              <p className="text-[10px] text-[var(--ink-soft)]/70">{formatSavedAt(r.savedAt, dateKey)}</p>
               <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>
               <ReadingsHint readings={r.readings} label="읽는 법" />
               {r.suggestions.map((s, j) => (
@@ -298,7 +386,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
             <DiaryStamp
               stampKind={hasPhoto ? "photo" : "keyword"}
               stampKey={previewStampKey}
-              photoUrl={croppedPreviewUrl}
+              photoUrl={previewPhotoUrl}
               className="w-full"
             />
           </div>
@@ -338,7 +426,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
           disabled={!content.trim() || busy}
           className="shrink-0 w-full rounded-full bg-[var(--ink)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
         >
-          {finishing ? "마무리하는 중…" : "오늘 일기 마치기"}
+          {finishing ? "마무리하는 중…" : initialEntry ? "이어서 쓴 일기 마치기" : "오늘 일기 마치기"}
         </button>
       </div>
 
