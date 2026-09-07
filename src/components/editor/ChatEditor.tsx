@@ -231,7 +231,7 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
               <div className="flex flex-col gap-1.5">
                 <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{p.comment}</p>
-                <ReadingsHint readings={p.readings} />
+                <ReadingsHint readings={p.readings} label="읽는 법" />
                 {p.suggestions.map((s, j) => (
                   <span
                     key={j}

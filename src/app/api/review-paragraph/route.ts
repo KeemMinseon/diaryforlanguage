@@ -5,7 +5,7 @@ import { PARAGRAPH_REVIEW_SYSTEM_PROMPT, buildParagraphUserMessage } from "@/lib
 import type { Reading, Suggestion } from "@/types/diary";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 45;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
 
@@ -99,6 +99,125 @@ function sanitizeReadings(raw: unknown, paragraph: string): Reading[] {
     .map((r) => ({ text: r.text, reading: r.reading, kind: r.kind }));
 }
 
+// The model is told to be exhaustive about readings, but in practice still
+// occasionally skips a kanji run or katakana word (observed: 事務所/行き
+// missing while everything else in the same paragraph was covered). Rather
+// than trust the prompt alone, scan the paragraph ourselves for every kanji
+// run and katakana word and check it against what came back; anything left
+// uncovered gets one focused follow-up call asking only for those.
+const KANJI_RUN_RE = /[一-鿿㐀-䶿]+/gu;
+const KATAKANA_RUN_RE = /[゠-ヿ]+/gu;
+
+function coverageMask(paragraph: string, readings: Reading[], kind: Reading["kind"]): boolean[] {
+  const mask = new Array(paragraph.length).fill(false);
+  for (const r of readings) {
+    if (r.kind !== kind || !r.text) continue;
+    let idx = paragraph.indexOf(r.text);
+    while (idx !== -1) {
+      for (let i = idx; i < idx + r.text.length; i++) mask[i] = true;
+      idx = paragraph.indexOf(r.text, idx + 1);
+    }
+  }
+  return mask;
+}
+
+function findMissingRuns(
+  paragraph: string,
+  readings: Reading[],
+  re: RegExp,
+  kind: Reading["kind"]
+): string[] {
+  const mask = coverageMask(paragraph, readings, kind);
+  const missing = new Set<string>();
+  for (const m of paragraph.matchAll(re)) {
+    const start = m.index;
+    if (start === undefined) continue;
+    const end = start + m[0].length;
+    let covered = true;
+    for (let i = start; i < end; i++) {
+      if (!mask[i]) {
+        covered = false;
+        break;
+      }
+    }
+    if (!covered) missing.add(m[0]);
+  }
+  return [...missing];
+}
+
+const MISSING_READINGS_TOOL_NAME = "submit_missing_readings";
+const MISSING_READINGS_TOOL: Anthropic.Tool = {
+  name: MISSING_READINGS_TOOL_NAME,
+  description: "주어진 한자/가타카나 표기 목록 전체에 대한 읽기를 채워 제출합니다.",
+  input_schema: {
+    type: "object",
+    properties: {
+      readings: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            text: { type: "string", description: "입력받은 표기를 그대로 복사." },
+            reading: { type: "string", description: "한자는 히라가나, 가타카나는 로마자." },
+          },
+          required: ["text", "reading"],
+        },
+      },
+    },
+    required: ["readings"],
+  },
+};
+
+/**
+ * One narrow follow-up call for readings the main call missed. Restricting
+ * the model to a fixed, already-known-correct list of texts (extracted from
+ * the paragraph itself via regex, not by the model) makes this a much
+ * easier, more reliable task than "find everything" — and the result can't
+ * introduce a text that doesn't actually appear in the paragraph.
+ */
+async function fetchMissingReadings(
+  anthropic: Anthropic,
+  paragraph: string,
+  missing: { text: string; kind: Reading["kind"] }[]
+): Promise<Reading[]> {
+  const list = missing.map((m) => `- ${m.text} (${m.kind === "kanji" ? "한자" : "가타카나"})`).join("\n");
+  const response = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 500,
+    system:
+      "당신은 일본어 첨삭 선생님입니다. 주어진 목록에 있는 한자/가타카나 표기 전부에 대해 정확한 읽기를 답하세요. 한자는 히라가나, 가타카나는 로마자로 답하세요. 목록에 없는 항목은 만들지 말고, 목록에 있는 건 하나도 빠짐없이 포함하세요. \"text\"는 입력받은 표기를 절대 바꾸지 말고 그대로 돌려주세요.",
+    messages: [
+      {
+        role: "user",
+        content: `문단 (읽기를 판단할 때 맥락으로 참고):\n${paragraph}\n\n다음 표기들의 읽기를 알려주세요:\n${list}`,
+      },
+    ],
+    tools: [MISSING_READINGS_TOOL],
+    tool_choice: { type: "tool", name: MISSING_READINGS_TOOL_NAME },
+  });
+
+  const toolUse = response.content.find(
+    (block): block is Anthropic.ToolUseBlock =>
+      block.type === "tool_use" && block.name === MISSING_READINGS_TOOL_NAME
+  );
+  if (!toolUse) return [];
+
+  const parsed = toolUse.input as { readings?: unknown };
+  if (!Array.isArray(parsed.readings)) return [];
+
+  const kindByText = new Map(missing.map((m) => [m.text, m.kind]));
+  return parsed.readings
+    .filter(
+      (r): r is { text: string; reading: string } =>
+        !!r &&
+        typeof r === "object" &&
+        typeof (r as { text?: unknown }).text === "string" &&
+        typeof (r as { reading?: unknown }).reading === "string" &&
+        kindByText.has((r as { text: string }).text)
+    )
+    .map((r) => ({ text: r.text, reading: r.reading, kind: kindByText.get(r.text)! }));
+}
+
 /**
  * Reviews a single paragraph while the learner is still writing — called
  * synchronously each time they send one, so it stays quick and focused
@@ -150,7 +269,28 @@ export async function POST(request: Request) {
         ? parsed.comment.trim()
         : "좋아요, 계속 이어서 써보세요!";
     const suggestions = sanitizeSuggestions(parsed.suggestions, paragraph);
-    const readings = sanitizeReadings(parsed.readings, paragraph);
+    let readings = sanitizeReadings(parsed.readings, paragraph);
+
+    const missing = [
+      ...findMissingRuns(paragraph, readings, KANJI_RUN_RE, "kanji").map((text) => ({
+        text,
+        kind: "kanji" as const,
+      })),
+      ...findMissingRuns(paragraph, readings, KATAKANA_RUN_RE, "katakana")
+        // A lone chouon mark (ー) can appear inside an otherwise-hiragana
+        // word (e.g. casual "みーてぃんぐ") and matches the katakana range
+        // on its own — not a real katakana word, so skip it.
+        .filter((text) => !/^ー+$/.test(text))
+        .map((text) => ({ text, kind: "katakana" as const })),
+    ];
+    if (missing.length > 0) {
+      try {
+        const extra = await fetchMissingReadings(anthropic, paragraph, missing);
+        readings = [...readings, ...extra];
+      } catch (err) {
+        console.error("Failed to backfill missing readings", err);
+      }
+    }
 
     return NextResponse.json({ comment, suggestions, readings });
   } catch (err) {
