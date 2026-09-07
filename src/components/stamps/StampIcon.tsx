@@ -193,9 +193,15 @@ export default function StampIcon({
   // Note: this used to run through an SVG feTurbulence/feDisplacementMap
   // filter for a hand-drawn wobble. Safari (including in-app WebViews)
   // frequently fails to render that filter chain at all, leaving the icon
-  // blank — so the icons are plain line art now, reliability over flourish.
+  // blank — so no <filter> primitives here, ever. The subtle depth below is
+  // just a second, offset copy of the same paths in a faint dark tone
+  // (plain geometry, not a filter) — a cheap stand-in for an engraved/
+  // printed look instead of the previously perfectly flat line art.
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
+      <g transform="translate(1.4, 2)" opacity={0.18} color="#000000">
+        <Icon id={id} />
+      </g>
       <Icon id={id} />
     </svg>
   );
