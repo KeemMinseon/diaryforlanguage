@@ -5,29 +5,44 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DayCell from "@/components/calendar/DayCell";
 import FuriganaText from "@/components/review/FuriganaText";
 import { fetchMonthEntries } from "@/lib/diary/client";
-import { buildMonthGrid, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
+import { buildMonthGrid, parseDateKey, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
 import type { DiaryEntryMap, Reading, Suggestion } from "@/types/diary";
 
 /** One suggestion plus the readings from the entry it came from — kept
- * together so FuriganaText has the right context to annotate it with,
- * even after suggestions from different days are merged into one list. */
-type MonthSuggestion = Suggestion & { readings: Reading[] };
+ * together so FuriganaText has the right context to annotate it with. */
+type MonthWord = Suggestion & { readings: Reading[] };
 
-function monthSuggestionsFrom(entries: DiaryEntryMap): MonthSuggestion[] {
-  const seen = new Set<string>();
-  const out: MonthSuggestion[] = [];
+interface MonthWordGroup {
+  entryDate: string;
+  words: MonthWord[];
+}
+
+// A learner mixing Korean into the Japanese diary is exactly the case the
+// model translates into a new Japanese `suggestion` — those are the words
+// most worth reviewing here, since they were never in Japanese to begin
+// with. A pure grammar fix (both sides already Japanese) doesn't qualify.
+const HANGUL_RE = /[가-힣]/;
+
+/** This month's Korean-origin words, grouped by the day they were written,
+ * most recent day first. */
+function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
   const sortedEntries = Object.values(entries).sort((a, b) =>
     a.entry_date < b.entry_date ? 1 : -1
   );
+  const groups: MonthWordGroup[] = [];
   for (const entry of sortedEntries) {
+    const seen = new Set<string>();
+    const words: MonthWord[] = [];
     for (const s of entry.suggestions) {
+      if (!HANGUL_RE.test(s.original)) continue;
       const key = `${s.original} ${s.suggestion}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ ...s, readings: entry.readings });
+      words.push({ ...s, readings: entry.readings });
     }
+    if (words.length > 0) groups.push({ entryDate: entry.entry_date, words });
   }
-  return out;
+  return groups;
 }
 
 function parseMonthParam(value: string | null): { year: number; month: number } {
@@ -85,7 +100,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
 
   const weeks = buildMonthGrid(year, month);
   const today = todayKey();
-  const monthSuggestions = monthSuggestionsFrom(entries);
+  const monthWordGroups = monthWordsByDate(entries);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
@@ -154,27 +169,35 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         )}
       </div>
 
-      {monthSuggestions.length > 0 && (
-        <section className="flex flex-col gap-3">
+      {monthWordGroups.length > 0 && (
+        <section className="flex flex-col gap-4">
           <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
-            이 달의 단어
+            이번 달
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {monthSuggestions.map((s, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-1.5 text-[13px]"
-              >
-                <span className="text-[var(--ink-soft)] line-through">
-                  <FuriganaText text={s.original} readings={s.readings} />
-                </span>
-                <span aria-hidden="true">→</span>
-                <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
-                  <FuriganaText text={s.suggestion} readings={s.readings} />
-                </span>
-              </span>
-            ))}
-          </div>
+          {monthWordGroups.map((group) => (
+            <div key={group.entryDate} className="flex flex-col gap-2">
+              <p className="text-xs text-[var(--ink-soft)]">
+                {parseDateKey(group.entryDate).toLocaleDateString("ko-KR", {
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {group.words.map((s, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-1.5 text-[13px]"
+                  >
+                    <span className="text-[var(--ink-soft)]">{s.original}</span>
+                    <span aria-hidden="true">→</span>
+                    <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
+                      <FuriganaText text={s.suggestion} readings={s.readings} />
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
       )}
     </div>
