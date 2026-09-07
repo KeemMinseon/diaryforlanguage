@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_JP } from "next/font/google";
 import "./globals.css";
-import SketchDefs from "@/components/stamps/SketchDefs";
 import ToastProvider from "@/components/toast/ToastProvider";
 
 const bodyFont = Noto_Sans_KR({
@@ -34,7 +33,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${bodyFont.variable} ${headingFont.variable} ${diaryFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SketchDefs />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

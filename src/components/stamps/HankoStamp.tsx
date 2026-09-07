@@ -13,7 +13,6 @@ export default function HankoStamp({ className }: { className?: string }) {
         color: "var(--shu, #b8654f)",
         mixBlendMode: "multiply",
         transform: "rotate(-11deg)",
-        filter: "url(#ink-grain)",
         pointerEvents: "none",
       }}
       aria-hidden="true"

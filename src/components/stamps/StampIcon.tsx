@@ -186,19 +186,16 @@ function Icon({ id }: { id: StampId }) {
 export default function StampIcon({
   id,
   className,
-  sketchy = true,
 }: {
   id: StampId;
   className?: string;
-  sketchy?: boolean;
 }) {
+  // Note: this used to run through an SVG feTurbulence/feDisplacementMap
+  // filter for a hand-drawn wobble. Safari (including in-app WebViews)
+  // frequently fails to render that filter chain at all, leaving the icon
+  // blank — so the icons are plain line art now, reliability over flourish.
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className={className}
-      style={sketchy ? { filter: "url(#hand-drawn)" } : undefined}
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
       <Icon id={id} />
     </svg>
   );
