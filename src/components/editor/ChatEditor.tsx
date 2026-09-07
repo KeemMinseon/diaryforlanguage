@@ -165,8 +165,13 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
   const busy = sending || finishing;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-3 px-4 py-4">
-      <header className="flex items-center justify-between">
+    // Fixed to the viewport height (not the page's natural scroll height) so
+    // the feedback feed and the compose area below split the screen and
+    // scroll independently — previously this whole block just grew with
+    // every sent paragraph, pushing the input further down each time and
+    // forcing a scroll-hunt for it (which read as "having to start over").
+    <div className="mx-auto flex h-dvh w-full max-w-2xl flex-col px-4 py-4">
+      <header className="flex shrink-0 items-center justify-between pb-3">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -179,44 +184,8 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         </p>
       </header>
 
-      <div className="flex items-center gap-2.5 rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-2">
-        <div className="w-10 shrink-0">
-          <DiaryStamp
-            stampKind={hasPhoto ? "photo" : "keyword"}
-            stampKey={previewStampKey}
-            photoUrl={croppedPreviewUrl}
-            className="w-full"
-          />
-        </div>
-        <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
-          쓴 내용에 맞는 우표가 자동으로 붙어요.
-        </p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="shrink-0 rounded-lg border border-[var(--paper-line)] bg-white px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
-        >
-          📷 사진
-        </button>
-        {hasPhoto && (
-          <button
-            type="button"
-            onClick={handleRemovePhoto}
-            className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
-          >
-            지우기
-          </button>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto py-1">
+      {/* Top half: feedback so far, scrolls on its own. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
         {paragraphs.length === 0 && (
           <p className="text-sm text-[var(--ink-soft)]">
             오늘 있었던 일을 일본어로 한 문단씩 적어보세요. 보낼 때마다 바로 짧은 피드백이 올게요.
@@ -253,38 +222,78 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         <div ref={threadEndRef} />
       </div>
 
-      <div className="flex flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleTextareaKeyDown}
-          placeholder="다음 문단을 이어서 적어보세요…"
-          disabled={busy}
-          rows={3}
-          className="resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
-        />
-        <div className="flex justify-end">
+      {/* Bottom half: everything about writing the next paragraph, pinned in place. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
+        <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-2">
+          <div className="w-10 shrink-0">
+            <DiaryStamp
+              stampKind={hasPhoto ? "photo" : "keyword"}
+              stampKey={previewStampKey}
+              photoUrl={croppedPreviewUrl}
+              className="w-full"
+            />
+          </div>
+          <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
+            쓴 내용에 맞는 우표가 자동으로 붙어요.
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
           <button
             type="button"
-            onClick={handleSend}
-            disabled={!draft.trim() || busy}
-            className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 rounded-lg border border-[var(--paper-line)] bg-white px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
           >
-            {sending ? "검토 중…" : "검토 요청"}
+            📷 사진
           </button>
+          {hasPhoto && (
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
+            >
+              지우기
+            </button>
+          )}
         </div>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleTextareaKeyDown}
+            placeholder="다음 문단을 이어서 적어보세요…"
+            disabled={busy}
+            rows={3}
+            className="min-h-0 flex-1 resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
+          />
+          <div className="flex shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!draft.trim() || busy}
+              className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+            >
+              {sending ? "검토 중…" : "검토 요청"}
+            </button>
+          </div>
+        </div>
+
+        {error && <p className="shrink-0 text-sm font-medium text-[var(--ink)]">{error}</p>}
+
+        <button
+          type="button"
+          onClick={handleFinish}
+          disabled={paragraphs.length === 0 || busy}
+          className="shrink-0 self-end rounded-full bg-[var(--ink)] px-7 py-3 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
+        >
+          {finishing ? "마무리하는 중…" : "오늘 일기 마치기"}
+        </button>
       </div>
-
-      {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
-
-      <button
-        type="button"
-        onClick={handleFinish}
-        disabled={paragraphs.length === 0 || busy}
-        className="self-end rounded-full bg-[var(--ink)] px-7 py-3 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
-      >
-        {finishing ? "마무리하는 중…" : "오늘 일기 마치기"}
-      </button>
 
       {rawImageUrl && (
         <PhotoCropModal
