@@ -67,12 +67,27 @@ export default function KeywordIcon({
     };
   }, [id]);
 
+  // `className` is expected to be the full slot the caller gives us (e.g.
+  // "h-full w-full") — the two modes then size themselves within it
+  // differently: the SVG line art wants its own centered breathing room,
+  // while an uploaded photo/icon should fill the whole window edge to
+  // edge (like the attached-photo stamp) rather than float tiny in the
+  // middle of it if the source image carries its own internal padding.
   if (!resolvedUrl) {
-    return <StampIcon id={id} className={className} />;
+    return (
+      <div className={`flex items-center justify-center ${className ?? ""}`}>
+        <StampIcon id={id} className="h-4/5 w-4/5" />
+      </div>
+    );
   }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time
-    <img src={resolvedUrl} alt="" className={className} style={{ objectFit: "contain" }} />
+    <img
+      src={resolvedUrl}
+      alt=""
+      className={className}
+      style={{ objectFit: "cover", display: "block" }}
+    />
   );
 }

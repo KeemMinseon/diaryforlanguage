@@ -24,17 +24,8 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       ) : (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: style.ink,
-          }}
-        >
-          <KeywordIcon id={id} className="w-4/5 h-4/5" />
+        <div style={{ width: "100%", height: "100%", color: style.ink }}>
+          <KeywordIcon id={id} className="h-full w-full" />
         </div>
       )}
     </StampFrame>
