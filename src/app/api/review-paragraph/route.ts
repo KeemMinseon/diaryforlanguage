@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 800,
+      max_tokens: 1200,
       system: PARAGRAPH_REVIEW_SYSTEM_PROMPT,
       messages: [{ role: "user", content: buildParagraphUserMessage(priorText, paragraph) }],
       tools: [TOOL],
