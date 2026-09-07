@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PhotoCropModal from "@/components/editor/PhotoCropModal";
+import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import FuriganaText from "@/components/review/FuriganaText";
 import ReadingsHint from "@/components/review/ReadingsHint";
@@ -403,9 +404,12 @@ export default function ChatEditor({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 rounded-lg border border-[var(--paper-line)] bg-white px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-white px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
           >
-            📷 사진
+            <UiIcon name="camera" className="h-3.5 w-3.5" alt="">
+              📷
+            </UiIcon>
+            사진
           </button>
           {hasPhoto && (
             <button

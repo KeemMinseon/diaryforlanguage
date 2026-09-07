@@ -122,6 +122,31 @@ drop policy if exists "stamp icons authenticated delete" on storage.objects;
 create policy "stamp icons authenticated delete" on storage.objects
   for delete using (bucket_id = 'stamp-icons' and auth.role() = 'authenticated');
 
+-- Storage bucket for custom overrides of the app's own UI icons (public
+-- read) — the settings gear, the camera icon, etc. Upload a file named
+-- "<icon name>.<png|jpg|jpeg|webp|svg>" (e.g. "settings.png") to swap
+-- that icon everywhere it's used — no code change needed, see
+-- src/components/icons/UiIcon.tsx and src/lib/icons/useStorageImageOverride.ts.
+insert into storage.buckets (id, name, public)
+values ('ui-icons', 'ui-icons', true)
+on conflict (id) do nothing;
+
+drop policy if exists "ui icons public read" on storage.objects;
+create policy "ui icons public read" on storage.objects
+  for select using (bucket_id = 'ui-icons');
+
+drop policy if exists "ui icons authenticated write" on storage.objects;
+create policy "ui icons authenticated write" on storage.objects
+  for insert with check (bucket_id = 'ui-icons' and auth.role() = 'authenticated');
+
+drop policy if exists "ui icons authenticated update" on storage.objects;
+create policy "ui icons authenticated update" on storage.objects
+  for update using (bucket_id = 'ui-icons' and auth.role() = 'authenticated');
+
+drop policy if exists "ui icons authenticated delete" on storage.objects;
+create policy "ui icons authenticated delete" on storage.objects
+  for delete using (bucket_id = 'ui-icons' and auth.role() = 'authenticated');
+
 -- Optional: enable Realtime updates on this table (Database → Replication)
 -- if you want instant hanko-stamp toasts instead of the client's polling
 -- fallback. Uncomment if your project doesn't already publish it:

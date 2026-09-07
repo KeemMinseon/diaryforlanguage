@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import PhotoCropModal from "@/components/editor/PhotoCropModal";
+import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
@@ -158,9 +159,12 @@ export default function EditEntry({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-lg border border-[var(--paper-line)] bg-white px-3 py-2 text-xs text-[var(--ink)]"
+              className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-white px-3 py-2 text-xs text-[var(--ink)]"
             >
-              📷 사진 첨부
+              <UiIcon name="camera" className="h-3.5 w-3.5" alt="">
+                📷
+              </UiIcon>
+              사진 첨부
             </button>
             {hasPhoto && (
               <button

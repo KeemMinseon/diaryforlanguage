@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import DayCell from "@/components/calendar/DayCell";
+import UiIcon from "@/components/icons/UiIcon";
 import FuriganaText from "@/components/review/FuriganaText";
 import { fetchMonthEntries } from "@/lib/diary/client";
 import { buildMonthGrid, parseDateKey, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
@@ -114,21 +115,23 @@ export default function MonthCalendar({ userId }: { userId: string }) {
           aria-label="설정"
           className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-            <path
-              d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M19.4 13.5a1.7 1.7 0 0 0 .35 1.9l.05.05a2 2 0 1 1-2.85 2.85l-.05-.05a1.7 1.7 0 0 0-1.9-.35 1.7 1.7 0 0 0-1 1.55V19.6a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.9.35l-.05.05a2 2 0 1 1-2.85-2.85l.05-.05a1.7 1.7 0 0 0 .35-1.9 1.7 1.7 0 0 0-1.55-1H4.4a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.35-1.9l-.05-.05A2 2 0 1 1 8.48 4.4l.05.05a1.7 1.7 0 0 0 1.9.35H10.5a1.7 1.7 0 0 0 1-1.55V3.4a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.9-.35l.05-.05a2 2 0 1 1 2.85 2.85l-.05.05a1.7 1.7 0 0 0-.35 1.9V9.5a1.7 1.7 0 0 0 1.55 1H19.6a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.55 1z"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              strokeLinejoin="round"
-            />
-          </svg>
+          <UiIcon name="settings" className="h-5 w-5" alt="설정">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+              <path
+                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M19.4 13.5a1.7 1.7 0 0 0 .35 1.9l.05.05a2 2 0 1 1-2.85 2.85l-.05-.05a1.7 1.7 0 0 0-1.9-.35 1.7 1.7 0 0 0-1 1.55V19.6a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.9.35l-.05.05a2 2 0 1 1-2.85-2.85l.05-.05a1.7 1.7 0 0 0 .35-1.9 1.7 1.7 0 0 0-1.55-1H4.4a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.35-1.9l-.05-.05A2 2 0 1 1 8.48 4.4l.05.05a1.7 1.7 0 0 0 1.9.35H10.5a1.7 1.7 0 0 0 1-1.55V3.4a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.9-.35l.05-.05a2 2 0 1 1 2.85 2.85l-.05.05a1.7 1.7 0 0 0-.35 1.9V9.5a1.7 1.7 0 0 0 1.55 1H19.6a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.55 1z"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeLinejoin="round"
+              />
+            </svg>
+          </UiIcon>
         </Link>
       </header>
 
