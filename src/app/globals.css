@@ -61,6 +61,19 @@ body {
   animation: stamp-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
 ::selection {
   background: rgba(0, 0, 0, 0.12);
   color: inherit;

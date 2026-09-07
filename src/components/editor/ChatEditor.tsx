@@ -245,8 +245,21 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
         ))}
         {sending && (
           <div className="flex items-center gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
-            <p className="text-[12.5px] text-[var(--ink-soft)]">검토하고 있어요…</p>
+            <span className="flex items-center gap-1">
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-[var(--ink-soft)]"
+                style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "0ms" }}
+              />
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-[var(--ink-soft)]"
+                style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "150ms" }}
+              />
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-[var(--ink-soft)]"
+                style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "300ms" }}
+              />
+            </span>
+            <p className="text-[12.5px] text-[var(--ink-soft)]">검토하고 있어요</p>
           </div>
         )}
         <div ref={threadEndRef} />
@@ -254,6 +267,28 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
 
       {/* Bottom half: everything about writing the next paragraph, pinned in place. */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={handleTextareaKeyDown}
+            placeholder="오늘 있었던 일을 이어서 적어보세요…"
+            disabled={busy}
+            rows={3}
+            className="min-h-0 flex-1 resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
+          />
+          <div className="flex shrink-0 justify-end">
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!pendingText.trim() || busy}
+              className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+            >
+              {sending ? "검토 중…" : "검토 요청"}
+            </button>
+          </div>
+        </div>
+
         <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-2">
           <div className="w-10 shrink-0">
             <DiaryStamp
@@ -291,35 +326,13 @@ export default function ChatEditor({ userId, dateKey }: { userId: string; dateKe
           )}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleTextareaKeyDown}
-            placeholder="오늘 있었던 일을 이어서 적어보세요…"
-            disabled={busy}
-            rows={3}
-            className="min-h-0 flex-1 resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
-          />
-          <div className="flex shrink-0 justify-end">
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={!pendingText.trim() || busy}
-              className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
-            >
-              {sending ? "검토 중…" : "검토 요청"}
-            </button>
-          </div>
-        </div>
-
         {error && <p className="shrink-0 text-sm font-medium text-[var(--ink)]">{error}</p>}
 
         <button
           type="button"
           onClick={handleFinish}
           disabled={!content.trim() || busy}
-          className="shrink-0 self-end rounded-full bg-[var(--ink)] px-7 py-3 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
+          className="shrink-0 w-full rounded-full bg-[var(--ink)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
         >
           {finishing ? "마무리하는 중…" : "오늘 일기 마치기"}
         </button>
