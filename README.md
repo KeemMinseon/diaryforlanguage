@@ -72,6 +72,7 @@ supabase/schema.sql          # DB 스키마 + RLS + 스토리지 정책
 
 - **다국어**: `src/lib/stamps/keywordMap.ts`의 `KEYWORD_RULES`에 로케일 키(`ko`, `en`, …)를 추가하고, 편집기/리뷰 프롬프트에서 로케일을 넘겨주면 됩니다. 우표/도장 UI는 언어에 의존하지 않습니다.
 - **아이덴티티**: 배경·테두리·잉크 톤은 CSS 변수(`src/app/globals.css`)와 `STAMP_STYLE`(`src/lib/stamps/stampStyle.ts`)에 모여 있어 다른 팔레트로 확장해도 톤을 유지하기 쉽습니다.
+- **키워드 아이콘 직접 교체**: Supabase Storage의 `stamp-icons` 버킷(public)에 `<키워드 id>.png`(또는 `.jpg`/`.jpeg`/`.webp`) 파일을 올리면, 코드 배포 없이 해당 키워드의 손그림 아이콘이 그 이미지로 바로 바뀝니다 (`src/components/stamps/KeywordIcon.tsx`). 키워드 id 목록은 `src/lib/stamps/keywordMap.ts`의 `STAMP_IDS`.
 
 ## 배포
 

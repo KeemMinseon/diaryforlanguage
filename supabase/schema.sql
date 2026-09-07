@@ -91,6 +91,30 @@ create policy "diary photos own delete" on storage.objects
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+-- Storage bucket for custom keyword-stamp icon overrides (public read).
+-- Upload a file named "<stamp id>.<png|jpg|jpeg|webp>" (e.g. "rain.png")
+-- to swap that keyword's built-in line-art icon for your own image — no
+-- code change needed, see src/components/stamps/KeywordIcon.tsx.
+insert into storage.buckets (id, name, public)
+values ('stamp-icons', 'stamp-icons', true)
+on conflict (id) do nothing;
+
+drop policy if exists "stamp icons public read" on storage.objects;
+create policy "stamp icons public read" on storage.objects
+  for select using (bucket_id = 'stamp-icons');
+
+drop policy if exists "stamp icons authenticated write" on storage.objects;
+create policy "stamp icons authenticated write" on storage.objects
+  for insert with check (bucket_id = 'stamp-icons' and auth.role() = 'authenticated');
+
+drop policy if exists "stamp icons authenticated update" on storage.objects;
+create policy "stamp icons authenticated update" on storage.objects
+  for update using (bucket_id = 'stamp-icons' and auth.role() = 'authenticated');
+
+drop policy if exists "stamp icons authenticated delete" on storage.objects;
+create policy "stamp icons authenticated delete" on storage.objects
+  for delete using (bucket_id = 'stamp-icons' and auth.role() = 'authenticated');
+
 -- Optional: enable Realtime updates on this table (Database → Replication)
 -- if you want instant hanko-stamp toasts instead of the client's polling
 -- fallback. Uncomment if your project doesn't already publish it:

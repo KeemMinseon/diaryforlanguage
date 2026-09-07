@@ -1,5 +1,5 @@
 import StampFrame from "@/components/stamps/StampFrame";
-import StampIcon from "@/components/stamps/StampIcon";
+import KeywordIcon from "@/components/stamps/KeywordIcon";
 import { STAMP_STYLE } from "@/lib/stamps/stampStyle";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
@@ -34,7 +34,7 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
             color: style.ink,
           }}
         >
-          <StampIcon id={id} className="w-4/5 h-4/5" />
+          <KeywordIcon id={id} className="w-4/5 h-4/5" />
         </div>
       )}
     </StampFrame>
