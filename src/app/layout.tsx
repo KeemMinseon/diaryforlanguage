@@ -1,25 +1,25 @@
 import type { Metadata } from "next";
-import { Gowun_Batang, Shippori_Mincho } from "next/font/google";
+import { Noto_Sans_KR, Noto_Serif_JP } from "next/font/google";
 import "./globals.css";
 import SketchDefs from "@/components/stamps/SketchDefs";
 import ToastProvider from "@/components/toast/ToastProvider";
 
-const bodyFont = Gowun_Batang({
+const bodyFont = Noto_Sans_KR({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "700"],
 });
 
-const headingFont = Gowun_Batang({
+const headingFont = Noto_Sans_KR({
   variable: "--font-heading",
   subsets: ["latin"],
   weight: ["700"],
 });
 
-const diaryFont = Shippori_Mincho({
+const diaryFont = Noto_Serif_JP({
   variable: "--font-diary",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["300", "500"],
 });
 
 export const metadata: Metadata = {

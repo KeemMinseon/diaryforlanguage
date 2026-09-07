@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { DiaryEntry } from "@/types/diary";
+import type { DiaryEntry, Suggestion } from "@/types/diary";
 
 const PHOTO_BUCKET = "diary-photos";
 
@@ -61,10 +61,21 @@ interface SaveEntryInput {
   stampKind: "photo" | "keyword";
   stampKey: string | null;
   photoPath: string | null;
+  /**
+   * The paragraph-by-paragraph writing flow reviews as it goes, so a saved
+   * entry is already fully reviewed by the time it's written — status
+   * defaults to "reviewed" with the comment/suggestions gathered along
+   * the way.
+   */
+  status?: "pending" | "reviewed" | "failed";
+  overallComment?: string | null;
+  suggestions?: Suggestion[];
+  reviewedAt?: string | null;
 }
 
 export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
   const supabase = createClient();
+  const status = input.status ?? "reviewed";
   const { data, error } = await supabase
     .from("diary_entries")
     .upsert(
@@ -75,10 +86,10 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
         stamp_kind: input.stampKind,
         stamp_key: input.stampKey,
         photo_path: input.photoPath,
-        status: "pending",
-        overall_comment: null,
-        suggestions: [],
-        reviewed_at: null,
+        status,
+        overall_comment: input.overallComment ?? null,
+        suggestions: input.suggestions ?? [],
+        reviewed_at: status === "reviewed" ? (input.reviewedAt ?? new Date().toISOString()) : null,
       },
       { onConflict: "user_id,entry_date" }
     )
@@ -86,13 +97,4 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
     .single();
   if (error) throw error;
   return data as DiaryEntry;
-}
-
-/** Fire-and-forget: kicks off the background Claude review for an entry. */
-export function triggerReview(entryId: string) {
-  fetch("/api/review", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ entryId }),
-  }).catch((err) => console.error("Failed to trigger review", err));
 }

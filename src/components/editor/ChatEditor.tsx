@@ -1,0 +1,285 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import PhotoCropModal from "@/components/editor/PhotoCropModal";
+import DiaryStamp from "@/components/stamps/DiaryStamp";
+import { useToast } from "@/components/toast/ToastProvider";
+import { pickStamp } from "@/lib/stamps/keywordMap";
+import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
+import { parseDateKey } from "@/lib/utils/date";
+import type { Suggestion } from "@/types/diary";
+
+interface SentParagraph {
+  text: string;
+  comment: string;
+  suggestions: Suggestion[];
+}
+
+export default function ChatEditor({ userId, dateKey }: { userId: string; dateKey: string }) {
+  const router = useRouter();
+  const toast = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
+
+  const [paragraphs, setParagraphs] = useState<SentParagraph[]>([]);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
+  const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
+    };
+  }, [croppedPreviewUrl]);
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: "nearest" });
+  }, [paragraphs.length]);
+
+  const dateLabel = parseDateKey(dateKey).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  });
+
+  const joinedContent = paragraphs.map((p) => p.text).join("\n\n");
+  const hasPhoto = Boolean(croppedPreviewUrl);
+  const previewStampKey = hasPhoto ? null : pickStamp(joinedContent || draft);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setRawImageUrl(URL.createObjectURL(file));
+  }
+
+  function handleCropConfirm(blob: Blob) {
+    if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
+    setCroppedBlob(blob);
+    setCroppedPreviewUrl(URL.createObjectURL(blob));
+    if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
+    setRawImageUrl(null);
+  }
+
+  function handleRemovePhoto() {
+    if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
+    setCroppedBlob(null);
+    setCroppedPreviewUrl(null);
+  }
+
+  async function handleSend() {
+    const paragraph = draft.trim();
+    if (!paragraph || sending) return;
+    setError(null);
+    setSending(true);
+    try {
+      const res = await fetch("/api/review-paragraph", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paragraph, priorText: joinedContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "첨삭 요청에 실패했어요.");
+      setParagraphs((prev) => [...prev, { text: paragraph, comment: data.comment, suggestions: data.suggestions ?? [] }]);
+      setDraft("");
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "첨삭 요청에 실패했어요. 다시 시도해 주세요.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleFinish() {
+    if (paragraphs.length === 0 || finishing) return;
+    setError(null);
+    setFinishing(true);
+    try {
+      const fullText = joinedContent;
+
+      let photoPath: string | null = null;
+      const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
+      if (croppedBlob) {
+        photoPath = await uploadStampPhoto(userId, dateKey, croppedBlob);
+      }
+
+      const finalizeRes = await fetch("/api/review-finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullText }),
+      });
+      const finalizeData = await finalizeRes.json();
+      if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
+
+      const allSuggestions = paragraphs.flatMap((p) => p.suggestions);
+
+      await saveEntry({
+        userId,
+        dateKey,
+        content: fullText,
+        stampKind,
+        stampKey: stampKind === "keyword" ? pickStamp(fullText) : null,
+        photoPath,
+        status: "reviewed",
+        overallComment: finalizeData.overallComment,
+        suggestions: allSuggestions,
+      });
+
+      toast("오늘 일기에 添削 도장이 찍혔어요! 📮");
+      const month = dateKey.slice(0, 7);
+      router.push(`/?month=${month}`);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "마무리에 실패했어요. 다시 시도해 주세요.");
+      setFinishing(false);
+    }
+  }
+
+  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSend();
+    }
+  }
+
+  const busy = sending || finishing;
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-3 px-4 py-4">
+      <header className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
+        >
+          ← 캘린더
+        </button>
+        <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
+          {dateLabel}
+        </p>
+      </header>
+
+      <div className="flex items-center gap-2.5 rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-2">
+        <div className="w-10 shrink-0">
+          <DiaryStamp
+            stampKind={hasPhoto ? "photo" : "keyword"}
+            stampKey={previewStampKey}
+            photoUrl={croppedPreviewUrl}
+            className="w-full"
+          />
+        </div>
+        <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
+          쓴 내용에 맞는 우표가 자동으로 붙어요.
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="shrink-0 rounded-lg border border-[var(--paper-line)] bg-white px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
+        >
+          📷 사진
+        </button>
+        {hasPhoto && (
+          <button
+            type="button"
+            onClick={handleRemovePhoto}
+            className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
+          >
+            지우기
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto py-1">
+        {paragraphs.length === 0 && (
+          <p className="text-sm text-[var(--ink-soft)]">
+            오늘 있었던 일을 일본어로 한 문단씩 적어보세요. 보낼 때마다 바로 짧은 피드백이 올게요.
+          </p>
+        )}
+        {paragraphs.map((p, i) => (
+          <div key={i} className="flex flex-col gap-1.5">
+            <p className="font-[family-name:var(--font-diary)] text-[17px] leading-relaxed text-[var(--ink)]">
+              {p.text}
+            </p>
+            <div className="ml-2.5 flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{p.comment}</p>
+                {p.suggestions.map((s, j) => (
+                  <span
+                    key={j}
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
+                  >
+                    <span className="text-[var(--ink-soft)] line-through">{s.original}</span>
+                    <span aria-hidden="true">→</span>
+                    <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
+                      {s.suggestion}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+        <div ref={threadEndRef} />
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleTextareaKeyDown}
+          placeholder="다음 문단을 이어서 적어보세요…"
+          disabled={busy}
+          rows={3}
+          className="resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
+        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!draft.trim() || busy}
+            className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+          >
+            {sending ? "검토 중…" : "검토 요청"}
+          </button>
+        </div>
+      </div>
+
+      {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
+
+      <button
+        type="button"
+        onClick={handleFinish}
+        disabled={paragraphs.length === 0 || busy}
+        className="self-end rounded-full bg-[var(--ink)] px-7 py-3 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
+      >
+        {finishing ? "마무리하는 중…" : "오늘 일기 마치기"}
+      </button>
+
+      {rawImageUrl && (
+        <PhotoCropModal
+          imageSrc={rawImageUrl}
+          onCancel={() => {
+            URL.revokeObjectURL(rawImageUrl);
+            setRawImageUrl(null);
+          }}
+          onConfirm={handleCropConfirm}
+        />
+      )}
+    </div>
+  );
+}

@@ -53,13 +53,13 @@ export default function LoginPage() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-lg border border-[var(--paper-line)] bg-white px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--shu-soft)]"
+              className="rounded-lg border border-[var(--paper-line)] bg-white px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]"
             />
-            {error && <p className="text-sm text-[var(--shu)]">{error}</p>}
+            {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-[var(--shu)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+              className="rounded-lg bg-[var(--ink)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
               {loading ? "보내는 중…" : "이메일로 로그인 링크 받기"}
             </button>

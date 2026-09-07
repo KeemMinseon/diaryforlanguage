@@ -60,12 +60,12 @@ export default function ReviewView({
         <div className="flex-1 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
           {isPending && (
             <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--shu-soft)]" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
               添削 검토 중이에요…
             </p>
           )}
           {isFailed && (
-            <p className="mb-4 text-xs text-[var(--shu)]">
+            <p className="mb-4 text-xs font-medium text-[var(--ink)]">
               첨삭 처리 중 문제가 있었어요. 다시 저장하면 재시도돼요.
             </p>
           )}
@@ -81,8 +81,8 @@ export default function ReviewView({
                   onClick={() =>
                     setActiveIndex((cur) => (cur === seg.suggestionIndex ? null : seg.suggestionIndex))
                   }
-                  className={`rounded px-0.5 underline decoration-[var(--shu)] decoration-2 underline-offset-4 transition ${
-                    activeIndex === seg.suggestionIndex ? "bg-[var(--shu-soft)]/30" : "bg-[var(--shu-soft)]/10"
+                  className={`rounded px-0.5 underline decoration-[var(--ink)] decoration-2 underline-offset-4 transition ${
+                    activeIndex === seg.suggestionIndex ? "bg-black/10" : "bg-black/5"
                   }`}
                 >
                   {seg.text}
@@ -95,8 +95,8 @@ export default function ReviewView({
 
       {isReviewed && (
         <>
-          <section className="rounded-2xl border border-[var(--shu-soft)]/40 bg-white p-5">
-            <h2 className="mb-2 font-[family-name:var(--font-heading)] text-sm text-[var(--shu)]">
+          <section className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+            <h2 className="mb-2 font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
               총평
             </h2>
             <p className="text-sm leading-relaxed text-[var(--ink)]">{entry.overall_comment}</p>
@@ -104,7 +104,7 @@ export default function ReviewView({
 
           {entry.suggestions.length > 0 && (
             <section className="flex flex-col gap-3">
-              <h2 className="font-[family-name:var(--font-heading)] text-sm text-[var(--shu)]">
+              <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
                 단어 · 표현 제안
               </h2>
               {entry.suggestions.map((s, i) => (
@@ -113,12 +113,12 @@ export default function ReviewView({
                   onClick={() => setActiveIndex(i)}
                   className={`cursor-pointer rounded-xl border p-4 transition ${
                     activeIndex === i
-                      ? "border-[var(--shu)] bg-[var(--shu-soft)]/10"
+                      ? "border-[var(--ink)] bg-black/5"
                       : "border-[var(--paper-line)] bg-[var(--paper-raised)]"
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-[var(--ink-soft)] line-through decoration-[var(--shu)]/60">
+                    <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
                       {s.original}
                     </span>
                     <span aria-hidden="true">→</span>

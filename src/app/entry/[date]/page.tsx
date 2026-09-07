@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import DiaryEditor from "@/components/editor/DiaryEditor";
+import ChatEditor from "@/components/editor/ChatEditor";
 import ReviewView from "@/components/review/ReviewView";
 import type { DiaryEntry } from "@/types/diary";
 
@@ -28,7 +28,7 @@ export default async function EntryPage({
     .maybeSingle();
 
   if (!entry) {
-    return <DiaryEditor userId={user.id} dateKey={date} />;
+    return <ChatEditor userId={user.id} dateKey={date} />;
   }
 
   const typedEntry = entry as DiaryEntry;

@@ -30,7 +30,7 @@ const PERFORATION_POINTS = buildPerforationPoints();
  */
 export default function StampFrame({
   children,
-  tint = "#f4ede0",
+  tint = "#eeeeee",
   className,
 }: {
   children: React.ReactNode;
@@ -61,14 +61,14 @@ export default function StampFrame({
     >
       <defs>{mask}</defs>
       <g mask={`url(#${maskId})`}>
-        <rect x={0} y={0} width={W} height={H} fill="#fffdf8" />
+        <rect x={0} y={0} width={W} height={H} fill="#f7f7f7" />
         <rect
           x={EDGE + PERF_R}
           y={EDGE + PERF_R}
           width={W - 2 * (EDGE + PERF_R)}
           height={H - 2 * (EDGE + PERF_R)}
           fill={tint}
-          stroke="#3a332a"
+          stroke="#333333"
           strokeWidth={1.4}
         />
         <foreignObject

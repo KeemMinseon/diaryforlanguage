@@ -16,7 +16,7 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
   const style = STAMP_STYLE[id] ?? STAMP_STYLE.default;
 
   return (
-    <StampFrame tint={stampKind === "photo" ? "#fffdf8" : style.tint} className={className}>
+    <StampFrame tint={stampKind === "photo" ? "#f7f7f7" : style.tint} className={className}>
       {stampKind === "photo" && photoUrl ? (
         <img
           src={photoUrl}

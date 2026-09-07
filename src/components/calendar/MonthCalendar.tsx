@@ -1,14 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DayCell from "@/components/calendar/DayCell";
-import { useToast } from "@/components/toast/ToastProvider";
 import { fetchMonthEntries } from "@/lib/diary/client";
 import { buildMonthGrid, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
-import type { DiaryEntry, DiaryEntryMap } from "@/types/diary";
-
-const POLL_INTERVAL_MS = 8000;
+import type { DiaryEntryMap } from "@/types/diary";
 
 function parseMonthParam(value: string | null): { year: number; month: number } {
   if (value && /^\d{4}-\d{2}$/.test(value)) {
@@ -22,43 +19,25 @@ function parseMonthParam(value: string | null): { year: number; month: number } 
 export default function MonthCalendar({ userId }: { userId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const toast = useToast();
 
   const [{ year, month }, setCursor] = useState(() => parseMonthParam(searchParams.get("month")));
   const [entries, setEntries] = useState<DiaryEntryMap>({});
   const [loading, setLoading] = useState(true);
-  const knownStatus = useRef<Map<string, string>>(new Map());
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
 
-  const load = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      if (!opts?.silent) setLoading(true);
-      try {
-        const rows = await fetchMonthEntries(userId, monthStartKey, monthEndKey);
-        const map: DiaryEntryMap = {};
-        for (const row of rows) map[row.entry_date] = row;
-
-        for (const row of rows) {
-          const prevStatus = knownStatus.current.get(row.entry_date);
-          if (prevStatus === "pending" && row.status === "reviewed") {
-            const label = new Date(row.entry_date).toLocaleDateString("ko-KR", {
-              month: "long",
-              day: "numeric",
-            });
-            toast(`${label} 일기에 添削이 도착했어요!`);
-          }
-          knownStatus.current.set(row.entry_date, row.status);
-        }
-
-        setEntries(map);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [userId, monthStartKey, monthEndKey, toast]
-  );
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rows = await fetchMonthEntries(userId, monthStartKey, monthEndKey);
+      const map: DiaryEntryMap = {};
+      for (const row of rows) map[row.entry_date] = row;
+      setEntries(map);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, monthStartKey, monthEndKey]);
 
   useEffect(() => {
     // `load` sets loading state before awaiting Supabase — that's the point
@@ -66,13 +45,6 @@ export default function MonthCalendar({ userId }: { userId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
-
-  useEffect(() => {
-    const hasPending = Object.values(entries).some((e: DiaryEntry) => e.status === "pending");
-    if (!hasPending) return;
-    const id = setInterval(() => load({ silent: true }), POLL_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [entries, load]);
 
   function goToMonth(nextYear: number, nextMonth: number) {
     let y = nextYear;

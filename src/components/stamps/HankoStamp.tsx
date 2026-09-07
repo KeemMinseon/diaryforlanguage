@@ -10,7 +10,7 @@ export default function HankoStamp({ className }: { className?: string }) {
       className={className}
       style={{
         position: "absolute",
-        color: "var(--shu, #b3272d)",
+        color: "var(--shu, #b8654f)",
         mixBlendMode: "multiply",
         transform: "rotate(-11deg)",
         filter: "url(#ink-grain)",
@@ -26,7 +26,7 @@ export default function HankoStamp({ className }: { className?: string }) {
         textAnchor="middle"
         dominantBaseline="central"
         fontSize="30"
-        fontFamily="var(--font-hand, serif)"
+        fontFamily="var(--font-diary), serif"
         fill="currentColor"
       >
         済
@@ -38,7 +38,7 @@ export default function HankoStamp({ className }: { className?: string }) {
         dominantBaseline="central"
         fontSize="9"
         letterSpacing="1"
-        fontFamily="var(--font-hand, serif)"
+        fontFamily="var(--font-diary), serif"
         fill="currentColor"
       >
         添削
