@@ -11,6 +11,14 @@
   --paper-line: #e0e0e0;
   --ink: #2c2c2c;
   --ink-soft: #888888;
+  /* A handful of solid CTA buttons (마치기/수정 완료/로그인 등) pair
+   * `bg-[var(--ink)]` with `text-white`, banking on --ink always being
+   * dark — true before dark mode existed, but --ink flips to a near-white
+   * value there (see below), which would leave white text on a near-white
+   * button. --cta stays fixed across both modes on purpose, so those
+   * buttons keep the exact same look in light mode and stay legible in
+   * dark mode instead of picking up --ink's flip. */
+  --cta: #2c2c2c;
   /* True vermillion (朱色/주색) — the traditional red-ink-seal color,
    * not the muted brownish-red this used to be. */
   --shu: #eb5a36;

@@ -6,16 +6,34 @@ type ThemePreference = "system" | "light" | "dark";
 
 const STORAGE_KEY = "theme-preference";
 
+const LIGHT_STATUS_COLOR = "#f2f2f3";
+const DARK_STATUS_COLOR = "#1c1c1e";
+
 /** Mirrors what the inline anti-flash script in layout.tsx already did to
  * <html> before this component ever mounts — "system" just means "no
  * explicit override", letting the `prefers-color-scheme` media query in
- * globals.css decide. */
+ * globals.css decide.
+ *
+ * Also force-syncs the OS status bar color the same way that script does:
+ * the two `<meta name="theme-color" media="...">` tags layout.tsx renders
+ * only ever follow the OS's own light/dark setting on their own, so
+ * picking "다크" while the OS itself is set to light left the status bar
+ * on the *light* entry — right page, wrong status bar. Forcing both tags
+ * to the same color sidesteps needing to know which one the browser
+ * would've actually picked; "system" resets each tag back to its own
+ * distinct color so the OS media query decides between them again. */
 function applyTheme(pref: ThemePreference) {
   if (pref === "system") {
     document.documentElement.removeAttribute("data-theme");
   } else {
     document.documentElement.setAttribute("data-theme", pref);
   }
+
+  const forced =
+    pref === "dark" ? DARK_STATUS_COLOR : pref === "light" ? LIGHT_STATUS_COLOR : null;
+  document.querySelectorAll('meta[name="theme-color"]').forEach((tag, i) => {
+    tag.setAttribute("content", forced ?? (i === 0 ? LIGHT_STATUS_COLOR : DARK_STATUS_COLOR));
+  });
 }
 
 const OPTIONS: { value: ThemePreference; label: string }[] = [

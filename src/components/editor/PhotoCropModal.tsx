@@ -80,7 +80,7 @@ export default function PhotoCropModal({
             type="button"
             onClick={handleConfirm}
             disabled={working}
-            className="flex-1 rounded-lg bg-[var(--ink)] py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            className="flex-1 rounded-lg bg-[var(--cta)] py-2.5 text-sm font-medium text-white disabled:opacity-60"
           >
             {working ? "적용 중…" : "이 부분으로 우표 만들기"}
           </button>

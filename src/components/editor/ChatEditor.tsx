@@ -140,7 +140,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
           {r.suggestions.map((s, j) => (
             <span
               key={j}
-              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
+              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-0.5 text-[12.5px]"
             >
               <span className="text-[var(--ink-soft)] line-through">
                 <FuriganaText text={s.original} readings={r.readings} />
@@ -594,7 +594,7 @@ export default function ChatEditor({
               {r.suggestions.map((s, j) => (
                 <span
                   key={j}
-                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-0.5 text-[12.5px]"
                 >
                   <span className="text-[var(--ink-soft)] line-through">
                     <FuriganaText text={s.original} readings={r.readings} />
@@ -702,7 +702,7 @@ export default function ChatEditor({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-white px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
           >
             <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
               📷
@@ -726,7 +726,7 @@ export default function ChatEditor({
           type="button"
           onClick={handleFinish}
           disabled={!content.trim() || busy}
-          className="shrink-0 w-full rounded-full bg-[var(--ink)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
+          className="shrink-0 w-full rounded-full bg-[var(--cta)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
         >
           {finishing ? "마무리하는 중…" : initialEntry ? "이어서 쓴 일기 마치기" : "오늘 일기 마치기"}
         </button>

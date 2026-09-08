@@ -21,12 +21,11 @@ export const viewport: Viewport = {
   // Matches --paper in each mode (the app's own background), not --ink —
   // this colors the OS status bar on an installed Android PWA, and
   // painting it the dark ink color left a stark black band sitting on top
-  // of every screen's light background instead of blending into it. Only
-  // follows the OS's own light/dark setting (the `media` condition below
-  // is a real CSS media query, so it can't also see the in-app dark-mode
-  // override in ThemeToggle.tsx) — a learner who explicitly picks a theme
-  // that disagrees with their OS setting gets a status bar matching the
-  // OS, not their in-app choice, on that one edge case.
+  // of every screen's light background instead of blending into it. These
+  // two tags only respond to the OS's own light/dark setting (`media` is a
+  // real CSS media query) — the inline script below forces both to the
+  // same color, overriding whichever one the OS would've picked, whenever
+  // an explicit in-app choice (ThemeToggle.tsx) disagrees with the OS.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f2f2f3" },
     { media: "(prefers-color-scheme: dark)", color: "#1c1c1e" },
@@ -43,11 +42,24 @@ export const viewport: Viewport = {
 // missing/invalid value here just leaves <html> without the attribute,
 // falling through to the plain `prefers-color-scheme` media query in
 // globals.css exactly as if nothing had ever been chosen.
+//
+// Also force-syncs the two `<meta name="theme-color" media="...">` tags
+// above to match — those only ever follow the OS's own setting on their
+// own, so picking "다크" while the OS itself is set to light left the
+// status bar on the *light* entry (right page, wrong status bar). Forcing
+// both tags to the same color sidesteps needing to know which one the
+// browser would've actually picked. ThemeToggle.tsx repeats this same
+// logic for a change made after this initial load.
 const THEME_INIT_SCRIPT = `
 try {
   var t = localStorage.getItem("theme-preference");
   if (t === "light" || t === "dark") {
     document.documentElement.setAttribute("data-theme", t);
+  }
+  var color = t === "dark" ? "#1c1c1e" : t === "light" ? "#f2f2f3" : null;
+  if (color) {
+    var tags = document.querySelectorAll('meta[name="theme-color"]');
+    for (var i = 0; i < tags.length; i++) tags[i].setAttribute("content", color);
   }
 } catch (e) {}
 `;

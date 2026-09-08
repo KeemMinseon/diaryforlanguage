@@ -159,7 +159,7 @@ export default function EditEntry({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-white px-3 py-2 text-xs text-[var(--ink)]"
+              className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
             >
               <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
                 📷
@@ -194,7 +194,7 @@ export default function EditEntry({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-full bg-[var(--ink)] px-7 py-2.5 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-60"
+          className="rounded-full bg-[var(--cta)] px-7 py-2.5 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-60"
         >
           {saving ? "다시 첨삭하는 중…" : "수정 완료"}
         </button>

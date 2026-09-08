@@ -164,7 +164,7 @@ export default function ReviewView({
               type="button"
               onClick={handleConfirmDelete}
               disabled={deleting}
-              className="rounded-full bg-[var(--ink)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+              className="rounded-full bg-[var(--cta)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
             >
               {deleting ? "삭제 중…" : "삭제"}
             </button>
@@ -194,7 +194,10 @@ export default function ReviewView({
                 className="w-full drop-shadow-md"
               />
               {isReviewed && (
-                <HankoStamp className="stamp-pop absolute -bottom-[10%] -right-[14%] w-[50%]" />
+                // Matches the calendar view's hanko-to-stamp ratio (42%,
+                // see StampedDay.tsx) instead of its own separately-tuned
+                // value, so the two screens read consistently.
+                <HankoStamp className="stamp-pop absolute -bottom-[10%] -right-[14%] w-[42%]" />
               )}
             </div>
 
