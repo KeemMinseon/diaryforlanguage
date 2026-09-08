@@ -37,16 +37,20 @@ export default function DayCell({
         {date.getDate()}
       </span>
       {entry && (
-        // `top-5` clears the date number above and can't shrink further.
-        // `bottom-5` (matching it exactly) made the stamp itself look
-        // noticeably smaller — the fixed inset overhead grew faster than
-        // the small aspect-ratio bump could make up for. `bottom-3` still
-        // gives real breathing room below the stamp (double the original
-        // `bottom-1`, no longer touching the cell's edge) without eating
-        // as much into the stamp's own size; the aspect ratio backed off
-        // slightly too (1.4 → 1.3) since it no longer needs to make room
-        // for a full top-sized bottom gap.
-        <div className="absolute inset-x-1.5 bottom-3 top-5 flex items-center justify-center">
+        // `top-5`/`bottom-3`/`inset-x-1.5` (rem-based) used to be here —
+        // rem is relative to the root font-size, which iOS bumps up
+        // under a larger system text-size setting even when a page never
+        // opts into its own zoom. Measured effect: going from a 16px to
+        // a 21px root shrank the stamp's own box by ~44% in height, while
+        // the cell itself barely changed size at all (confirmed via a
+        // learner comparing their iPhone, at its smallest text-size
+        // setting, against an Android phone with an even smaller one).
+        // Percentages here are relative to the cell's own size instead,
+        // so root font-size can't eat into the stamp's share of it.
+        // Chosen to match the previous rem values' proportions at a
+        // typical cell size (top-5/bottom-3/inset-x-1.5 ≈ 32%/19%/12.5%
+        // of a ~62×48px cell).
+        <div className="absolute inset-x-[12.5%] top-[32%] bottom-[19%] flex items-center justify-center">
           <StampedDay entry={entry} photoUrl={photoUrl} className="h-full max-w-full" />
         </div>
       )}
