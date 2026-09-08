@@ -142,7 +142,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
           className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="이전 달"
         >
-          <UiIcon name="arrow-left" className="h-4 w-4" alt="">
+          <UiIcon name="bracket" className="h-4 w-4" alt="">
             ←
           </UiIcon>
         </button>
@@ -155,7 +155,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
           className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="다음 달"
         >
-          <UiIcon name="arrow-right" className="h-4 w-4" alt="">
+          <UiIcon name="bracket" flip className="h-4 w-4" alt="">
             →
           </UiIcon>
         </button>
@@ -215,7 +215,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                     className="inline-flex items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-1.5 text-[13px]"
                   >
                     <span className="text-[var(--ink-soft)]">{s.original}</span>
-                    <UiIcon name="suggestion-arrow" className="h-3 w-3" alt="">
+                    <UiIcon name="arrow" className="h-3 w-3" alt="">
                       <span aria-hidden="true">→</span>
                     </UiIcon>
                     <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
