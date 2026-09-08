@@ -20,5 +20,11 @@ export const STAMP_STYLE: Record<StampId, { tint: string; ink: string }> = {
   friend: { tint: "#f1ecdf", ink: "#8a6a2a" },
   cat: { tint: "#f0ebe1", ink: "#7a5a3a" },
   flower: { tint: "#f8ecef", ink: "#a85570" },
+  celebration: { tint: "#fbeef4", ink: "#b8527a" },
+  shopping: { tint: "#f0edf7", ink: "#6a5a9a" },
+  movie: { tint: "#e8e9f0", ink: "#40486b" },
+  phone: { tint: "#e7f0ee", ink: "#3a7a70" },
+  rest: { tint: "#f1ede4", ink: "#8a7a5a" },
+  cooking: { tint: "#f4ece1", ink: "#8a5a2a" },
   default: { tint: "#f4ede0", ink: "#5c4a32" },
 };

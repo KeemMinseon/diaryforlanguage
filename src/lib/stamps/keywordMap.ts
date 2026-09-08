@@ -29,6 +29,18 @@ export const STAMP_IDS = [
   "friend",
   "cat",
   "flower",
+  // Added on request — no built-in hand-drawn icon for these yet (StampIcon's
+  // switch falls through to the generic "default" paper icon until one
+  // exists), but a custom image uploaded to the "stamp-icons" Storage bucket
+  // as "<id>.<ext>" (e.g. "celebration.svg") overrides that immediately, the
+  // same way every other keyword stamp's icon can be replaced. See
+  // KeywordIcon.tsx / useStorageImageOverride for that mechanism.
+  "celebration",
+  "shopping",
+  "movie",
+  "phone",
+  "rest",
+  "cooking",
   "default",
 ] as const;
 
@@ -51,9 +63,12 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "snow", words: ["雪", "雪だるま", "雪合戦"] },
     { id: "sun", words: ["晴れ", "太陽", "日差し", "暑い", "猛暑"] },
     { id: "flower", words: ["花", "桜", "公園", "紅葉", "植物", "庭"] },
+    { id: "celebration", words: ["誕生日", "お祝い", "記念日", "プレゼント"] },
     { id: "travel", words: ["旅行", "電車", "空港", "飛行機", "駅", "旅", "海外", "ホテル", "新幹線"] },
+    { id: "shopping", words: ["買い物", "ショッピング", "デパート", "セール"] },
     { id: "exercise", words: ["運動", "走る", "ジム", "散歩", "筋トレ", "ヨガ", "水泳", "サッカー", "バスケ"] },
     { id: "music", words: ["音楽", "歌", "ライブ", "カラオケ", "コンサート", "バンド"] },
+    { id: "movie", words: ["映画", "ドラマ", "映画館"] },
     { id: "book", words: ["本", "読書", "小説", "漫画", "図書館", "雑誌"] },
     { id: "cat", words: ["猫", "犬", "ペット", "動物"] },
     { id: "friend", words: ["友達", "友人", "会った", "同僚", "飲み会"] },
@@ -62,6 +77,9 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "study", words: ["勉強", "宿題", "テスト", "試験", "授業", "日本語", "留学"] },
     { id: "work", words: ["仕事", "会社", "残業", "会議", "出張", "上司"] },
     { id: "sleep", words: ["眠い", "寝る", "寝坊", "布団", "疲れ", "寝不足"] },
+    { id: "phone", words: ["電話", "メッセージ", "LINE"] },
+    { id: "rest", words: ["休み", "のんびり", "ゆっくり", "リラックス"] },
+    { id: "cooking", words: ["自炊", "レシピ", "キッチン", "包丁"] },
     { id: "coffee", words: ["コーヒー", "カフェ", "紅茶", "お茶"] },
     { id: "food", words: ["ご飯", "食べ", "料理", "ラーメン", "美味し", "レストラン", "居酒屋"] },
   ],
