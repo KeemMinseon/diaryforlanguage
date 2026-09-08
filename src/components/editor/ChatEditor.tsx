@@ -72,7 +72,7 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
  * confirmed.
  *
  * `rounds` are exactly contiguous chunks of the box's text in order (each
- * one is whatever was sent by a "검토 요청" click), so concatenating
+ * one is whatever was sent by a "살펴보기" click), so concatenating
  * their segments plus the still-unreviewed tail lines up with the
  * textarea's full text with nothing double-rendered or out of place. */
 function renderBoxHighlight(rounds: FeedbackRound[], pendingText: string) {
@@ -256,7 +256,7 @@ export default function ChatEditor({
     const fullText = content;
     const chunk = pendingText.trim();
     // What's actually new since this entry was last durably saved — not
-    // just since the last "검토 요청" click. On a same-session entry
+    // just since the last "살펴보기" click. On a same-session entry
     // (no initialEntry) this is the whole thing; on "이어서 쓰기" it's
     // only what was added after reopening, whether or not it was already
     // sent for per-paragraph review this session.
@@ -474,7 +474,7 @@ export default function ChatEditor({
                 style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "300ms" }}
               />
             </span>
-            <p className="text-[12.5px] text-[var(--ink-soft)]">검토하고 있어요</p>
+            <p className="text-[12.5px] text-[var(--ink-soft)]">살펴보고 있어요</p>
           </div>
         )}
         <div ref={threadEndRef} />
@@ -523,7 +523,7 @@ export default function ChatEditor({
               disabled={!pendingText.trim() || busy}
               className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
             >
-              {sending ? "검토 중…" : "검토 요청"}
+              {sending ? "살펴보는 중…" : "살펴보기"}
             </button>
           </div>
         </div>
@@ -538,7 +538,7 @@ export default function ChatEditor({
             />
           </div>
           <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
-            쓴 내용에 맞는 우표가 자동으로 붙어요.
+            사진을 추가하고, 오늘의 우표로 붙여보세요.
           </p>
           <input
             ref={fileInputRef}
