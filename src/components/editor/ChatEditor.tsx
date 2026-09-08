@@ -105,6 +105,60 @@ function renderBoxHighlight(rounds: FeedbackRound[], pendingText: string) {
   );
 }
 
+/** A previous sitting's paragraph, shown as a plain (non-transparent) highlighted
+ * block — unlike `renderBoxHighlight`, this isn't laid out under a live textarea,
+ * so it can just render real, visible text straight through. Used for everything
+ * already durably saved before this visit: once a round is locked, it's never
+ * folded back into the editable box (see the "이어서 쓰기" split below), so its
+ * own stored text and highlight positions can never drift out of sync with
+ * anything — there's nothing live to drift against. */
+function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
+  return (
+    <div
+      key={key}
+      className="flex flex-col gap-3 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-4"
+    >
+      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)]">
+        {buildHighlightSegments(r.text, r.suggestions).map((seg, si) =>
+          seg.suggestionIndex === null ? (
+            <span key={si}>{seg.text}</span>
+          ) : (
+            <mark
+              key={si}
+              className="rounded bg-black/[0.06] px-0.5 text-[var(--ink)] underline decoration-[var(--ink)] decoration-2 underline-offset-4"
+            >
+              {seg.text}
+            </mark>
+          )
+        )}
+      </p>
+      {(r.comment || r.suggestions.length > 0 || r.readings.length > 0) && (
+        <div className="flex flex-col gap-1.5 border-t border-[var(--paper-line)] pt-2.5">
+          <p className="text-[10px] text-[var(--ink-soft)]/70">{formatSavedAt(r.savedAt, dateKey)}</p>
+          {r.comment && <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>}
+          <ReadingsHint readings={r.readings} label="읽는 법" />
+          {r.suggestions.map((s, j) => (
+            <span
+              key={j}
+              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-white px-2.5 py-0.5 text-[12.5px]"
+            >
+              <span className="text-[var(--ink-soft)] line-through">
+                <FuriganaText text={s.original} readings={r.readings} />
+              </span>
+              <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
+                <span aria-hidden="true">→</span>
+              </UiIcon>
+              <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
+                <FuriganaText text={s.suggestion} readings={r.readings} />
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function localDateKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -148,13 +202,33 @@ export default function ChatEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
-  // The whole diary-so-far, one continuously editable box — never wiped
-  // after a review, so the learner never has to retype anything.
+  // Whatever was already saved before this visit — shown as locked,
+  // read-only blocks (see renderLockedRound) rather than folded into the
+  // editable box below. On "이어서 쓰기", the box used to reopen pre-filled
+  // with all of it, one continuously editable string; editing anything
+  // inside that older text (e.g. applying a suggested fix) had no way to
+  // stay in sync with the review state built for it, and reopening a day
+  // just to add a sentence buried today's new writing inside yesterday's,
+  // scrolled far below. Splitting it into its own locked block up front
+  // sidesteps both: nothing already reviewed can ever go stale again, and
+  // every visit's own writing stays visually its own thing.
+  const lockedRounds = initialRoundsFrom(initialEntry);
+  // Prior context for the AI only — never part of the editable box, so it
+  // can't desync with anything the learner types. Sent alongside whatever
+  // this visit has reviewed so far, so a "이어서 쓰기" visit's very first
+  // paragraph still gets judged against yesterday's tense/flow, not in a
+  // vacuum.
+  const priorContentForBlock = initialEntry?.content ?? "";
+
+  // This visit's own writing, one continuously editable box — never wiped
+  // after a review, so the learner never has to retype anything. Always
+  // starts blank, even on "이어서 쓰기": everything from before this visit
+  // lives only in `lockedRounds` above.
   // `reviewedPrefix` marks how much of it has already been sent for review;
   // only the part of `content` past that point counts as "new" next time.
-  const [content, setContent] = useState(initialEntry?.content ?? "");
-  const [reviewedPrefix, setReviewedPrefix] = useState(initialEntry?.content ?? "");
-  const [rounds, setRounds] = useState<FeedbackRound[]>(() => initialRoundsFrom(initialEntry));
+  const [content, setContent] = useState("");
+  const [reviewedPrefix, setReviewedPrefix] = useState("");
+  const [rounds, setRounds] = useState<FeedbackRound[]>([]);
   const [sending, setSending] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -187,9 +261,17 @@ export default function ChatEditor({
   // matching what was already reviewed, not a fixed offset — so editing
   // something earlier in the box doesn't desync the split point too badly).
   const pendingText = content.slice(commonPrefixLength(reviewedPrefix, content));
+  // Locked history + this visit's box, joined only for things that should
+  // reflect the whole day (the saved `content` column, the keyword stamp) —
+  // the box itself never contains the locked part.
+  const combinedContent = priorContentForBlock
+    ? content
+      ? `${priorContentForBlock}\n\n${content}`
+      : priorContentForBlock
+    : content;
   const hasPhoto = Boolean(croppedPreviewUrl) || keepExistingPhoto;
   const previewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? (existingPhotoUrl ?? null) : null);
-  const previewStampKey = hasPhoto ? null : pickStamp(content);
+  const previewStampKey = hasPhoto ? null : pickStamp(combinedContent);
 
   function handleContentChange(next: string) {
     setContent(next);
@@ -278,7 +360,8 @@ export default function ChatEditor({
     setError(null);
     setSending(true);
     try {
-      const round = await reviewChunk(chunk, reviewedPrefix);
+      const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
+      const round = await reviewChunk(chunk, priorTextForApi);
       setRounds((prev) => [...prev, { ...round, text: rawChunk }]);
       setReviewedPrefix(content);
     } catch (err) {
@@ -294,24 +377,21 @@ export default function ChatEditor({
     setError(null);
     setFinishing(true);
 
-    const fullText = content;
+    // This visit's own writing is *all* new by construction (the box never
+    // starts pre-filled — see the state setup above), so there's no more
+    // diffing needed here to figure out what to review versus what to skip.
+    const newContent = content;
+    const fullText = combinedContent;
     const rawChunk = pendingText; // see handleSend — kept raw for the same reason
     const chunk = rawChunk.trim();
-    // What's actually new since this entry was last durably saved — not
-    // just since the last "살펴보기" click. On a same-session entry
-    // (no initialEntry) this is the whole thing; on "이어서 쓰기" it's
-    // only what was added after reopening, whether or not it was already
-    // sent for per-paragraph review this session.
-    const priorContent = initialEntry?.content ?? "";
-    const newMaterial = fullText.slice(commonPrefixLength(priorContent, fullText)).trim();
-    const needsReview = fullText !== priorContent;
 
     let photoPath: string | null = null;
     const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
     const stampKey = stampKind === "keyword" ? pickStamp(fullText) : null;
-    const existingSuggestions = rounds.flatMap((r) => r.suggestions);
-    const existingReadings = rounds.flatMap((r) => r.readings);
-    const existingParagraphs: DiaryParagraph[] = rounds.map((r) => ({
+    const allSoFar = [...lockedRounds, ...rounds];
+    const existingSuggestions = allSoFar.flatMap((r) => r.suggestions);
+    const existingReadings = allSoFar.flatMap((r) => r.readings);
+    const existingParagraphs: DiaryParagraph[] = allSoFar.map((r) => ({
       text: r.text,
       comment: r.comment,
       suggestions: r.suggestions,
@@ -321,13 +401,13 @@ export default function ChatEditor({
 
     try {
       // 1) Save the text itself first — it shouldn't sit in the browser
-      // waiting on an AI round trip to be safe. If there's anything left
-      // to review, this lands as "pending" (same treatment ReviewView
-      // already gives an in-progress entry); step 2 below then reviews
-      // just the new part and re-saves as "reviewed". Previously this
-      // review pass ran *before* saving, so the feed would visibly pick
-      // up the new round while the button still said "마무리하는 중…"
-      // — as if saving were still waiting on it.
+      // waiting on an AI round trip to be safe. It always lands as
+      // "pending" here (there's always something from this visit still
+      // unreviewed at this point); step 2 below then reviews just that
+      // and re-saves as "reviewed". Previously this review pass ran
+      // *before* saving, so the feed would visibly pick up the new round
+      // while the button still said "마무리하는 중…" — as if saving were
+      // still waiting on it.
       if (croppedBlob) {
         photoPath = await uploadStampPhoto(userId, dateKey, croppedBlob);
       } else if (keepExistingPhoto) {
@@ -341,7 +421,7 @@ export default function ChatEditor({
         stampKind,
         stampKey,
         photoPath,
-        status: needsReview ? "pending" : "reviewed",
+        status: "pending",
         overallComment: initialEntry?.overall_comment ?? "",
         suggestions: existingSuggestions,
         readings: existingReadings,
@@ -355,47 +435,47 @@ export default function ChatEditor({
     }
 
     try {
-      // 2) Now review just what's new — never the whole day again just
-      // because it was reopened to add a bit more.
+      // 2) Now review just this visit's own writing — locked history from
+      // earlier visits was already reviewed then and is never resent.
       let allRounds = rounds;
-      if (needsReview) {
-        if (chunk) {
-          const round = await reviewChunk(chunk, reviewedPrefix);
-          allRounds = [...rounds, { ...round, text: rawChunk }];
-        }
-
-        const finalizeRes = await fetch("/api/review-finalize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullText: newMaterial || fullText }),
-        });
-        const finalizeData = await finalizeRes.json();
-        if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
-
-        const allSuggestions = allRounds.flatMap((r) => r.suggestions);
-        const allReadings = allRounds.flatMap((r) => r.readings);
-        const paragraphs: DiaryParagraph[] = allRounds.map((r) => ({
-          text: r.text,
-          comment: r.comment,
-          suggestions: r.suggestions,
-          readings: r.readings,
-          savedAt: r.savedAt,
-        }));
-
-        await saveEntry({
-          userId,
-          dateKey,
-          content: fullText,
-          stampKind,
-          stampKey,
-          photoPath,
-          status: "reviewed",
-          overallComment: finalizeData.overallComment,
-          suggestions: allSuggestions,
-          readings: allReadings,
-          paragraphs,
-        });
+      if (chunk) {
+        const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
+        const round = await reviewChunk(chunk, priorTextForApi);
+        allRounds = [...rounds, { ...round, text: rawChunk }];
       }
+
+      const finalizeRes = await fetch("/api/review-finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullText: newContent }),
+      });
+      const finalizeData = await finalizeRes.json();
+      if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
+
+      const allBlocks = [...lockedRounds, ...allRounds];
+      const allSuggestions = allBlocks.flatMap((r) => r.suggestions);
+      const allReadings = allBlocks.flatMap((r) => r.readings);
+      const paragraphs: DiaryParagraph[] = allBlocks.map((r) => ({
+        text: r.text,
+        comment: r.comment,
+        suggestions: r.suggestions,
+        readings: r.readings,
+        savedAt: r.savedAt,
+      }));
+
+      await saveEntry({
+        userId,
+        dateKey,
+        content: fullText,
+        stampKind,
+        stampKey,
+        photoPath,
+        status: "reviewed",
+        overallComment: finalizeData.overallComment,
+        suggestions: allSuggestions,
+        readings: allReadings,
+        paragraphs,
+      });
 
       setRounds(allRounds);
       setReviewedPrefix(content);
@@ -466,13 +546,24 @@ export default function ChatEditor({
         </p>
       </header>
 
-      {/* Top half: feedback so far, scrolls on its own. The learner's own
-          text stays only in the box below — it's never echoed back up here. */}
+      {/* Top half: locked history first (if any), then this visit's own
+          feedback so far, scrolls on its own. This visit's own text stays
+          only in the box below — it's never echoed back up here; locked
+          rounds show their text right here instead, since it's not in the
+          box at all anymore. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-        {rounds.length === 0 && !sending && (
+        {rounds.length === 0 && lockedRounds.length === 0 && !sending && (
           <p className="text-sm text-[var(--ink-soft)]">
             오늘 하루는 어땠나요? 편하게 적어보세요 — 한 문단씩 보낼 때마다 짧은 피드백을 드릴게요.
           </p>
+        )}
+        {lockedRounds.map((r, i) => renderLockedRound(r, dateKey, `locked-${i}`))}
+        {lockedRounds.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="h-px flex-1 bg-[var(--paper-line)]" />
+            <p className="shrink-0 text-[11px] text-[var(--ink-soft)]">여기서부터 이어서 써요</p>
+            <span className="h-px flex-1 bg-[var(--paper-line)]" />
+          </div>
         )}
         {rounds.map((r, i) => (
           <div key={i} className="flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
