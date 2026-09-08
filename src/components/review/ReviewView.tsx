@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
@@ -51,6 +51,13 @@ export default function ReviewView({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // "이어서 쓰기" stays on this exact route (/entry/[date]), just adding
+  // ?continue=1 — Next's loading.tsx boundary only fires for an actual
+  // route-segment change, not a search-param-only navigation, so this
+  // page would otherwise just sit here doing nothing while ChatEditor's
+  // data loads behind it. useTransition's isPending is the standard way
+  // to still get a pending state for that click specifically.
+  const [continuePending, startContinueTransition] = useTransition();
 
   // An entry saved before per-paragraph history existed has none — fall
   // back to the old single flat block instead of showing nothing.
@@ -229,10 +236,15 @@ export default function ReviewView({
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => router.push(`/entry/${entry.entry_date}?continue=1`)}
-                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+                disabled={continuePending}
+                onClick={() =>
+                  startContinueTransition(() => {
+                    router.push(`/entry/${entry.entry_date}?continue=1`);
+                  })
+                }
+                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)] disabled:opacity-60"
               >
-                {isFailed ? "다시 시도" : "이어서 쓰기"}
+                {continuePending ? "불러오는 중…" : isFailed ? "다시 시도" : "이어서 쓰기"}
               </button>
             </div>
           )}
