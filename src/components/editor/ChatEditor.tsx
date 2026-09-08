@@ -228,7 +228,15 @@ export default function ChatEditor({
   // only the part of `content` past that point counts as "new" next time.
   const [content, setContent] = useState("");
   const [reviewedPrefix, setReviewedPrefix] = useState("");
+  // Bookkeeping copy of this visit's rounds — used for reviewedPrefix/the
+  // backdrop highlight and for what actually gets persisted, so it can be
+  // safely rolled back when an edit lands inside already-reviewed text
+  // (see handleContentChange). `feedHistory` below is the visible log and
+  // is never rolled back, so touching the box to apply a fix never makes
+  // the feedback that pointed it out disappear — only `rounds` shrinks;
+  // every card the learner has already seen stays right where it was.
   const [rounds, setRounds] = useState<FeedbackRound[]>([]);
+  const [feedHistory, setFeedHistory] = useState<FeedbackRound[]>([]);
   const [sending, setSending] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -248,7 +256,7 @@ export default function ChatEditor({
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: "nearest" });
-  }, [rounds.length, sending]);
+  }, [feedHistory.length, sending]);
 
   const dateLabel = parseDateKey(dateKey).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -291,6 +299,11 @@ export default function ChatEditor({
     // unfixed wording never got updated, so it kept being replayed as if
     // still true. Roll every round from the edit point on back into
     // "pending" so the whole rest is reviewed together, fresh, next time.
+    // Only `rounds` (bookkeeping) rolls back here — `feedHistory` (what's
+    // actually shown above) is untouched, so the comment/suggestion card
+    // that pointed out the fix doesn't vanish the moment it's applied;
+    // it just stays as the record of what was said, and a fresh round
+    // gets added alongside it once this stretch is reviewed again.
     let consumed = 0;
     const kept: FeedbackRound[] = [];
     for (const r of rounds) {
@@ -362,7 +375,9 @@ export default function ChatEditor({
     try {
       const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
       const round = await reviewChunk(chunk, priorTextForApi);
-      setRounds((prev) => [...prev, { ...round, text: rawChunk }]);
+      const newRound = { ...round, text: rawChunk };
+      setRounds((prev) => [...prev, newRound]);
+      setFeedHistory((prev) => [...prev, newRound]);
       setReviewedPrefix(content);
     } catch (err) {
       console.error(err);
@@ -438,10 +453,13 @@ export default function ChatEditor({
       // 2) Now review just this visit's own writing — locked history from
       // earlier visits was already reviewed then and is never resent.
       let allRounds = rounds;
+      let allFeedHistory = feedHistory;
       if (chunk) {
         const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
         const round = await reviewChunk(chunk, priorTextForApi);
-        allRounds = [...rounds, { ...round, text: rawChunk }];
+        const newRound = { ...round, text: rawChunk };
+        allRounds = [...rounds, newRound];
+        allFeedHistory = [...feedHistory, newRound];
       }
 
       const finalizeRes = await fetch("/api/review-finalize", {
@@ -478,6 +496,7 @@ export default function ChatEditor({
       });
 
       setRounds(allRounds);
+      setFeedHistory(allFeedHistory);
       setReviewedPrefix(content);
 
       toast(
@@ -552,7 +571,7 @@ export default function ChatEditor({
           rounds show their text right here instead, since it's not in the
           box at all anymore. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-        {rounds.length === 0 && lockedRounds.length === 0 && !sending && (
+        {feedHistory.length === 0 && lockedRounds.length === 0 && !sending && (
           <p className="text-sm text-[var(--ink-soft)]">
             오늘 하루는 어땠나요? 편하게 적어보세요 — 한 문단씩 보낼 때마다 짧은 피드백을 드릴게요.
           </p>
@@ -565,7 +584,7 @@ export default function ChatEditor({
             <span className="h-px flex-1 bg-[var(--paper-line)]" />
           </div>
         )}
-        {rounds.map((r, i) => (
+        {feedHistory.map((r, i) => (
           <div key={i} className="flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
             <div className="flex flex-col gap-1.5">
