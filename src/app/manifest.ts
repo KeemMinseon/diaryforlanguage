@@ -8,7 +8,11 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     background_color: "#e8e8e8",
-    theme_color: "#2c2c2c",
+    // Matches background_color/--paper, not --ink — this colors the OS
+    // status bar on an installed Android PWA; painting it the dark ink
+    // color left a stark black band that didn't blend with any screen's
+    // actual (light) background.
+    theme_color: "#e8e8e8",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

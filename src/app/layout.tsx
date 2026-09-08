@@ -18,7 +18,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#2c2c2c",
+  // Matches --paper (the app's own background), not --ink — this colors
+  // the OS status bar on an installed Android PWA, and painting it the
+  // dark ink color left a stark black band sitting on top of every
+  // screen's light background instead of blending into it.
+  themeColor: "#e8e8e8",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
