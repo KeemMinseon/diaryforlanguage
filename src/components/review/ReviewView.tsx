@@ -102,7 +102,7 @@ export default function ReviewView({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
-      <header className="flex items-center justify-between">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -113,21 +113,12 @@ export default function ReviewView({
           </UiIcon>
           캘린더
         </button>
-        <div className="flex items-center gap-3">
-          <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
-            {dateLabel}
-          </p>
+        <p className="whitespace-nowrap text-center font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
+          {dateLabel}
+        </p>
+        <div className="flex items-center justify-end gap-3">
           {!editing && !confirmingDelete && (
             <>
-              {(isReviewed || isPending || isFailed) && (
-                <button
-                  type="button"
-                  onClick={() => router.push(`/entry/${entry.entry_date}?continue=1`)}
-                  className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
-                >
-                  {isFailed ? "다시 시도" : "이어서 쓰기"}
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => setEditing(true)}
@@ -187,8 +178,8 @@ export default function ReviewView({
         />
       ) : (
         <>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative w-28 shrink-0 self-start">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-28 shrink-0">
               <DiaryStamp
                 stampKind={entry.stamp_kind}
                 stampKey={entry.stamp_key as never}
@@ -200,7 +191,7 @@ export default function ReviewView({
               )}
             </div>
 
-            <div className="flex-1 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+            <div className="w-full rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
               {isPending && (
                 <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
@@ -234,24 +225,20 @@ export default function ReviewView({
             </div>
           </div>
 
+          {(isReviewed || isPending || isFailed) && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => router.push(`/entry/${entry.entry_date}?continue=1`)}
+                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+              >
+                {isFailed ? "다시 시도" : "이어서 쓰기"}
+              </button>
+            </div>
+          )}
+
           {isReviewed && (
             <>
-              {entry.readings.length > 0 && (
-                <section className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
-                  <h2 className="mb-2 font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
-                    읽기 안내
-                  </h2>
-                  <ReadingsHint readings={entry.readings} />
-                </section>
-              )}
-
-              <section className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
-                <h2 className="mb-2 font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
-                  총평
-                </h2>
-                <p className="text-sm leading-relaxed text-[var(--ink)]">{entry.overall_comment}</p>
-              </section>
-
               {entry.suggestions.length > 0 && (
                 <section className="flex flex-col gap-3">
                   <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
@@ -283,6 +270,26 @@ export default function ReviewView({
                   ))}
                 </section>
               )}
+
+              {entry.readings.length > 0 && (
+                <section className="flex flex-col gap-2">
+                  <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
+                    읽기 안내
+                  </h2>
+                  <div className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+                    <ReadingsHint readings={entry.readings} />
+                  </div>
+                </section>
+              )}
+
+              <section className="flex flex-col gap-2">
+                <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
+                  총평
+                </h2>
+                <div className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+                  <p className="text-sm leading-relaxed text-[var(--ink)]">{entry.overall_comment}</p>
+                </div>
+              </section>
             </>
           )}
         </>

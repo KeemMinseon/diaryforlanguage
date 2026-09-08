@@ -208,11 +208,11 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                   day: "numeric",
                 })}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-1.5">
                 {group.words.map((s, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-1.5 text-[13px]"
+                    className="flex w-full items-center gap-1.5 rounded-[10px] border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-[13px]"
                   >
                     <span className="text-[var(--ink-soft)]">{s.original}</span>
                     <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
