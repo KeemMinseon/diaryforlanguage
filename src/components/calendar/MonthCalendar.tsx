@@ -107,7 +107,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        <h1 className="font-[family-name:var(--font-heading)] text-xl text-[var(--ink)]">
+        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
           우표일기
         </h1>
         <Link
@@ -146,7 +146,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
             ←
           </UiIcon>
         </button>
-        <p className="font-[family-name:var(--font-heading)] text-lg text-[var(--ink)]">
+        <p className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
           {year}년 {month + 1}월
         </p>
         <button

@@ -34,7 +34,7 @@ export default function HankoStamp({ className }: { className?: string }) {
             textAnchor="middle"
             dominantBaseline="central"
             fontSize="30"
-            fontFamily="var(--font-diary), serif"
+            fontFamily="var(--font-diary)"
             fill="currentColor"
           >
             済
@@ -46,7 +46,7 @@ export default function HankoStamp({ className }: { className?: string }) {
             dominantBaseline="central"
             fontSize="9"
             letterSpacing="1"
-            fontFamily="var(--font-diary), serif"
+            fontFamily="var(--font-diary)"
             fill="currentColor"
           >
             添削

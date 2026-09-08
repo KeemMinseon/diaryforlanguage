@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-6">
       <div className="w-full max-w-sm rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-8 shadow-sm">
-        <h1 className="mb-1 text-center font-[family-name:var(--font-heading)] text-2xl text-[var(--ink)]">
+        <h1 className="mb-1 text-center font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--ink)]">
           우표일기
         </h1>
         <p className="mb-8 text-center text-sm text-[var(--ink-soft)]">

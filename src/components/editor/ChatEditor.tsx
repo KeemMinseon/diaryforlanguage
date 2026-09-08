@@ -419,7 +419,7 @@ export default function ChatEditor({
           </UiIcon>
           캘린더
         </button>
-        <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
+        <p className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink-soft)]">
           {dateLabel}
         </p>
       </header>

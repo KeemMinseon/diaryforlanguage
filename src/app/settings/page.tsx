@@ -22,7 +22,7 @@ export default async function SettingsPage() {
           </UiIcon>
           캘린더
         </Link>
-        <h1 className="font-[family-name:var(--font-heading)] text-lg text-[var(--ink)]">설정</h1>
+        <h1 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">설정</h1>
         <span className="w-[52px]" aria-hidden="true" />
       </header>
 

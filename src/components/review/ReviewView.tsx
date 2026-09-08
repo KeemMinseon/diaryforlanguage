@@ -113,7 +113,7 @@ export default function ReviewView({
           </UiIcon>
           캘린더
         </button>
-        <p className="whitespace-nowrap text-center font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
+        <p className="whitespace-nowrap text-center font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink-soft)]">
           {dateLabel}
         </p>
         <div className="flex items-center justify-end gap-3">
