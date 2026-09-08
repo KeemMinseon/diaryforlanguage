@@ -23,7 +23,7 @@ export default function DayCell({
 
   const content = (
     <div
-      className={`group relative flex aspect-[1/1.3] flex-col overflow-visible rounded-xl p-1.5 transition ${
+      className={`group relative flex aspect-[1/1.44] flex-col overflow-visible rounded-xl p-1.5 transition ${
         isToday ? "border-[1.5px] border-[var(--ink)]" : "hover:border hover:border-[var(--paper-line)]"
       } ${inCurrentMonth ? "bg-[var(--paper-raised)]" : "bg-transparent opacity-40"} ${
         clickable ? "cursor-pointer" : "cursor-default opacity-50"
@@ -37,20 +37,29 @@ export default function DayCell({
         {date.getDate()}
       </span>
       {entry && (
-        // `top-5`/`bottom-3`/`inset-x-1.5` (rem-based) used to be here —
-        // rem is relative to the root font-size, which iOS bumps up
-        // under a larger system text-size setting even when a page never
-        // opts into its own zoom. Measured effect: going from a 16px to
-        // a 21px root shrank the stamp's own box by ~44% in height, while
-        // the cell itself barely changed size at all (confirmed via a
-        // learner comparing their iPhone, at its smallest text-size
-        // setting, against an Android phone with an even smaller one).
-        // Percentages here are relative to the cell's own size instead,
-        // so root font-size can't eat into the stamp's share of it.
-        // Chosen to match the previous rem values' proportions at a
-        // typical cell size (top-5/bottom-3/inset-x-1.5 ≈ 32%/19%/12.5%
-        // of a ~62×48px cell).
-        <div className="absolute inset-x-[12.5%] top-[32%] bottom-[19%] flex items-center justify-center">
+        // Percentages, not rem-based spacing (top-5/bottom-3/inset-x-1.5
+        // used to be here) — rem is relative to the root font-size, which
+        // iOS bumps up under a larger system text-size setting even when
+        // a page never opts into its own zoom, and that ate into the
+        // stamp's own share of a cell that didn't grow to match.
+        //
+        // The stamp's own artwork (inside StampedDay/StampFrame) always
+        // renders at a fixed aspect ratio, letterboxed to fit this box.
+        // A first pass at making the stamp bigger just shrank `bottom`
+        // and switched to `justify-start`, growing the box rightward from
+        // a fixed left edge — bigger, but visibly lopsided (a lot of
+        // empty space on the right that centering used to hide, and no
+        // matching gap below). Instead: `bottom` is set to the same
+        // *pixel* margin as `inset-x` (left/right and bottom read as one
+        // consistent frame around the stamp; only `top` differs, for the
+        // date number's clearance) — that pixel/percentage mismatch is
+        // also why bottom's percentage looks smaller than inset-x's even
+        // though the margins match: bottom-% is of the *cell's height*,
+        // inset-x-% is of its *width*, two different bases for the same
+        // target pixel amount. The cell grew taller again
+        // (aspect-[1/1.35] → aspect-[1/1.44]) to fit a stamp this size
+        // with all three margins actually even.
+        <div className="absolute inset-x-[19%] top-[29%] bottom-[13%] flex items-center justify-center">
           <StampedDay entry={entry} photoUrl={photoUrl} className="h-full max-w-full" />
         </div>
       )}

@@ -23,8 +23,11 @@ export default function StampedDay({
       {entry.status === "reviewed" && (
         // 80% of the previous 52% — the calendar grid is small enough that
         // the hanko at full size read as crowding out the stamp artwork
-        // itself.
-        <HankoStamp className="absolute -bottom-[10%] -right-[14%] w-[42%] h-[42%] drop-shadow-md" />
+        // itself. Positive insets (not overflowing past the stamp's own
+        // edges) so a small margin shows on its right and bottom too,
+        // matching the stamp's own outer margins instead of the hanko
+        // bleeding into the cell's corner.
+        <HankoStamp className="absolute bottom-[4%] right-[6%] w-[42%] h-[42%] drop-shadow-md" />
       )}
     </div>
   );
