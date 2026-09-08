@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
@@ -47,6 +47,11 @@ export default function ReviewView({
 }) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // One highlighted word per suggestion index, wherever it actually landed
+  // (a specific paragraph, when paragraph history exists) — picking a
+  // suggestion card below jumps the content above to that exact word
+  // instead of leaving the learner to hunt for it in a long entry.
+  const highlightRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -80,6 +85,9 @@ export default function ReviewView({
       ) : (
         <button
           key={`${keyPrefix}-${i}`}
+          ref={(el) => {
+            highlightRefs.current[seg.suggestionIndex as number] = el;
+          }}
           type="button"
           onClick={() =>
             setActiveIndex((cur) => (cur === seg.suggestionIndex ? null : seg.suggestionIndex))
@@ -93,6 +101,15 @@ export default function ReviewView({
       )
     );
   }
+
+  // Scrolls the diary content up to the matching highlighted word whenever
+  // a suggestion becomes active — from a suggestion card click (this is the
+  // point of it) or from clicking the highlighted word itself (a harmless
+  // re-center, since it's already in view then).
+  useEffect(() => {
+    if (activeIndex === null) return;
+    highlightRefs.current[activeIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeIndex]);
 
   async function handleConfirmDelete() {
     setDeleting(true);
