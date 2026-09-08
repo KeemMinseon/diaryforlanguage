@@ -232,13 +232,23 @@ export default function ChatEditor({
   }
 
   async function handleSend() {
-    const chunk = pendingText.trim();
+    // The raw, untrimmed slice — kept as the round's own `text` (not the
+    // trimmed value sent to the API) so concatenating every round's text
+    // plus whatever's still pending reconstructs `content` exactly. Any
+    // round stored trimmed quietly drops the whitespace/newline the
+    // learner typed between paragraphs, and the highlight backdrop (see
+    // renderBoxHighlight) has no way to know that was missing — it just
+    // drifts further out of alignment with the real textarea with every
+    // round after that, which is what "이어서 작성하고 다시 검토했을 때
+    // 앞의 문장은 잘리는 것 같아" was actually seeing.
+    const rawChunk = pendingText;
+    const chunk = rawChunk.trim();
     if (!chunk || sending) return;
     setError(null);
     setSending(true);
     try {
       const round = await reviewChunk(chunk, reviewedPrefix);
-      setRounds((prev) => [...prev, round]);
+      setRounds((prev) => [...prev, { ...round, text: rawChunk }]);
       setReviewedPrefix(content);
     } catch (err) {
       console.error(err);
@@ -254,7 +264,8 @@ export default function ChatEditor({
     setFinishing(true);
 
     const fullText = content;
-    const chunk = pendingText.trim();
+    const rawChunk = pendingText; // see handleSend — kept raw for the same reason
+    const chunk = rawChunk.trim();
     // What's actually new since this entry was last durably saved — not
     // just since the last "살펴보기" click. On a same-session entry
     // (no initialEntry) this is the whole thing; on "이어서 쓰기" it's
@@ -319,7 +330,7 @@ export default function ChatEditor({
       if (needsReview) {
         if (chunk) {
           const round = await reviewChunk(chunk, reviewedPrefix);
-          allRounds = [...rounds, round];
+          allRounds = [...rounds, { ...round, text: rawChunk }];
         }
 
         const finalizeRes = await fetch("/api/review-finalize", {
