@@ -31,9 +31,19 @@ export default async function SettingsPage() {
       </header>
 
       <section className="card-elevated flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden rounded-2xl bg-[var(--paper-raised)]">
-        {/* Fixed for now — no picker yet, just the row this'll live in. */}
+        {/* Both fixed for now — no picker yet, just the two rows they'll
+            live in. Split apart since they're not the same thing: this
+            app's own screens/copy (서비스 언어) versus the language the
+            diary itself gets written and reviewed in (학습 언어) — the
+            same UI could someday support learning Japanese with an
+            English interface, say, so one "언어" setting standing in for
+            both was papering over a real distinction. */}
         <div className="flex items-center justify-between px-5 py-4">
-          <span className="text-sm text-[var(--ink)]">일기 언어</span>
+          <span className="text-sm text-[var(--ink)]">서비스 언어</span>
+          <span className="text-sm text-[var(--ink-soft)]">한국어</span>
+        </div>
+        <div className="flex items-center justify-between px-5 py-4">
+          <span className="text-sm text-[var(--ink)]">학습 언어</span>
           <span className="text-sm text-[var(--ink-soft)]">일본어</span>
         </div>
         <ThemeToggle />
