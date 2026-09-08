@@ -5,10 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
+  // See HomePage — proxy.ts already ran the network-verified getUser()
+  // for this request, so a local, no-round-trip getSession() is enough
+  // here without doubling that auth check on every navigation.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) redirect("/login");
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">

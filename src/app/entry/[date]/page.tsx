@@ -17,20 +17,24 @@ export default async function EntryPage({
   if (!DATE_RE.test(date)) redirect("/");
 
   const supabase = await createClient();
+  // See HomePage — proxy.ts already ran the network-verified getUser()
+  // for this request, so a local, no-round-trip getSession() is enough
+  // here without doubling that auth check on every navigation.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) redirect("/login");
+  const userId = session.user.id;
 
   const { data: entry } = await supabase
     .from("diary_entries")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("entry_date", date)
     .maybeSingle();
 
   if (!entry) {
-    return <ChatEditor userId={user.id} dateKey={date} />;
+    return <ChatEditor userId={userId} dateKey={date} />;
   }
 
   const typedEntry = entry as DiaryEntry;
@@ -46,7 +50,7 @@ export default async function EntryPage({
   if (shouldContinue) {
     return (
       <ChatEditor
-        userId={user.id}
+        userId={userId}
         dateKey={date}
         initialEntry={typedEntry}
         existingPhotoUrl={photoUrl}
@@ -54,5 +58,5 @@ export default async function EntryPage({
     );
   }
 
-  return <ReviewView userId={user.id} entry={typedEntry} photoUrl={photoUrl} />;
+  return <ReviewView userId={userId} entry={typedEntry} photoUrl={photoUrl} />;
 }
