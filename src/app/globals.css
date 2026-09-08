@@ -81,6 +81,59 @@ body {
   }
 }
 
+/* Page transitions — a real cross-fade/slide between the outgoing and
+ * incoming screen needs React's <ViewTransition>, which only exists in
+ * a canary React build right now; pinning production to that just for
+ * this felt like the wrong trade. So this only animates the *incoming*
+ * page's entrance (see PageTransition.tsx) — depth-based direction
+ * (deeper screen slides in from the right, shallower from the left)
+ * still reads as real navigation instead of an abrupt swap, without
+ * needing to also choreograph the outgoing page's exit. */
+@keyframes page-slide-forward {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes page-slide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.page-slide-forward {
+  animation: page-slide-forward 220ms ease-out both;
+}
+.page-slide-back {
+  animation: page-slide-back 220ms ease-out both;
+}
+.page-slide-none {
+  animation: page-fade 150ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-slide-forward,
+  .page-slide-back,
+  .page-slide-none {
+    animation: none;
+  }
+}
+
 ::selection {
   background: rgba(0, 0, 0, 0.12);
   color: inherit;
