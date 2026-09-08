@@ -146,7 +146,7 @@ export default function ReviewView({
       </header>
 
       {confirmingDelete && (
-        <div className="flex items-center justify-between rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-3">
+        <div className="flex items-center justify-between rounded-xl bg-[var(--paper-raised)] px-4 py-3">
           <p className="text-sm text-[var(--ink)]">
             이 날짜의 일기를 정말 삭제할까요? 되돌릴 수 없어요.
             {deleteError && <span className="ml-2 font-medium">{deleteError}</span>}
@@ -185,8 +185,8 @@ export default function ReviewView({
         />
       ) : (
         <>
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative w-28 shrink-0">
+          <div className="flex flex-col items-center gap-8">
+            <div className="relative w-[7.7rem] shrink-0">
               <DiaryStamp
                 stampKind={entry.stamp_kind}
                 stampKey={entry.stamp_key as never}
@@ -194,11 +194,11 @@ export default function ReviewView({
                 className="w-full drop-shadow-md"
               />
               {isReviewed && (
-                <HankoStamp className="stamp-pop absolute -bottom-[10%] -right-[14%] w-[56%]" />
+                <HankoStamp className="stamp-pop absolute -bottom-[10%] -right-[14%] w-[50%]" />
               )}
             </div>
 
-            <div className="w-full rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+            <div className="w-full rounded-2xl bg-[var(--paper-raised)] p-5">
               {isPending && (
                 <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
@@ -260,10 +260,10 @@ export default function ReviewView({
                     <div
                       key={i}
                       onClick={() => setActiveIndex(i)}
-                      className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition ${
+                      className={`flex cursor-pointer flex-col gap-1 rounded-xl p-4 transition ${
                         activeIndex === i
-                          ? "border-[var(--ink)] bg-black/5"
-                          : "border-[var(--paper-line)] bg-[var(--paper-raised)]"
+                          ? "border border-[var(--ink)] bg-black/5"
+                          : "border border-transparent bg-[var(--paper-raised)]"
                       }`}
                     >
                       {/* Original → suggestion → guide note, stacked in that
@@ -288,7 +288,7 @@ export default function ReviewView({
                   <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
                     읽기 안내
                   </h2>
-                  <div className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+                  <div className="rounded-2xl bg-[var(--paper-raised)] p-5">
                     <ReadingsHint readings={entry.readings} />
                   </div>
                 </section>
@@ -298,7 +298,7 @@ export default function ReviewView({
                 <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
                   총평
                 </h2>
-                <div className="rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5">
+                <div className="rounded-2xl bg-[var(--paper-raised)] p-5">
                   <p className="text-sm leading-relaxed text-[var(--ink)]">{entry.overall_comment}</p>
                 </div>
               </section>
