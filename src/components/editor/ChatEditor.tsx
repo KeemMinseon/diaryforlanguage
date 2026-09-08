@@ -191,6 +191,37 @@ export default function ChatEditor({
   const previewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? (existingPhotoUrl ?? null) : null);
   const previewStampKey = hasPhoto ? null : pickStamp(content);
 
+  function handleContentChange(next: string) {
+    setContent(next);
+    const commonLen = commonPrefixLength(reviewedPrefix, next);
+    if (commonLen >= reviewedPrefix.length) return; // strict append — nothing stale to fix
+    // The learner edited words inside a paragraph that was already
+    // reviewed — most often applying a suggested fix — instead of only
+    // typing past the end. `reviewedPrefix`, and any round whose text
+    // falls at or after that edit, now describe words that no longer
+    // exist: sending them again as "already reviewed" context would show
+    // the AI a version of the diary that doesn't match what's actually in
+    // the box, and the highlight backdrop (built from each round's own
+    // stored text — see renderBoxHighlight) would drift out of alignment
+    // with the real textarea, since it's laid out assuming that stored
+    // text is still accurate. This is what "제안대로 수정했는데
+    // 틀렸다고 하네" was actually seeing — the round describing the old,
+    // unfixed wording never got updated, so it kept being replayed as if
+    // still true. Roll every round from the edit point on back into
+    // "pending" so the whole rest is reviewed together, fresh, next time.
+    let consumed = 0;
+    const kept: FeedbackRound[] = [];
+    for (const r of rounds) {
+      if (consumed + r.text.length > commonLen) break;
+      kept.push(r);
+      consumed += r.text.length;
+    }
+    if (kept.length !== rounds.length) {
+      setRounds(kept);
+      setReviewedPrefix(next.slice(0, consumed));
+    }
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -517,7 +548,7 @@ export default function ChatEditor({
             <textarea
               ref={textareaRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => handleContentChange(e.target.value)}
               onKeyDown={handleTextareaKeyDown}
               onScroll={(e) => {
                 if (backdropRef.current) backdropRef.current.scrollTop = e.currentTarget.scrollTop;
