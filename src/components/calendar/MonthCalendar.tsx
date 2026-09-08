@@ -19,14 +19,12 @@ interface MonthWordGroup {
   words: MonthWord[];
 }
 
-// A learner mixing Korean into the Japanese diary is exactly the case the
-// model translates into a new Japanese `suggestion` — those are the words
-// most worth reviewing here, since they were never in Japanese to begin
-// with. A pure grammar fix (both sides already Japanese) doesn't qualify.
-const HANGUL_RE = /[가-힣]/;
-
-/** This month's Korean-origin words, grouped by the day they were written,
- * most recent day first. */
+/** This month's word/expression suggestions, grouped by the day they were
+ * written, most recent day first — every suggestion from the entry, not
+ * just ones that started out as Korean mixed into the Japanese (that used
+ * to be the only case shown here, which made a day's grammar/phrasing
+ * suggestions disappear from this list even though they're just as worth
+ * reviewing). */
 function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
   const sortedEntries = Object.values(entries).sort((a, b) =>
     a.entry_date < b.entry_date ? 1 : -1
@@ -36,7 +34,6 @@ function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
     const seen = new Set<string>();
     const words: MonthWord[] = [];
     for (const s of entry.suggestions) {
-      if (!HANGUL_RE.test(s.original)) continue;
       const key = `${s.original} ${s.suggestion}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -212,14 +209,18 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                 {group.words.map((s, i) => (
                   <span
                     key={i}
-                    className="flex w-full items-center gap-1.5 rounded-[10px] border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-[13px]"
+                    className="flex w-full flex-col gap-1 rounded-[10px] border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-[13px]"
                   >
-                    <span className="text-[var(--ink-soft)]">{s.original}</span>
-                    <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
-                      <span aria-hidden="true">→</span>
-                    </UiIcon>
-                    <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
-                      <FuriganaText text={s.suggestion} readings={s.readings} />
+                    <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
+                      {s.original}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <UiIcon name="arrow-right-line" className="h-3 w-3 shrink-0 rotate-90" alt="">
+                        <span aria-hidden="true">↓</span>
+                      </UiIcon>
+                      <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
+                        <FuriganaText text={s.suggestion} readings={s.readings} />
+                      </span>
                     </span>
                   </span>
                 ))}
