@@ -112,7 +112,7 @@ function Icon({ id }: { id: StampId }) {
           <line x1="32" y1="48" x2="52" y2="48" />
         </g>
       );
-    case "heart":
+    case "joy":
       return (
         <g {...common}>
           <path d="M50 76C28 60 16 48 16 34a16 16 0 0 1 30-8 16 16 0 0 1 30 8c0 14-12 26-26 42z" />
