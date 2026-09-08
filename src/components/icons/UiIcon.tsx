@@ -28,6 +28,17 @@ function sanitizeAndRecolorSvg(raw: string): string | null {
   svg = svg.replace(/(<svg\b[^>]*?)\sheight="[^"]*"/i, "$1");
   svg = svg.replace(/<svg\b/i, '<svg width="100%" height="100%"');
 
+  // A shape with no `fill` written down at all (common from Illustrator's
+  // SVG export, which happily omits it and leans on the spec's own
+  // default) never matched either replacement above — there was nothing
+  // there to swap — so it rendered in SVG's built-in default fill, solid
+  // black, no matter what `--shu`/currentColor said. `fill` is inherited
+  // in SVG, so setting it once on the root carries it down to every
+  // child that doesn't set its own; harmless to add even when a fill
+  // elsewhere already got rewritten to `currentColor` above, since it'd
+  // just be a duplicate of the same value.
+  svg = svg.replace(/<svg\b/i, '<svg fill="currentColor"');
+
   return svg;
 }
 
@@ -39,7 +50,15 @@ function sanitizeAndRecolorSvg(raw: string): string | null {
  * the URL instantly from its own cache. */
 const svgMarkupCache = new Map<string, string | null>();
 
-const SVG_STORAGE_PREFIX = "ui-icon-svg:";
+// Bumped to "v2" once — sanitizeAndRecolorSvg used to leave a shape with
+// no explicit `fill` attribute at all (common from Illustrator's export,
+// which omits it and leans on the spec's own default) as solid black,
+// forever, since there was nothing for the old regexes to swap. Anyone
+// who'd already loaded such an icon had that broken markup persisted here
+// indefinitely (no expiry) — the fix alone wouldn't reach them without
+// also invalidating what's already cached. Bumping the key prefix orphans
+// every old entry cheaply; no need to bump again for unrelated changes.
+const SVG_STORAGE_PREFIX = "ui-icon-svg:v2:";
 
 function readPersistedSvg(url: string): string | null {
   try {
