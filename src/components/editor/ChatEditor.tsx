@@ -58,14 +58,23 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
   ];
 }
 
-/** Renders the input box's own text with each already-reviewed round's
- * matched suggestion spans marked, so a suggestion is still findable in
- * the box once the diary gets long — same highlight treatment as the
- * review screen, just non-interactive here. `rounds` are exactly
- * contiguous chunks of the box's text in order (each one is whatever was
- * sent by a "검토 요청" click), so concatenating their highlighted
- * segments plus the still-unreviewed tail reconstructs the box's full
- * text with nothing double-rendered or out of place. */
+/** A highlight-only backdrop for the input box: every character here is
+ * invisible (`text-transparent`) — the learner's actual visible text is
+ * still the real, fully normal, fully editable `<textarea>` on top of
+ * this. Only the `<mark>` spans paint anything (a background + underline)
+ * at the exact position their matched text sits, since this backdrop is
+ * laid out identically underneath. This split — real text stays in the
+ * real textarea, only the decoration lives underneath — is what keeps
+ * typing (including IME composition, which renders using the textarea's
+ * own text color) working exactly like a normal input; an earlier version
+ * hid the textarea's own text and drew the visible glyphs from this
+ * backdrop instead, which made composing Japanese invisible until
+ * confirmed.
+ *
+ * `rounds` are exactly contiguous chunks of the box's text in order (each
+ * one is whatever was sent by a "검토 요청" click), so concatenating
+ * their segments plus the still-unreviewed tail lines up with the
+ * textarea's full text with nothing double-rendered or out of place. */
 function renderBoxHighlight(rounds: FeedbackRound[], pendingText: string) {
   return (
     <>
@@ -76,7 +85,13 @@ function renderBoxHighlight(rounds: FeedbackRound[], pendingText: string) {
           ) : (
             <mark
               key={`${ri}-${si}`}
-              className="rounded bg-black/[0.06] text-inherit underline decoration-[var(--ink)] decoration-2 underline-offset-4"
+              // `text-transparent` isn't optional here — browsers' UA
+              // stylesheet sets `mark { color: black }` explicitly (not
+              // "inherit"), so without overriding it directly on the
+              // element, its real text ghosts through underneath the
+              // textarea's own text despite this whole backdrop's
+              // wrapping div being transparent.
+              className="rounded bg-black/[0.06] text-transparent underline decoration-[var(--ink)] decoration-2 underline-offset-4"
             >
               {seg.text}
             </mark>
@@ -472,19 +487,19 @@ export default function ChatEditor({
           than the feed area even though the two halves were equal height. */}
       <div className="flex min-h-0 flex-[1.4] flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
         <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
-          {/* The textarea's own text is transparent (only its caret shows) —
-              what the learner actually reads is this backdrop underneath,
-              rendered from the exact same string with suggestion matches
-              marked. Long content makes those matches hard to spot again
-              by eye alone, so this mirrors the review screen's highlight
-              treatment right in the box instead of leaving it only in the
-              feed above. Kept in sync on scroll since only the (topmost,
-              interactive) textarea actually receives scroll input. */}
+          {/* This backdrop is decoration only — every character in it is
+              invisible, it just paints a highlight behind where a matched
+              suggestion sits. The textarea on top keeps its own text fully
+              visible and completely normal, so typing (Japanese IME
+              composition included) still works exactly like a plain input;
+              only the highlight lives underneath. Kept in sync on scroll
+              since only the (topmost, interactive) textarea actually
+              receives scroll input. */}
           <div className="relative min-h-0 flex-1">
             <div
               ref={backdropRef}
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)]"
+              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words text-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed"
             >
               {renderBoxHighlight(rounds, pendingText)}
             </div>
@@ -498,7 +513,7 @@ export default function ChatEditor({
               }}
               placeholder="여기에 이어서 편하게 적어주세요…"
               disabled={busy}
-              className="absolute inset-0 resize-none whitespace-pre-wrap break-words bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-transparent caret-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
+              className="absolute inset-0 resize-none whitespace-pre-wrap break-words bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
             />
           </div>
           <div className="flex shrink-0 justify-end">

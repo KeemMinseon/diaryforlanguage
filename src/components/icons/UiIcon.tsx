@@ -31,6 +31,33 @@ function sanitizeAndRecolorSvg(raw: string): string | null {
   return svg;
 }
 
+/** In-memory, for the life of the tab — keyed by the resolved Storage URL
+ * (not the icon name), since that's what actually identifies the file
+ * content. Without this, every remount (any client-side navigation) redid
+ * the fetch-and-recolor pass and showed the built-in fallback icon again
+ * while it did, even though `useStorageImageOverride` itself already knew
+ * the URL instantly from its own cache. */
+const svgMarkupCache = new Map<string, string | null>();
+
+const SVG_STORAGE_PREFIX = "ui-icon-svg:";
+
+function readPersistedSvg(url: string): string | null {
+  try {
+    return localStorage.getItem(SVG_STORAGE_PREFIX + url);
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedSvg(url: string, svg: string) {
+  try {
+    localStorage.setItem(SVG_STORAGE_PREFIX + url, svg);
+  } catch {
+    // Private browsing / storage disabled — the in-memory cache still
+    // covers the rest of this tab's life.
+  }
+}
+
 /**
  * Renders a custom-uploaded icon for `name` if one exists in the public
  * `ui-icons` Storage bucket (named "<name>.png"/".svg" etc.), falling
@@ -66,7 +93,9 @@ export default function UiIcon({
 }) {
   const resolvedUrl = useStorageImageOverride("ui-icons", name);
   const isSvg = resolvedUrl?.toLowerCase().endsWith(".svg") ?? false;
-  const [svgMarkup, setSvgMarkup] = useState<string | null>(null);
+  const [svgMarkup, setSvgMarkup] = useState<string | null>(() =>
+    resolvedUrl ? (svgMarkupCache.get(resolvedUrl) ?? null) : null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -76,11 +105,24 @@ export default function UiIcon({
         setSvgMarkup(null);
         return;
       }
+
+      const known = svgMarkupCache.get(resolvedUrl) ?? readPersistedSvg(resolvedUrl);
+      if (known) {
+        svgMarkupCache.set(resolvedUrl, known);
+        if (!cancelled) setSvgMarkup(known);
+        return;
+      }
+
       try {
         const res = await fetch(resolvedUrl);
         if (!res.ok) throw new Error("fetch failed");
         const text = await res.text();
-        if (!cancelled) setSvgMarkup(sanitizeAndRecolorSvg(text));
+        const sanitized = sanitizeAndRecolorSvg(text);
+        if (sanitized) {
+          svgMarkupCache.set(resolvedUrl, sanitized);
+          writePersistedSvg(resolvedUrl, sanitized);
+        }
+        if (!cancelled) setSvgMarkup(sanitized);
       } catch {
         if (!cancelled) setSvgMarkup(null);
       }
