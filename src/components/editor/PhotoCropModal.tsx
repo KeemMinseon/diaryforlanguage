@@ -4,8 +4,13 @@ import { useCallback, useState } from "react";
 import Cropper from "react-easy-crop";
 import type { Area, Point } from "react-easy-crop";
 import { getCroppedImageBlob } from "@/lib/utils/cropImage";
+import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMask";
 
-const STAMP_ASPECT = 170 / 210;
+// Matches the actual stamp shape's own aspect ratio (see stampMask.ts) —
+// otherwise the crop preview shown here doesn't match what StampFrame's
+// object-fit: cover ends up clipping once the photo is actually placed in
+// the stamp, silently cutting a bit more off the sides than the user saw.
+const STAMP_ASPECT = STAMP_MASK_WIDTH / STAMP_MASK_HEIGHT;
 
 export default function PhotoCropModal({
   imageSrc,
