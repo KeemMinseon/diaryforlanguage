@@ -113,7 +113,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
             aria-label="단어장"
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
           >
-            <UiIcon name="book-line" className="h-5 w-5" alt="단어장">
+            <UiIcon name="book-open-line" className="h-5 w-5" alt="단어장">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
                 <path
                   d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11a2 2 0 0 1 2 2v14a1.5 1.5 0 0 0-1.5-1.5H4z"
