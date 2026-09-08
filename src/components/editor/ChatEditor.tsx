@@ -291,9 +291,12 @@ export default function ChatEditor({
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
+          className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
         >
-          ← 캘린더
+          <UiIcon name="back" className="h-3.5 w-3.5" alt="">
+            ←
+          </UiIcon>
+          캘린더
         </button>
         <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
           {dateLabel}
@@ -323,7 +326,9 @@ export default function ChatEditor({
                   <span className="text-[var(--ink-soft)] line-through">
                     <FuriganaText text={s.original} readings={r.readings} />
                   </span>
-                  <span aria-hidden="true">→</span>
+                  <UiIcon name="suggestion-arrow" className="h-3 w-3" alt="">
+                    <span aria-hidden="true">→</span>
+                  </UiIcon>
                   <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
                     <FuriganaText text={s.suggestion} readings={r.readings} />
                   </span>

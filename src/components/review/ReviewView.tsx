@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
+import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import HankoStamp from "@/components/stamps/HankoStamp";
 import FuriganaText from "@/components/review/FuriganaText";
@@ -105,9 +106,12 @@ export default function ReviewView({
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
+          className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
         >
-          ← 캘린더
+          <UiIcon name="back" className="h-3.5 w-3.5" alt="">
+            ←
+          </UiIcon>
+          캘린더
         </button>
         <div className="flex items-center gap-3">
           <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
@@ -267,7 +271,9 @@ export default function ReviewView({
                         <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
                           <FuriganaText text={s.original} readings={entry.readings} />
                         </span>
-                        <span aria-hidden="true">→</span>
+                        <UiIcon name="suggestion-arrow" className="h-3 w-3" alt="">
+                          <span aria-hidden="true">→</span>
+                        </UiIcon>
                         <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
                           <FuriganaText text={s.suggestion} readings={entry.readings} />
                         </span>

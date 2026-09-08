@@ -215,7 +215,9 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                     className="inline-flex items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-1.5 text-[13px]"
                   >
                     <span className="text-[var(--ink-soft)]">{s.original}</span>
-                    <span aria-hidden="true">→</span>
+                    <UiIcon name="suggestion-arrow" className="h-3 w-3" alt="">
+                      <span aria-hidden="true">→</span>
+                    </UiIcon>
                     <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
                       <FuriganaText text={s.suggestion} readings={s.readings} />
                     </span>
