@@ -60,25 +60,24 @@ export default function WordListView({ userId }: { userId: string }) {
 
   async function toggle(word: WordItem) {
     const next = !word.memorized;
-    const key = wordKey(word.original, word.suggestion);
+    const key = wordKey(word.text, word.reading);
     // Optimistic — this is a plain boolean flip a learner will tap
     // through many of in a row; waiting on the round trip before
     // reflecting it would make the list feel laggy for no benefit.
     setWords(
       (prev) =>
-        prev?.map((w) =>
-          wordKey(w.original, w.suggestion) === key ? { ...w, memorized: next } : w
-        ) ?? prev
+        prev?.map((w) => (wordKey(w.text, w.reading) === key ? { ...w, memorized: next } : w)) ??
+        prev
     );
     try {
-      await setWordMemorized(userId, word.original, word.suggestion, next);
+      await setWordMemorized(userId, word.text, word.reading, word.kind, next);
     } catch (err) {
       console.error(err);
       push("저장하지 못했어요. 다시 시도해 주세요.");
       setWords(
         (prev) =>
           prev?.map((w) =>
-            wordKey(w.original, w.suggestion) === key ? { ...w, memorized: !next } : w
+            wordKey(w.text, w.reading) === key ? { ...w, memorized: !next } : w
           ) ?? prev
       );
     }
@@ -130,7 +129,7 @@ export default function WordListView({ userId }: { userId: string }) {
 
       {words !== null && words.length === 0 && (
         <p className="text-sm text-[var(--ink-soft)]">
-          아직 모은 단어·표현이 없어요. 일기를 쓰고 첨삭을 받으면 여기에 쌓여요.
+          아직 모은 단어가 없어요. 일기를 쓰고 첨삭을 받으면 여기에 쌓여요.
         </p>
       )}
 
@@ -140,18 +139,16 @@ export default function WordListView({ userId }: { userId: string }) {
 
       <div className="flex flex-col gap-2">
         {visible.map((w) => {
-          const key = wordKey(w.original, w.suggestion);
+          const key = wordKey(w.text, w.reading);
           return (
             <div
               key={key}
-              className="flex items-start justify-between gap-3 rounded-xl bg-[var(--paper-raised)] p-4"
+              className="flex items-center justify-between gap-3 rounded-xl bg-[var(--paper-raised)] p-4"
             >
               <div className="flex flex-1 flex-col gap-1">
-                <span className="text-[12px] text-[var(--ink-soft)]">{w.original}</span>
-                <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
-                  <FuriganaText text={w.suggestion} readings={w.readings} />
+                <span className="font-[family-name:var(--font-diary)] text-lg font-medium text-[var(--ink)]">
+                  <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
                 </span>
-                {w.note && <p className="text-xs text-[var(--ink-soft)]">{w.note}</p>}
                 <span className="text-[11px] text-[var(--ink-soft)]">
                   {parseDateKey(w.lastSeen).toLocaleDateString("ko-KR", {
                     month: "long",

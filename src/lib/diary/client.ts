@@ -1,7 +1,14 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { DiaryEntry, DiaryParagraph, Reading, Suggestion, WordProgress } from "@/types/diary";
+import type {
+  DiaryEntry,
+  DiaryParagraph,
+  ReadingKind,
+  Reading,
+  Suggestion,
+  WordProgress,
+} from "@/types/diary";
 
 const PHOTO_BUCKET = "diary-photos";
 
@@ -22,15 +29,17 @@ export async function fetchMonthEntries(
 }
 
 /** Just enough of every entry to build the 단어장 word list — every day,
- * not scoped to one month, so a word only needs `original`/`suggestion`/
- * `readings`/`entry_date` rather than the full row. */
-export type WordSourceEntry = Pick<DiaryEntry, "entry_date" | "suggestions" | "readings">;
+ * not scoped to one month, so a word only needs `readings`/`entry_date`
+ * rather than the full row. Sourced from `readings`, not `suggestions`:
+ * a reading is always exactly one kanji compound or katakana word, where
+ * a suggestion can occasionally be a whole corrected sentence. */
+export type WordSourceEntry = Pick<DiaryEntry, "entry_date" | "readings">;
 
 export async function fetchAllEntriesForWords(userId: string): Promise<WordSourceEntry[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("diary_entries")
-    .select("entry_date, suggestions, readings")
+    .select("entry_date, readings")
     .eq("user_id", userId)
     .order("entry_date", { ascending: false });
   if (error) throw error;
@@ -44,20 +53,21 @@ export async function fetchWordProgress(userId: string): Promise<WordProgress[]>
   return (data ?? []) as WordProgress[];
 }
 
-/** Upserted by (user, original, suggestion) — the same word marked
- * memorized on one day carries that state everywhere else it appears. */
+/** Upserted by (user, text, reading) — the same word marked memorized on
+ * one day carries that state everywhere else it appears. */
 export async function setWordMemorized(
   userId: string,
-  original: string,
-  suggestion: string,
+  text: string,
+  reading: string,
+  kind: ReadingKind,
   memorized: boolean
 ): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase
     .from("word_progress")
     .upsert(
-      { user_id: userId, original, suggestion, memorized },
-      { onConflict: "user_id,original,suggestion" }
+      { user_id: userId, text, reading, kind, memorized },
+      { onConflict: "user_id,text,reading" }
     );
   if (error) throw error;
 }

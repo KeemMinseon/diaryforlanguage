@@ -148,17 +148,22 @@ create policy "ui icons authenticated delete" on storage.objects
   for delete using (bucket_id = 'ui-icons' and auth.role() = 'authenticated');
 
 -- Vocabulary review ("단어장"): tracks whether the learner has marked a
--- suggested word/expression as memorized, independent of which day(s) it
+-- reading (a kanji compound or katakana word, same shape as an entry's
+-- `readings` column) as memorized, independent of which day(s) it
 -- appeared on — the same word can resurface across many entries and
 -- should share one memorized/not state rather than one per occurrence.
+-- Keyed on `readings` rather than `suggestions`: a reading is always
+-- exactly one word/term, where a suggestion can occasionally be a whole
+-- corrected sentence — not what a vocabulary list should be built from.
 create table if not exists public.word_progress (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  original text not null,
-  suggestion text not null,
+  text text not null,
+  reading text not null,
+  kind text not null check (kind in ('kanji', 'katakana')),
   memorized boolean not null default false,
   updated_at timestamptz not null default now(),
-  unique (user_id, original, suggestion)
+  unique (user_id, text, reading)
 );
 
 create index if not exists word_progress_user_idx

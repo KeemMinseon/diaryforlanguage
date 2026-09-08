@@ -55,14 +55,18 @@ export interface DiaryEntry {
 
 export type DiaryEntryMap = Record<string, DiaryEntry>; // keyed by entry_date
 
-/** Whether the learner has marked one specific (original, suggestion)
- * word/expression pair as memorized — shared across every entry it
- * appears in, not tracked per-occurrence. See 단어장 (WordListView). */
+/** Whether the learner has marked one specific reading (a kanji compound
+ * or katakana word, same shape as `Reading`) as memorized — shared across
+ * every entry it appears in, not tracked per-occurrence. See 단어장
+ * (WordListView). Sourced from `readings` rather than `suggestions`: a
+ * reading is always exactly one word/term, where a suggestion can
+ * occasionally be a whole corrected sentence. */
 export interface WordProgress {
   id: string;
   user_id: string;
-  original: string;
-  suggestion: string;
+  text: string;
+  reading: string;
+  kind: ReadingKind;
   memorized: boolean;
   updated_at: string;
 }
