@@ -30,7 +30,7 @@ export default async function SettingsPage() {
         <span className="w-[52px]" aria-hidden="true" />
       </header>
 
-      <section className="card-elevated flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden rounded-2xl bg-[var(--paper-raised)]">
+      <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden rounded-2xl bg-[var(--paper-raised)]">
         {/* Both fixed for now — no picker yet, just the two rows they'll
             live in. Split apart since they're not the same thing: this
             app's own screens/copy (서비스 언어) versus the language the
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
       <form action="/auth/signout" method="post">
         <button
           type="submit"
-          className="card-elevated w-full rounded-2xl bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-black/[0.02]"
+          className="w-full rounded-2xl bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-black/[0.02]"
         >
           로그아웃
         </button>

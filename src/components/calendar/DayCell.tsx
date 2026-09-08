@@ -25,7 +25,7 @@ export default function DayCell({
     <div
       className={`group relative flex aspect-[1/1.3] flex-col overflow-visible rounded-xl p-1.5 transition ${
         isToday ? "border-[1.5px] border-[var(--ink)]" : "hover:border hover:border-[var(--paper-line)]"
-      } ${inCurrentMonth ? "card-elevated bg-[var(--paper-raised)]" : "bg-transparent opacity-40"} ${
+      } ${inCurrentMonth ? "bg-[var(--paper-raised)]" : "bg-transparent opacity-40"} ${
         clickable ? "cursor-pointer" : "cursor-default opacity-50"
       }`}
     >

@@ -116,7 +116,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
   return (
     <div
       key={key}
-      className="card-elevated flex flex-col gap-3 rounded-2xl bg-[var(--paper-raised)] p-4"
+      className="flex flex-col gap-3 rounded-2xl bg-[var(--paper-raised)] p-4"
     >
       <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)]">
         {buildHighlightSegments(r.text, r.suggestions).map((seg, si) =>
@@ -638,7 +638,7 @@ export default function ChatEditor({
           flex-1 as the feed left the actual textarea box visibly smaller
           than the feed area even though the two halves were equal height. */}
       <div className="flex min-h-0 flex-[1.4] flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
-        <div className="card-elevated flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
           {/* This backdrop is decoration only — every character in it is
               invisible, it just paints a highlight behind where a matched
               suggestion sits. The textarea on top keeps its own text fully
@@ -680,13 +680,13 @@ export default function ChatEditor({
           </div>
         </div>
 
-        <div className="card-elevated flex shrink-0 items-center gap-2.5 rounded-xl bg-[var(--paper-raised)] px-2.5 py-2">
+        <div className="flex shrink-0 items-center gap-2.5 rounded-xl bg-[var(--paper-raised)] px-2.5 py-2">
           <div className="w-10 shrink-0">
             <DiaryStamp
               stampKind={hasPhoto ? "photo" : "keyword"}
               stampKey={previewStampKey}
               photoUrl={previewPhotoUrl}
-              className="w-full"
+              className="w-full drop-shadow-md"
             />
           </div>
           <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">

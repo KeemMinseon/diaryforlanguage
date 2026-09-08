@@ -209,7 +209,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                 {group.words.map((s, i) => (
                   <span
                     key={i}
-                    className="card-elevated flex w-full flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-3 py-2"
+                    className="flex w-full flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-3 py-2"
                   >
                     {/* Color alone (soft original above, full-ink suggestion
                         below) already reads as "before → after" — a

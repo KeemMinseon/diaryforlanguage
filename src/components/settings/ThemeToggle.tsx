@@ -91,7 +91,7 @@ export default function ThemeToggle() {
             onClick={() => choose(o.value)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition ${
               pref === o.value
-                ? "card-elevated bg-[var(--paper-raised)] text-[var(--ink)]"
+                ? "bg-[var(--paper-raised)] text-[var(--ink)]"
                 : "text-[var(--ink-soft)]"
             }`}
           >

@@ -214,7 +214,7 @@ export default function ReviewView({
                 // Matches the calendar view's hanko-to-stamp ratio (42%,
                 // see StampedDay.tsx) instead of its own separately-tuned
                 // value, so the two screens read consistently.
-                <HankoStamp className="stamp-pop absolute -bottom-[10%] -right-[14%] w-[42%]" />
+                <HankoStamp className="stamp-pop absolute -bottom-[10%] -right-[14%] w-[42%] drop-shadow-md" />
               )}
             </div>
 
