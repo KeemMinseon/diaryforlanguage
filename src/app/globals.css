@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #e8e8e8;
+  /* Lighter than the old #e8e8e8 — against a reference with this same
+   * light-gray-page / near-white-card structure, that read as noticeably
+   * darker than intended; elevation was carrying entirely on that one
+   * color jump instead of also reading through a soft shadow (see
+   * --card-shadow below). */
+  --paper: #f2f2f3;
   --paper-raised: #ffffff;
   --paper-line: #e0e0e0;
   --ink: #2c2c2c;
@@ -10,6 +15,11 @@
    * not the muted brownish-red this used to be. */
   --shu: #eb5a36;
   --shu-soft: #f3ab97;
+  /* A soft, diffuse card elevation — two low-opacity layers rather than
+   * one harder shadow, closer to how the reference's cards read. */
+  --card-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.04);
 
   /* The device's own font, not a loaded webfont — one stack for every
    * role (body/heading/diary) rather than each specifying its own. */
@@ -17,6 +27,40 @@
     "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
   --font-heading: var(--font-body);
   --font-diary: var(--font-body);
+}
+
+/* Dark mode: applies automatically when the OS is dark and the learner
+ * hasn't explicitly picked light (see ThemeToggle.tsx), or always when
+ * they've explicitly picked dark — that's what the `data-theme` attribute
+ * on <html> is for (set by ThemeToggle, read back on load by the inline
+ * script in layout.tsx before first paint, to avoid a light-mode flash).
+ * Raised surfaces go *lighter* than the page here, not darker-via-white —
+ * a plain white card on a near-black page would be jarringly bright. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1c1c1e;
+    --paper-raised: #2c2c2e;
+    --paper-line: #3a3a3c;
+    --ink: #f2f2f2;
+    --ink-soft: #9a9a9e;
+    --shu: #ff7a52;
+    --shu-soft: #5a2c1e;
+    --card-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.3),
+      0 1px 2px rgba(0, 0, 0, 0.24);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1c1c1e;
+  --paper-raised: #2c2c2e;
+  --paper-line: #3a3a3c;
+  --ink: #f2f2f2;
+  --ink-soft: #9a9a9e;
+  --shu: #ff7a52;
+  --shu-soft: #5a2c1e;
+  --card-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
 @theme inline {
@@ -132,6 +176,12 @@ body {
   .page-slide-none {
     animation: none;
   }
+}
+
+/* Soft card elevation — see --card-shadow above. A shared class instead
+ * of repeating the shadow value at every call site. */
+.card-elevated {
+  box-shadow: var(--card-shadow);
 }
 
 ::selection {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import UiIcon from "@/components/icons/UiIcon";
+import ThemeToggle from "@/components/settings/ThemeToggle";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
@@ -29,18 +30,19 @@ export default async function SettingsPage() {
         <span className="w-[52px]" aria-hidden="true" />
       </header>
 
-      <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)]">
+      <section className="card-elevated flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden rounded-2xl bg-[var(--paper-raised)]">
         {/* Fixed for now — no picker yet, just the row this'll live in. */}
         <div className="flex items-center justify-between px-5 py-4">
           <span className="text-sm text-[var(--ink)]">일기 언어</span>
           <span className="text-sm text-[var(--ink-soft)]">일본어</span>
         </div>
+        <ThemeToggle />
       </section>
 
       <form action="/auth/signout" method="post">
         <button
           type="submit"
-          className="w-full rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-black/[0.02]"
+          className="card-elevated w-full rounded-2xl bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-black/[0.02]"
         >
           로그아웃
         </button>
