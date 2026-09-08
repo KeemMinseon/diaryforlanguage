@@ -95,6 +95,17 @@ function sanitizeSuggestions(raw: unknown, paragraph: string): Suggestion[] {
 // any new kanji/katakana the model introduces when translating a Korean
 // phrase the learner mixed in (the learner has never seen that word, so it
 // needs a reading even more than stuff they already typed themselves).
+//
+// `scanText.includes(text)` alone doesn't guarantee `text` is actually
+// kanji/katakana — an app name or other Latin-script word the learner
+// happened to type is just as much a substring match, and the model has
+// occasionally labeled one "kanji"/"katakana" anyway (observed: "Duolingo"
+// coming back as a submitted reading). These anchored character-class
+// checks catch that: every character in `text` must actually belong to
+// the claimed script.
+const KANJI_ONLY_RE = /^[一-鿿㐀-䶿]+$/u;
+const KATAKANA_ONLY_RE = /^[゠-ヿー]+$/u;
+
 function sanitizeReadings(raw: unknown, scanText: string): Reading[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -105,7 +116,10 @@ function sanitizeReadings(raw: unknown, scanText: string): Reading[] {
         typeof (r as Reading).text === "string" &&
         typeof (r as Reading).reading === "string" &&
         ((r as Reading).kind === "kanji" || (r as Reading).kind === "katakana") &&
-        scanText.includes((r as Reading).text)
+        scanText.includes((r as Reading).text) &&
+        ((r as Reading).kind === "kanji"
+          ? KANJI_ONLY_RE.test((r as Reading).text)
+          : KATAKANA_ONLY_RE.test((r as Reading).text))
     )
     .map((r) => ({
       text: r.text,
