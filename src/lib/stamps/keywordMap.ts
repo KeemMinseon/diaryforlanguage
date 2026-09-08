@@ -28,11 +28,11 @@ export const STAMP_IDS = [
   "work",
   "cat",
   "flower",
-  // Added on request — no built-in hand-drawn icon for these yet (StampIcon's
-  // switch falls through to the generic "default" paper icon until one
-  // exists), but a custom image uploaded to the "stamp-icons" Storage bucket
-  // as "<id>.<ext>" (e.g. "celebration.svg") overrides that immediately, the
-  // same way every other keyword stamp's icon can be replaced. See
+  // Added on request — each now has its own built-in hand-drawn icon in
+  // StampIcon.tsx, same line-art style as the original set above. A custom
+  // image uploaded to the "stamp-icons" Storage bucket as "<id>.<ext>"
+  // (e.g. "celebration.svg") still overrides that immediately, the same
+  // way every other keyword stamp's icon can be replaced. See
   // KeywordIcon.tsx / useStorageImageOverride for that mechanism.
   "celebration",
   "shopping",
