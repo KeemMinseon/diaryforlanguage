@@ -482,8 +482,8 @@ export default function ChatEditor({
 
       toast(
         initialEntry
-          ? "이어서 쓴 내용까지 添削 도장이 다시 찍혔어요! 📮"
-          : "오늘 일기에 添削 도장이 찍혔어요! 📮"
+          ? "이어서 쓴 내용까지 도장이 다시 찍혔어요! 📮"
+          : "오늘 일기에 도장이 찍혔어요! 📮"
       );
       const month = dateKey.slice(0, 7);
       router.push(`/?month=${month}`);

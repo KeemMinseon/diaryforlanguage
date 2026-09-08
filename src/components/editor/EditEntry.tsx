@@ -121,7 +121,7 @@ export default function EditEntry({
         readings: reviewData.readings ?? [],
       });
 
-      toast("수정한 일기에 添削 도장이 다시 찍혔어요! 📮");
+      toast("수정한 일기에 도장이 다시 찍혔어요! 📮");
       onSaved();
     } catch (err) {
       console.error(err);

@@ -202,7 +202,7 @@ export default function ReviewView({
               {isPending && (
                 <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
-                  添削 검토 중이에요…
+                  검토 중이에요…
                 </p>
               )}
               {isFailed && (
