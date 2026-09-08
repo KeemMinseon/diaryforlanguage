@@ -14,26 +14,37 @@ const DARK_STATUS_COLOR = "#1c1c1e";
  * explicit override", letting the `prefers-color-scheme` media query in
  * globals.css decide.
  *
- * Also force-syncs the OS status bar color the same way that script does:
- * the two `<meta name="theme-color" media="...">` tags layout.tsx renders
- * only ever follow the OS's own light/dark setting on their own, so
- * picking "다크" while the OS itself is set to light left the status bar
- * on the *light* entry — right page, wrong status bar. Forcing both tags
- * to the same color sidesteps needing to know which one the browser
- * would've actually picked; "system" resets each tag back to its own
- * distinct color so the OS media query decides between them again. */
+ * Also force-syncs the OS status bar color the same way that script does,
+ * by upserting the same `#theme-color-override` tag rather than mutating
+ * Next's own two `media`-scoped theme-color tags directly — see the long
+ * comment on THEME_INIT_SCRIPT in layout.tsx for why: React's hydration
+ * reconciles those two and silently undoes a direct mutation of their
+ * `content` the moment it runs. This tag has no `media` condition (always
+ * matches) and isn't part of Next's metadata tree, so nothing reconciles
+ * it away, and a browser resolving multiple matching theme-color tags
+ * takes the last one in document order — this one, appended after. */
+function syncStatusBarMeta(pref: ThemePreference) {
+  const isDark =
+    pref === "dark" ||
+    (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const color = isDark ? DARK_STATUS_COLOR : LIGHT_STATUS_COLOR;
+  let tag = document.getElementById("theme-color-override") as HTMLMetaElement | null;
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.id = "theme-color-override";
+    tag.setAttribute("name", "theme-color");
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute("content", color);
+}
+
 function applyTheme(pref: ThemePreference) {
   if (pref === "system") {
     document.documentElement.removeAttribute("data-theme");
   } else {
     document.documentElement.setAttribute("data-theme", pref);
   }
-
-  const forced =
-    pref === "dark" ? DARK_STATUS_COLOR : pref === "light" ? LIGHT_STATUS_COLOR : null;
-  document.querySelectorAll('meta[name="theme-color"]').forEach((tag, i) => {
-    tag.setAttribute("content", forced ?? (i === 0 ? LIGHT_STATUS_COLOR : DARK_STATUS_COLOR));
-  });
+  syncStatusBarMeta(pref);
 }
 
 const OPTIONS: { value: ThemePreference; label: string }[] = [

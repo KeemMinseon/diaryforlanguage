@@ -43,24 +43,58 @@ export const viewport: Viewport = {
 // falling through to the plain `prefers-color-scheme` media query in
 // globals.css exactly as if nothing had ever been chosen.
 //
-// Also force-syncs the two `<meta name="theme-color" media="...">` tags
-// above to match — those only ever follow the OS's own setting on their
-// own, so picking "다크" while the OS itself is set to light left the
-// status bar on the *light* entry (right page, wrong status bar). Forcing
-// both tags to the same color sidesteps needing to know which one the
-// browser would've actually picked. ThemeToggle.tsx repeats this same
-// logic for a change made after this initial load.
+// Also force-syncs the OS status bar color — the two `<meta
+// name="theme-color" media="...">` tags above only ever follow the OS's
+// own light/dark setting on their own, so picking "다크" while the OS
+// itself is set to light (or vice versa) left the status bar on the
+// wrong entry. This resolves the right color in JS instead of trusting
+// that `media` matching.
+//
+// It does *not* just mutate those two tags' `content` in place, though —
+// they're part of Next's own managed metadata output, and React
+// reconciles them on hydration. Directly overwriting their `content`
+// first made hydration detect a mismatch against what it expected to
+// render and patch a *third* tag back in with the original, unmutated
+// color, undoing the fix the moment hydration finished (verified via a
+// post-hydration DOM dump turning up three theme-color tags instead of
+// two). Appending one extra tag of our own instead — never touched by
+// Next's metadata tree, so nothing reconciles it away — sidesteps that:
+// it carries no `media` condition (always matches), and a browser
+// resolving multiple matching theme-color tags takes the *last* one in
+// document order, so this one wins over Next's pair without needing to
+// touch them at all.
+//
+// The change listener keeps this correct if the OS's own light/dark
+// setting flips while the page is already open and no explicit choice
+// is active — otherwise only the *next* full reload would pick it up.
+// This script tag is part of the root layout's persistent <head>, so
+// (unlike a component's effect) it isn't torn down by client-side
+// navigation and only needs to attach this listener once.
+// ThemeToggle.tsx repeats the same resolve-and-write logic for a change
+// made after this initial load.
 const THEME_INIT_SCRIPT = `
 try {
+  var LIGHT = "#f2f2f3", DARK = "#1c1c1e";
+  var media = window.matchMedia("(prefers-color-scheme: dark)");
+  function syncStatusBar() {
+    var t = localStorage.getItem("theme-preference");
+    var isDark = t === "dark" || (t !== "light" && media.matches);
+    var color = isDark ? DARK : LIGHT;
+    var tag = document.getElementById("theme-color-override");
+    if (!tag) {
+      tag = document.createElement("meta");
+      tag.id = "theme-color-override";
+      tag.setAttribute("name", "theme-color");
+      document.head.appendChild(tag);
+    }
+    tag.setAttribute("content", color);
+  }
   var t = localStorage.getItem("theme-preference");
   if (t === "light" || t === "dark") {
     document.documentElement.setAttribute("data-theme", t);
   }
-  var color = t === "dark" ? "#1c1c1e" : t === "light" ? "#f2f2f3" : null;
-  if (color) {
-    var tags = document.querySelectorAll('meta[name="theme-color"]');
-    for (var i = 0; i < tags.length; i++) tags[i].setAttribute("content", color);
-  }
+  syncStatusBar();
+  media.addEventListener("change", syncStatusBar);
 } catch (e) {}
 `;
 
