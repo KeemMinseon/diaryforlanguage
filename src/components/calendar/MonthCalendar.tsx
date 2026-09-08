@@ -209,18 +209,14 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                 {group.words.map((s, i) => (
                   <span
                     key={i}
-                    className="flex w-full flex-col gap-1 rounded-[10px] border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-[13px]"
+                    className="flex w-full flex-col gap-1 rounded-[10px] border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2"
                   >
-                    <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
-                      {s.original}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <UiIcon name="arrow-right-line" className="h-3 w-3 shrink-0 rotate-90" alt="">
-                        <span aria-hidden="true">↓</span>
-                      </UiIcon>
-                      <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
-                        <FuriganaText text={s.suggestion} readings={s.readings} />
-                      </span>
+                    {/* Color alone (soft original above, full-ink suggestion
+                        below) already reads as "before → after" — a
+                        strikethrough and arrow on top of that was redundant. */}
+                    <span className="text-[12px] text-[var(--ink-soft)]">{s.original}</span>
+                    <span className="font-[family-name:var(--font-diary)] text-[15px] font-medium text-[var(--ink)]">
+                      <FuriganaText text={s.suggestion} readings={s.readings} />
                     </span>
                   </span>
                 ))}
