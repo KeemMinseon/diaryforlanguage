@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import UiIcon from "@/components/icons/UiIcon";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
@@ -12,8 +13,14 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        <Link href="/" className="text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]">
-          ← 캘린더
+        <Link
+          href="/"
+          className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
+        >
+          <UiIcon name="back" className="h-3.5 w-3.5" alt="">
+            ←
+          </UiIcon>
+          캘린더
         </Link>
         <h1 className="font-[family-name:var(--font-heading)] text-lg text-[var(--ink)]">설정</h1>
         <span className="w-[52px]" aria-hidden="true" />

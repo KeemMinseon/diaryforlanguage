@@ -24,7 +24,14 @@ export default function UiIcon({
 }) {
   const resolvedUrl = useStorageImageOverride("ui-icons", name);
 
-  if (!resolvedUrl) return <>{children}</>;
+  if (!resolvedUrl) {
+    // A bare fragment wouldn't be a real box — flex `gap` on a parent row
+    // (e.g. an icon next to a text label) has nothing to apply to between
+    // two raw text nodes, so the space next to the label silently
+    // disappears. Wrapping in an inline-flex span fixes that without
+    // constraining the fallback glyph's own natural size.
+    return <span className="inline-flex items-center justify-center">{children}</span>;
+  }
 
   return (
     // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time

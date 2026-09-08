@@ -139,10 +139,12 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={() => goToMonth(year, month - 1)}
-          className="rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+          className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="이전 달"
         >
-          ←
+          <UiIcon name="arrow-left" className="h-4 w-4" alt="">
+            ←
+          </UiIcon>
         </button>
         <p className="font-[family-name:var(--font-heading)] text-lg text-[var(--ink)]">
           {year}년 {month + 1}월
@@ -150,10 +152,12 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={() => goToMonth(year, month + 1)}
-          className="rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+          className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="다음 달"
         >
-          →
+          <UiIcon name="arrow-right" className="h-4 w-4" alt="">
+            →
+          </UiIcon>
         </button>
       </div>
 
