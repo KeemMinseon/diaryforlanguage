@@ -23,7 +23,7 @@ export default function HankoStamp({ className }: { className?: string }) {
       className={`aspect-square ${className ?? ""}`}
       style={{
         position: "absolute",
-        color: "var(--shu, #b8654f)",
+        color: "var(--shu, #eb5a36)",
         transform: "rotate(-11deg)",
         pointerEvents: "none",
       }}

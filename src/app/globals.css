@@ -6,8 +6,10 @@
   --paper-line: #e0e0e0;
   --ink: #2c2c2c;
   --ink-soft: #888888;
-  --shu: #b8654f;
-  --shu-soft: #d9a08f;
+  /* True vermillion (朱色/주색) — the traditional red-ink-seal color,
+   * not the muted brownish-red this used to be. */
+  --shu: #eb5a36;
+  --shu-soft: #f3ab97;
 
   /* The device's own font, not a loaded webfont — one stack for every
    * role (body/heading/diary) rather than each specifying its own. */
@@ -30,9 +32,7 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.4), transparent 60%),
-    var(--paper);
+  background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
   min-height: 100dvh;
