@@ -26,7 +26,6 @@ export const STAMP_IDS = [
   "joy",
   "sad",
   "work",
-  "friend",
   "cat",
   "flower",
   // Added on request — no built-in hand-drawn icon for these yet (StampIcon's
@@ -44,6 +43,26 @@ export const STAMP_IDS = [
   "dog",
   "cloud",
   "bread",
+  // "friend" was dropped — its single icon didn't fit every friend-related
+  // entry equally well. Split by what the entry is actually about instead:
+  // an actual get-together/plan reads as "calendar", just mentioning a
+  // friend in passing (e.g. while talking about something else) reads as
+  // "chat".
+  "calendar",
+  "chat",
+  // Re-split from "joy": romantic love gets its own icon now that one
+  // exists; general happiness/gratitude stays under "joy".
+  "heart",
+  "mountain",
+  "ocean",
+  "rainbow",
+  "tomato",
+  "gimbap",
+  "sushi",
+  "bibimbap",
+  "burger",
+  "pizza",
+  "salad",
   "default",
 ] as const;
 
@@ -54,7 +73,7 @@ type Locale = "ja";
 // Ordered: earlier categories win when multiple keywords match in the same
 // entry. Weather goes first (explicit, rarely the *point* of an entry that
 // also mentions something else). Specific, eventful categories come next —
-// a day is more "friend"/"work"/"travel" than it is "food" just because a
+// a day is more "calendar"/"work"/"travel" than it is "food" just because a
 // meal got mentioned along the way. "coffee"/"food" go last, right before
 // the fallback: almost every entry mentions eating or drinking *something*
 // incidentally ("식사를 걸렀다", "야근하고 늦게 저녁을 먹었다"), so a bare
@@ -66,8 +85,15 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "snow", words: ["雪", "雪だるま", "雪合戦"] },
     { id: "sun", words: ["晴れ", "太陽", "日差し", "暑い", "猛暑"] },
     { id: "cloud", words: ["曇り", "くもり"] },
+    { id: "rainbow", words: ["虹"] },
+    { id: "mountain", words: ["山"] },
+    { id: "ocean", words: ["海"] },
     { id: "flower", words: ["花", "桜", "公園", "紅葉", "植物", "庭"] },
     { id: "celebration", words: ["誕生日", "お祝い", "記念日", "プレゼント"] },
+    // An actual get-together (or a firm plan for one) reads as "calendar" —
+    // a work drinking party counts too, it's still a specific plan/event,
+    // not just friend small talk.
+    { id: "calendar", words: ["会った", "約束", "飲み会"] },
     { id: "travel", words: ["旅行", "電車", "空港", "飛行機", "駅", "旅", "海外", "ホテル", "新幹線"] },
     { id: "shopping", words: ["買い物", "ショッピング", "デパート", "セール"] },
     { id: "exercise", words: ["運動", "走る", "ジム", "散歩", "筋トレ", "ヨガ", "水泳", "サッカー", "バスケ"] },
@@ -76,16 +102,27 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "book", words: ["本", "読書", "小説", "漫画", "図書館", "雑誌"] },
     { id: "cat", words: ["猫", "ペット", "動物"] },
     { id: "dog", words: ["犬"] },
-    { id: "friend", words: ["友達", "友人", "会った", "同僚", "飲み会"] },
-    { id: "joy", words: ["好き", "嬉しい", "楽しい", "幸せ", "恋", "感謝"] },
+    // Just naming a friend, without it being about a specific meetup or
+    // plan (that's "calendar" above) — closer to mentioning them in
+    // passing than the point of the entry.
+    { id: "chat", words: ["友達", "友人"] },
+    { id: "heart", words: ["恋"] },
+    { id: "joy", words: ["好き", "嬉しい", "楽しい", "幸せ", "感謝"] },
     { id: "sad", words: ["悲しい", "泣", "辛い", "寂しい", "落ち込", "不安", "心配"] },
     { id: "study", words: ["勉強", "宿題", "テスト", "試験", "授業", "日本語", "留学"] },
-    { id: "work", words: ["仕事", "会社", "残業", "会議", "出張", "上司"] },
+    { id: "work", words: ["仕事", "会社", "残業", "会議", "出張", "上司", "同僚"] },
     { id: "sleep", words: ["眠い", "寝る", "寝坊", "布団", "疲れ", "寝不足"] },
     { id: "phone", words: ["電話", "メッセージ", "LINE"] },
     { id: "rest", words: ["休み", "のんびり", "ゆっくり", "リラックス"] },
     { id: "cook", words: ["自炊", "レシピ", "キッチン", "包丁"] },
     { id: "bread", words: ["パン", "ベーカリー"] },
+    { id: "tomato", words: ["トマト"] },
+    { id: "gimbap", words: ["キンパ"] },
+    { id: "sushi", words: ["寿司", "すし"] },
+    { id: "bibimbap", words: ["ビビンバ"] },
+    { id: "burger", words: ["ハンバーガー"] },
+    { id: "pizza", words: ["ピザ"] },
+    { id: "salad", words: ["サラダ"] },
     { id: "coffee", words: ["コーヒー", "カフェ", "紅茶", "お茶"] },
     { id: "food", words: ["ご飯", "食べ", "料理", "ラーメン", "美味し", "レストラン", "居酒屋"] },
   ],

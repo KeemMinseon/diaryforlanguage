@@ -133,15 +133,6 @@ function Icon({ id }: { id: StampId }) {
           <line x1="18" y1="56" x2="82" y2="56" />
         </g>
       );
-    case "friend":
-      return (
-        <g {...common}>
-          <circle cx="36" cy="38" r="14" />
-          <circle cx="66" cy="42" r="11" />
-          <path d="M14 78c2-16 14-24 22-24s18 6 22 18" />
-          <path d="M58 78c2-12 8-20 18-20 8 0 14 6 16 16" />
-        </g>
-      );
     case "cat":
       return (
         <g {...common}>
