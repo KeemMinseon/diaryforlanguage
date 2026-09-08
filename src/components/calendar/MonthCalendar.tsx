@@ -115,7 +115,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
           aria-label="설정"
           className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
         >
-          <UiIcon name="settings" className="h-5 w-5" alt="설정">
+          <UiIcon name="settings-line" className="h-5 w-5" alt="설정">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
               <path
                 d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
@@ -142,7 +142,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
           className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="이전 달"
         >
-          <UiIcon name="bracket" className="h-4 w-4" alt="">
+          <UiIcon name="bracket-left-line" className="h-4 w-4" alt="">
             ←
           </UiIcon>
         </button>
@@ -155,7 +155,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
           className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="다음 달"
         >
-          <UiIcon name="bracket" flip className="h-4 w-4" alt="">
+          <UiIcon name="bracket-right-line" className="h-4 w-4" alt="">
             →
           </UiIcon>
         </button>
@@ -215,7 +215,7 @@ export default function MonthCalendar({ userId }: { userId: string }) {
                     className="inline-flex items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-1.5 text-[13px]"
                   >
                     <span className="text-[var(--ink-soft)]">{s.original}</span>
-                    <UiIcon name="arrow" className="h-3 w-3" alt="">
+                    <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
                       <span aria-hidden="true">→</span>
                     </UiIcon>
                     <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">

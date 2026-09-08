@@ -161,7 +161,7 @@ export default function EditEntry({
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-white px-3 py-2 text-xs text-[var(--ink)]"
             >
-              <UiIcon name="camera" className="h-3.5 w-3.5" alt="">
+              <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
                 📷
               </UiIcon>
               사진 첨부

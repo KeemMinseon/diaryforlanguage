@@ -108,7 +108,7 @@ export default function ReviewView({
           onClick={() => router.push("/")}
           className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
         >
-          <UiIcon name="bracket" className="h-3.5 w-3.5" alt="">
+          <UiIcon name="bracket-left-line" className="h-3.5 w-3.5" alt="">
             ←
           </UiIcon>
           캘린더
@@ -271,7 +271,7 @@ export default function ReviewView({
                         <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
                           <FuriganaText text={s.original} readings={entry.readings} />
                         </span>
-                        <UiIcon name="arrow" className="h-3 w-3" alt="">
+                        <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
                           <span aria-hidden="true">→</span>
                         </UiIcon>
                         <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">

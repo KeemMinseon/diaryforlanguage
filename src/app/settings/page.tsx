@@ -17,7 +17,7 @@ export default async function SettingsPage() {
           href="/"
           className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
         >
-          <UiIcon name="bracket" className="h-3.5 w-3.5" alt="">
+          <UiIcon name="bracket-left-line" className="h-3.5 w-3.5" alt="">
             ←
           </UiIcon>
           캘린더
