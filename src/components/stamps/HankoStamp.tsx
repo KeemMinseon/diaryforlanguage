@@ -7,9 +7,15 @@ import UiIcon from "@/components/icons/UiIcon";
  *
  * The seal artwork is swappable via the same Storage-upload override
  * mechanism as other UI icons (slot: "verified-badge-fill"). The ink
- * color, rotation, and multiply blend stay on this wrapper regardless of
- * which artwork ends up inside it — that's the stamping *effect*, not
- * part of any one icon's own art.
+ * color and rotation stay on this wrapper regardless of which artwork
+ * ends up inside it — that's the stamping *effect*, not part of any one
+ * icon's own art.
+ *
+ * No blend mode here — this used to sit under `mixBlendMode: "multiply"`
+ * for a paper-ink look, but multiply darkens toward whatever's underneath,
+ * so on a dark photo stamp (a night shot, say) the red ink crushed toward
+ * black and the seal all but disappeared. Plain opaque color reads clearly
+ * over any photo, at the cost of that translucent-ink look on light ones.
  */
 export default function HankoStamp({ className }: { className?: string }) {
   return (
@@ -18,7 +24,6 @@ export default function HankoStamp({ className }: { className?: string }) {
       style={{
         position: "absolute",
         color: "var(--shu, #b8654f)",
-        mixBlendMode: "multiply",
         transform: "rotate(-11deg)",
         pointerEvents: "none",
       }}
