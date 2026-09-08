@@ -260,24 +260,24 @@ export default function ReviewView({
                     <div
                       key={i}
                       onClick={() => setActiveIndex(i)}
-                      className={`cursor-pointer rounded-xl border p-4 transition ${
+                      className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-4 transition ${
                         activeIndex === i
                           ? "border-[var(--ink)] bg-black/5"
                           : "border-[var(--paper-line)] bg-[var(--paper-raised)]"
                       }`}
                     >
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <span className="text-[var(--ink-soft)] line-through decoration-[var(--ink-soft)]">
-                          <FuriganaText text={s.original} readings={entry.readings} />
-                        </span>
-                        <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
-                          <span aria-hidden="true">→</span>
-                        </UiIcon>
-                        <span className="font-[family-name:var(--font-diary)] font-medium text-[var(--ink)]">
-                          <FuriganaText text={s.suggestion} readings={entry.readings} />
-                        </span>
-                      </div>
-                      {s.note && <p className="mt-1.5 text-xs text-[var(--ink-soft)]">{s.note}</p>}
+                      {/* Original → suggestion → guide note, stacked in that
+                          reading order — color alone (soft original, full-ink
+                          suggestion) already reads as "before → after", so no
+                          strikethrough/arrow needed on top of that (same as
+                          the calendar's month word list). */}
+                      <span className="text-[13px] text-[var(--ink-soft)]">
+                        <FuriganaText text={s.original} readings={entry.readings} />
+                      </span>
+                      <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
+                        <FuriganaText text={s.suggestion} readings={entry.readings} />
+                      </span>
+                      {s.note && <p className="mt-0.5 text-xs text-[var(--ink-soft)]">{s.note}</p>}
                     </div>
                   ))}
                 </section>
