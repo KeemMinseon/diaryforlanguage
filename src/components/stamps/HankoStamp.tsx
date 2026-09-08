@@ -6,7 +6,7 @@ import UiIcon from "@/components/icons/UiIcon";
  * by the parent (which should be `position: relative`).
  *
  * The seal artwork is swappable via the same Storage-upload override
- * mechanism as other UI icons (slot: "verified-badge-fill"). The ink
+ * mechanism as other UI icons (slot: "verified-badge"). The ink
  * color and rotation stay on this wrapper regardless of which artwork
  * ends up inside it — that's the stamping *effect*, not part of any one
  * icon's own art.
@@ -29,7 +29,7 @@ export default function HankoStamp({ className }: { className?: string }) {
       }}
       aria-hidden="true"
     >
-      <UiIcon name="verified-badge-fill" className="h-full w-full" alt="">
+      <UiIcon name="verified-badge" className="h-full w-full" alt="">
         <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
           <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" strokeWidth="5" />
           <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" strokeWidth="2.5" />

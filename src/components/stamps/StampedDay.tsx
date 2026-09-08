@@ -21,7 +21,10 @@ export default function StampedDay({
         className="w-full h-full"
       />
       {entry.status === "reviewed" && (
-        <HankoStamp className="absolute -bottom-[10%] -right-[14%] w-[52%] h-[52%]" />
+        // 80% of the previous 52% — the calendar grid is small enough that
+        // the hanko at full size read as crowding out the stamp artwork
+        // itself.
+        <HankoStamp className="absolute -bottom-[10%] -right-[14%] w-[42%] h-[42%]" />
       )}
     </div>
   );
