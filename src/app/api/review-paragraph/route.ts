@@ -253,7 +253,21 @@ export async function POST(request: Request) {
   const priorText = typeof body.priorText === "string" ? body.priorText : "";
 
   try {
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      // Comfortably under this route's `maxDuration` (45s) so a slow
+      // model response surfaces as our own friendly error in the catch
+      // block below, instead of the platform silently killing the
+      // function once its own timeout fires first — that skips this
+      // catch entirely and hands the client a much uglier, unhandled
+      // failure with no Korean error message at all.
+      timeout: 35_000,
+      // One retry is enough to smooth over a single transient blip (a
+      // dropped connection, a momentary 429/5xx) — the SDK's own default
+      // (2) risks stacking multiple full-length attempts past
+      // `maxDuration` on top of each other.
+      maxRetries: 1,
+    });
     const response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 1200,
