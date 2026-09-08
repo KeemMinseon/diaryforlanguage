@@ -107,29 +107,53 @@ export default function MonthCalendar({ userId }: { userId: string }) {
         <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
           우표일기
         </h1>
-        <Link
-          href="/settings"
-          aria-label="설정"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
-        >
-          <UiIcon name="settings-line" className="h-5 w-5" alt="설정">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-              <path
-                d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M19.4 13.5a1.7 1.7 0 0 0 .35 1.9l.05.05a2 2 0 1 1-2.85 2.85l-.05-.05a1.7 1.7 0 0 0-1.9-.35 1.7 1.7 0 0 0-1 1.55V19.6a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.9.35l-.05.05a2 2 0 1 1-2.85-2.85l.05-.05a1.7 1.7 0 0 0 .35-1.9 1.7 1.7 0 0 0-1.55-1H4.4a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.35-1.9l-.05-.05A2 2 0 1 1 8.48 4.4l.05.05a1.7 1.7 0 0 0 1.9.35H10.5a1.7 1.7 0 0 0 1-1.55V3.4a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.9-.35l.05-.05a2 2 0 1 1 2.85 2.85l-.05.05a1.7 1.7 0 0 0-.35 1.9V9.5a1.7 1.7 0 0 0 1.55 1H19.6a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.55 1z"
-                stroke="currentColor"
-                strokeWidth={1.5}
-                strokeLinejoin="round"
-              />
-            </svg>
-          </UiIcon>
-        </Link>
+        <div className="flex items-center gap-1">
+          <Link
+            href="/words"
+            aria-label="단어장"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
+          >
+            <UiIcon name="book-line" className="h-5 w-5" alt="단어장">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                <path
+                  d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11a2 2 0 0 1 2 2v14a1.5 1.5 0 0 0-1.5-1.5H4z"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13a2 2 0 0 0-2 2v14a1.5 1.5 0 0 1 1.5-1.5H20z"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </UiIcon>
+          </Link>
+          <Link
+            href="/settings"
+            aria-label="설정"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
+          >
+            <UiIcon name="settings-line" className="h-5 w-5" alt="설정">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                <path
+                  d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M19.4 13.5a1.7 1.7 0 0 0 .35 1.9l.05.05a2 2 0 1 1-2.85 2.85l-.05-.05a1.7 1.7 0 0 0-1.9-.35 1.7 1.7 0 0 0-1 1.55V19.6a2 2 0 1 1-4 0v-.08a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.9.35l-.05.05a2 2 0 1 1-2.85-2.85l.05-.05a1.7 1.7 0 0 0 .35-1.9 1.7 1.7 0 0 0-1.55-1H4.4a2 2 0 1 1 0-4h.08a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.35-1.9l-.05-.05A2 2 0 1 1 8.48 4.4l.05.05a1.7 1.7 0 0 0 1.9.35H10.5a1.7 1.7 0 0 0 1-1.55V3.4a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.9-.35l.05-.05a2 2 0 1 1 2.85 2.85l-.05.05a1.7 1.7 0 0 0-.35 1.9V9.5a1.7 1.7 0 0 0 1.55 1H19.6a2 2 0 1 1 0 4h-.08a1.7 1.7 0 0 0-1.55 1z"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </UiIcon>
+          </Link>
+        </div>
       </header>
 
       <div className="flex items-center justify-between">

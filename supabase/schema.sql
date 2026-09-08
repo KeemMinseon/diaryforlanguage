@@ -147,6 +147,48 @@ drop policy if exists "ui icons authenticated delete" on storage.objects;
 create policy "ui icons authenticated delete" on storage.objects
   for delete using (bucket_id = 'ui-icons' and auth.role() = 'authenticated');
 
+-- Vocabulary review ("단어장"): tracks whether the learner has marked a
+-- suggested word/expression as memorized, independent of which day(s) it
+-- appeared on — the same word can resurface across many entries and
+-- should share one memorized/not state rather than one per occurrence.
+create table if not exists public.word_progress (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  original text not null,
+  suggestion text not null,
+  memorized boolean not null default false,
+  updated_at timestamptz not null default now(),
+  unique (user_id, original, suggestion)
+);
+
+create index if not exists word_progress_user_idx
+  on public.word_progress (user_id);
+
+alter table public.word_progress enable row level security;
+
+drop policy if exists "select own word progress" on public.word_progress;
+create policy "select own word progress" on public.word_progress
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "insert own word progress" on public.word_progress;
+create policy "insert own word progress" on public.word_progress
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "update own word progress" on public.word_progress;
+create policy "update own word progress" on public.word_progress
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "delete own word progress" on public.word_progress;
+create policy "delete own word progress" on public.word_progress
+  for delete using (auth.uid() = user_id);
+
+-- Reuses the same set_updated_at() trigger function diary_entries defines
+-- above — already created by the time this table is (re-)created.
+drop trigger if exists trg_word_progress_updated_at on public.word_progress;
+create trigger trg_word_progress_updated_at
+  before update on public.word_progress
+  for each row execute procedure public.set_updated_at();
+
 -- Optional: enable Realtime updates on this table (Database → Replication)
 -- if you want instant hanko-stamp toasts instead of the client's polling
 -- fallback. Uncomment if your project doesn't already publish it:

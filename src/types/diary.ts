@@ -54,3 +54,15 @@ export interface DiaryEntry {
 }
 
 export type DiaryEntryMap = Record<string, DiaryEntry>; // keyed by entry_date
+
+/** Whether the learner has marked one specific (original, suggestion)
+ * word/expression pair as memorized — shared across every entry it
+ * appears in, not tracked per-occurrence. See 단어장 (WordListView). */
+export interface WordProgress {
+  id: string;
+  user_id: string;
+  original: string;
+  suggestion: string;
+  memorized: boolean;
+  updated_at: string;
+}

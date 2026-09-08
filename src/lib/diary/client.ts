@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import type { DiaryEntry, DiaryParagraph, Reading, Suggestion } from "@/types/diary";
+import type { DiaryEntry, DiaryParagraph, Reading, Suggestion, WordProgress } from "@/types/diary";
 
 const PHOTO_BUCKET = "diary-photos";
 
@@ -19,6 +19,47 @@ export async function fetchMonthEntries(
     .lte("entry_date", monthEndKey);
   if (error) throw error;
   return (data ?? []) as DiaryEntry[];
+}
+
+/** Just enough of every entry to build the 단어장 word list — every day,
+ * not scoped to one month, so a word only needs `original`/`suggestion`/
+ * `readings`/`entry_date` rather than the full row. */
+export type WordSourceEntry = Pick<DiaryEntry, "entry_date" | "suggestions" | "readings">;
+
+export async function fetchAllEntriesForWords(userId: string): Promise<WordSourceEntry[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("diary_entries")
+    .select("entry_date, suggestions, readings")
+    .eq("user_id", userId)
+    .order("entry_date", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as WordSourceEntry[];
+}
+
+export async function fetchWordProgress(userId: string): Promise<WordProgress[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("word_progress").select("*").eq("user_id", userId);
+  if (error) throw error;
+  return (data ?? []) as WordProgress[];
+}
+
+/** Upserted by (user, original, suggestion) — the same word marked
+ * memorized on one day carries that state everywhere else it appears. */
+export async function setWordMemorized(
+  userId: string,
+  original: string,
+  suggestion: string,
+  memorized: boolean
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("word_progress")
+    .upsert(
+      { user_id: userId, original, suggestion, memorized },
+      { onConflict: "user_id,original,suggestion" }
+    );
+  if (error) throw error;
 }
 
 export async function fetchEntry(userId: string, dateKey: string): Promise<DiaryEntry | null> {
