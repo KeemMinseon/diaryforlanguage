@@ -58,8 +58,12 @@ const TOOL: Anthropic.Tool = {
             },
             reading: { type: "string", description: "한자는 히라가나, 가타카나는 로마자." },
             kind: { type: "string", enum: ["kanji", "katakana"] },
+            meaning: {
+              type: "string",
+              description: "이 단어의 한국어 뜻. 짧게 (1~3단어), 문맥에 맞는 뜻 하나만.",
+            },
           },
-          required: ["text", "reading", "kind"],
+          required: ["text", "reading", "kind", "meaning"],
         },
       },
     },
@@ -103,7 +107,12 @@ function sanitizeReadings(raw: unknown, scanText: string): Reading[] {
         ((r as Reading).kind === "kanji" || (r as Reading).kind === "katakana") &&
         scanText.includes((r as Reading).text)
     )
-    .map((r) => ({ text: r.text, reading: r.reading, kind: r.kind }));
+    .map((r) => ({
+      text: r.text,
+      reading: r.reading,
+      kind: r.kind,
+      meaning: typeof r.meaning === "string" ? r.meaning : "",
+    }));
 }
 
 // The model is told to be exhaustive about readings, but in practice still
@@ -166,8 +175,12 @@ const MISSING_READINGS_TOOL: Anthropic.Tool = {
           properties: {
             text: { type: "string", description: "입력받은 표기를 그대로 복사." },
             reading: { type: "string", description: "한자는 히라가나, 가타카나는 로마자." },
+            meaning: {
+              type: "string",
+              description: "이 단어의 한국어 뜻. 짧게 (1~3단어), 문맥에 맞는 뜻 하나만.",
+            },
           },
-          required: ["text", "reading"],
+          required: ["text", "reading", "meaning"],
         },
       },
     },
@@ -192,7 +205,7 @@ async function fetchMissingReadings(
     model: MODEL,
     max_tokens: 500,
     system:
-      "당신은 일본어 첨삭 선생님입니다. 주어진 목록에 있는 한자/가타카나 표기 전부에 대해 정확한 읽기를 답하세요. 한자는 히라가나, 가타카나는 로마자로 답하세요. 목록에 없는 항목은 만들지 말고, 목록에 있는 건 하나도 빠짐없이 포함하세요. \"text\"는 입력받은 표기를 절대 바꾸지 말고 그대로 돌려주세요.",
+      "당신은 일본어 첨삭 선생님입니다. 주어진 목록에 있는 한자/가타카나 표기 전부에 대해 정확한 읽기와 한국어 뜻을 답하세요. 한자는 히라가나, 가타카나는 로마자로 읽기를 답하세요. 뜻은 짧게 (1~3단어), 문맥에 맞는 뜻 하나만. 목록에 없는 항목은 만들지 말고, 목록에 있는 건 하나도 빠짐없이 포함하세요. \"text\"는 입력받은 표기를 절대 바꾸지 말고 그대로 돌려주세요.",
     messages: [
       {
         role: "user",
@@ -215,14 +228,19 @@ async function fetchMissingReadings(
   const kindByText = new Map(missing.map((m) => [m.text, m.kind]));
   return parsed.readings
     .filter(
-      (r): r is { text: string; reading: string } =>
+      (r): r is { text: string; reading: string; meaning?: unknown } =>
         !!r &&
         typeof r === "object" &&
         typeof (r as { text?: unknown }).text === "string" &&
         typeof (r as { reading?: unknown }).reading === "string" &&
         kindByText.has((r as { text: string }).text)
     )
-    .map((r) => ({ text: r.text, reading: r.reading, kind: kindByText.get(r.text)! }));
+    .map((r) => ({
+      text: r.text,
+      reading: r.reading,
+      kind: kindByText.get(r.text)!,
+      meaning: typeof r.meaning === "string" ? r.meaning : "",
+    }));
 }
 
 /**

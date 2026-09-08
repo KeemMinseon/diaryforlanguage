@@ -19,6 +19,10 @@ export interface Reading {
   /** Hiragana reading (kanji) or romanized reading (katakana). */
   reading: string;
   kind: ReadingKind;
+  /** Short Korean gloss (e.g. "만나다"), shown in 단어장. Optional because
+   * an entry saved before this existed has readings with no `meaning` key
+   * in its stored JSON at all. */
+  meaning?: string;
 }
 
 /** One paragraph as sent for review, with the feedback it got and when it

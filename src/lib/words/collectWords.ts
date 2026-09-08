@@ -12,6 +12,9 @@ export interface WordItem {
   text: string;
   reading: string;
   kind: ReadingKind;
+  /** Short Korean gloss — empty for a word saved before this existed
+   * (its stored reading has no `meaning` at all). */
+  meaning: string;
   /** Most recent entry_date this word appeared in. */
   lastSeen: string;
   /** How many separate entries this exact (text, reading) pair showed up in. */
@@ -48,6 +51,7 @@ export function collectWords(
         text: r.text,
         reading: r.reading,
         kind: r.kind,
+        meaning: r.meaning ?? "",
         lastSeen: entry.entry_date,
         occurrences: 1,
         memorized: memorizedByKey.get(key) ?? false,

@@ -23,7 +23,8 @@ export const PARAGRAPH_REVIEW_SYSTEM_PROMPT = `당신은 한국어 원어민 학
     예1 (한자 한 글자 + 오쿠리가나): "食べた"에서는 text="食", reading="た".
     예2 (한자 여러 글자, 오쿠리가나 없음): "十時"에서는 text="十時", reading="じゅうじ".
   - 가타카나: "text"는 가타카나 단어 전체, "reading"은 로마자 표기 (예: text="コーヒー", reading="kohi").
-  - "text"는 원문(문단) 또는 당신이 제출하는 suggestion 문장에 실제로 등장하는 표기와 한 글자도 다르지 않게 정확히 일치해야 합니다. 문단에 오타나 어색한 표현, 한국어가 섞여 있어도 절대 고치거나 정규화하지 말고 원문 그대로 복사하세요 — 정확히 일치하지 않으면 이 항목은 화면에 아예 표시되지 않습니다.`;
+  - "text"는 원문(문단) 또는 당신이 제출하는 suggestion 문장에 실제로 등장하는 표기와 한 글자도 다르지 않게 정확히 일치해야 합니다. 문단에 오타나 어색한 표현, 한국어가 섞여 있어도 절대 고치거나 정규화하지 말고 원문 그대로 복사하세요 — 정확히 일치하지 않으면 이 항목은 화면에 아예 표시되지 않습니다.
+  - "meaning": 이 단어(문맥에서 쓰인 뜻)의 한국어 뜻을 짧게 (1~3단어) 함께 제출하세요. 학습자가 나중에 단어장에서 뜻을 바로 확인할 수 있어야 합니다.`;
 
 export function buildParagraphUserMessage(priorText: string, paragraph: string): string {
   const context = priorText.trim()

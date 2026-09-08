@@ -53,6 +53,21 @@ describe("collectWords", () => {
     expect(words[0].memorized).toBe(true);
   });
 
+  it("carries the meaning through, defaulting to an empty string when absent", () => {
+    const withMeaning = collectWords(
+      [entry({ readings: [{ text: "会", reading: "あ", kind: "kanji", meaning: "만나다" }] })],
+      []
+    );
+    expect(withMeaning[0].meaning).toBe("만나다");
+
+    // A reading saved before `meaning` existed has no such key at all.
+    const withoutMeaning = collectWords(
+      [entry({ readings: [{ text: "楽", reading: "たの", kind: "kanji" }] })],
+      []
+    );
+    expect(withoutMeaning[0].meaning).toBe("");
+  });
+
   it("skips a malformed reading missing text or reading", () => {
     const words = collectWords(
       [

@@ -55,7 +55,14 @@ export default function WordListView({ userId }: { userId: string }) {
       filter === "all"
         ? words
         : words.filter((w) => (filter === "memorized" ? w.memorized : !w.memorized));
-    return [...filtered].sort((a, b) => (a.lastSeen < b.lastSeen ? 1 : -1));
+    // Must return 0 for equal dates — always returning -1/1 (never 0)
+    // gives the sort contradictory signals for same-day words (a-before-b
+    // AND b-before-a simultaneously), which let it reorder them
+    // unpredictably instead of leaving equal-date words in their
+    // original (most-recently-collected) order.
+    return [...filtered].sort((a, b) =>
+      a.lastSeen === b.lastSeen ? 0 : a.lastSeen < b.lastSeen ? 1 : -1
+    );
   }, [words, filter]);
 
   async function toggle(word: WordItem) {
@@ -149,6 +156,9 @@ export default function WordListView({ userId }: { userId: string }) {
                 <span className="font-[family-name:var(--font-diary)] text-lg font-medium text-[var(--ink)]">
                   <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
                 </span>
+                {/* Empty for a word saved before `meaning` was collected —
+                    no placeholder text, just one fewer line for that card. */}
+                {w.meaning && <p className="text-sm text-[var(--ink)]">{w.meaning}</p>}
                 <span className="text-[11px] text-[var(--ink-soft)]">
                   {parseDateKey(w.lastSeen).toLocaleDateString("ko-KR", {
                     month: "long",
