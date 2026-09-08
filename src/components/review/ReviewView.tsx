@@ -119,13 +119,13 @@ export default function ReviewView({
           </p>
           {!editing && !confirmingDelete && (
             <>
-              {isReviewed && (
+              {(isReviewed || isPending || isFailed) && (
                 <button
                   type="button"
                   onClick={() => router.push(`/entry/${entry.entry_date}?continue=1`)}
                   className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
                 >
-                  이어서 쓰기
+                  {isFailed ? "다시 시도" : "이어서 쓰기"}
                 </button>
               )}
               <button

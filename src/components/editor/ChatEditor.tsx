@@ -10,6 +10,7 @@ import ReadingsHint from "@/components/review/ReadingsHint";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
+import { buildHighlightSegments } from "@/lib/review/highlight";
 import { parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, Suggestion } from "@/types/diary";
 
@@ -57,6 +58,38 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
   ];
 }
 
+/** Renders the input box's own text with each already-reviewed round's
+ * matched suggestion spans marked, so a suggestion is still findable in
+ * the box once the diary gets long — same highlight treatment as the
+ * review screen, just non-interactive here. `rounds` are exactly
+ * contiguous chunks of the box's text in order (each one is whatever was
+ * sent by a "검토 요청" click), so concatenating their highlighted
+ * segments plus the still-unreviewed tail reconstructs the box's full
+ * text with nothing double-rendered or out of place. */
+function renderBoxHighlight(rounds: FeedbackRound[], pendingText: string) {
+  return (
+    <>
+      {rounds.map((r, ri) =>
+        buildHighlightSegments(r.text, r.suggestions).map((seg, si) =>
+          seg.suggestionIndex === null ? (
+            <span key={`${ri}-${si}`}>{seg.text}</span>
+          ) : (
+            <mark
+              key={`${ri}-${si}`}
+              className="rounded bg-black/[0.06] text-inherit underline decoration-[var(--ink)] decoration-2 underline-offset-4"
+            >
+              {seg.text}
+            </mark>
+          )
+        )
+      )}
+      <span>{pendingText}</span>
+      {/* Keeps a trailing newline from collapsing the last line's height. */}
+      {"​"}
+    </>
+  );
+}
+
 function localDateKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -97,6 +130,8 @@ export default function ChatEditor({
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
 
   // The whole diary-so-far, one continuously editable box — never wiped
   // after a review, so the learner never has to retype anything.
@@ -202,60 +237,111 @@ export default function ChatEditor({
     if (!content.trim() || finishing) return;
     setError(null);
     setFinishing(true);
+
+    const fullText = content;
+    const chunk = pendingText.trim();
+    // What's actually new since this entry was last durably saved — not
+    // just since the last "검토 요청" click. On a same-session entry
+    // (no initialEntry) this is the whole thing; on "이어서 쓰기" it's
+    // only what was added after reopening, whether or not it was already
+    // sent for per-paragraph review this session.
+    const priorContent = initialEntry?.content ?? "";
+    const newMaterial = fullText.slice(commonPrefixLength(priorContent, fullText)).trim();
+    const needsReview = fullText !== priorContent;
+
+    let photoPath: string | null = null;
+    const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
+    const stampKey = stampKind === "keyword" ? pickStamp(fullText) : null;
+    const existingSuggestions = rounds.flatMap((r) => r.suggestions);
+    const existingReadings = rounds.flatMap((r) => r.readings);
+    const existingParagraphs: DiaryParagraph[] = rounds.map((r) => ({
+      text: r.text,
+      comment: r.comment,
+      suggestions: r.suggestions,
+      readings: r.readings,
+      savedAt: r.savedAt,
+    }));
+
     try {
-      // Anything typed but not yet reviewed gets one last pass so it's not
-      // saved without feedback/furigana just because the learner never
-      // hit "검토 요청" on it themselves.
-      let allRounds = rounds;
-      const chunk = pendingText.trim();
-      if (chunk) {
-        const round = await reviewChunk(chunk, reviewedPrefix);
-        allRounds = [...rounds, round];
-        setRounds(allRounds);
-        setReviewedPrefix(content);
-      }
-
-      const fullText = content;
-
-      let photoPath: string | null = null;
-      const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
+      // 1) Save the text itself first — it shouldn't sit in the browser
+      // waiting on an AI round trip to be safe. If there's anything left
+      // to review, this lands as "pending" (same treatment ReviewView
+      // already gives an in-progress entry); step 2 below then reviews
+      // just the new part and re-saves as "reviewed". Previously this
+      // review pass ran *before* saving, so the feed would visibly pick
+      // up the new round while the button still said "마무리하는 중…"
+      // — as if saving were still waiting on it.
       if (croppedBlob) {
         photoPath = await uploadStampPhoto(userId, dateKey, croppedBlob);
       } else if (keepExistingPhoto) {
         photoPath = initialEntry?.photo_path ?? null;
       }
 
-      const finalizeRes = await fetch("/api/review-finalize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullText }),
-      });
-      const finalizeData = await finalizeRes.json();
-      if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
-
-      const allSuggestions = allRounds.flatMap((r) => r.suggestions);
-      const allReadings = allRounds.flatMap((r) => r.readings);
-      const paragraphs: DiaryParagraph[] = allRounds.map((r) => ({
-        text: r.text,
-        comment: r.comment,
-        suggestions: r.suggestions,
-        readings: r.readings,
-        savedAt: r.savedAt,
-      }));
-
       await saveEntry({
         userId,
         dateKey,
         content: fullText,
         stampKind,
-        stampKey: stampKind === "keyword" ? pickStamp(fullText) : null,
+        stampKey,
         photoPath,
-        status: "reviewed",
-        overallComment: finalizeData.overallComment,
-        suggestions: allSuggestions,
-        readings: allReadings,
-        paragraphs,
+        status: needsReview ? "pending" : "reviewed",
+        overallComment: initialEntry?.overall_comment ?? "",
+        suggestions: existingSuggestions,
+        readings: existingReadings,
+        paragraphs: existingParagraphs,
       });
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "저장에 실패했어요. 다시 시도해 주세요.");
+      setFinishing(false);
+      return;
+    }
+
+    try {
+      // 2) Now review just what's new — never the whole day again just
+      // because it was reopened to add a bit more.
+      let allRounds = rounds;
+      if (needsReview) {
+        if (chunk) {
+          const round = await reviewChunk(chunk, reviewedPrefix);
+          allRounds = [...rounds, round];
+        }
+
+        const finalizeRes = await fetch("/api/review-finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullText: newMaterial || fullText }),
+        });
+        const finalizeData = await finalizeRes.json();
+        if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
+
+        const allSuggestions = allRounds.flatMap((r) => r.suggestions);
+        const allReadings = allRounds.flatMap((r) => r.readings);
+        const paragraphs: DiaryParagraph[] = allRounds.map((r) => ({
+          text: r.text,
+          comment: r.comment,
+          suggestions: r.suggestions,
+          readings: r.readings,
+          savedAt: r.savedAt,
+        }));
+
+        await saveEntry({
+          userId,
+          dateKey,
+          content: fullText,
+          stampKind,
+          stampKey,
+          photoPath,
+          status: "reviewed",
+          overallComment: finalizeData.overallComment,
+          suggestions: allSuggestions,
+          readings: allReadings,
+          paragraphs,
+        });
+      }
+
+      setRounds(allRounds);
+      setReviewedPrefix(content);
 
       toast(
         initialEntry
@@ -268,6 +354,26 @@ export default function ChatEditor({
       console.error(err);
       setError(err instanceof Error ? err.message : "마무리에 실패했어요. 다시 시도해 주세요.");
       setFinishing(false);
+      // The text itself is already safely saved from step 1 — just mark
+      // it so reopening the entry shows "다시 저장하면 재시도돼요"
+      // instead of looking like nothing was ever attempted.
+      try {
+        await saveEntry({
+          userId,
+          dateKey,
+          content: fullText,
+          stampKind,
+          stampKey,
+          photoPath,
+          status: "failed",
+          overallComment: initialEntry?.overall_comment ?? "",
+          suggestions: existingSuggestions,
+          readings: existingReadings,
+          paragraphs: existingParagraphs,
+        });
+      } catch (markErr) {
+        console.error(markErr);
+      }
     }
   }
 
@@ -366,15 +472,35 @@ export default function ChatEditor({
           than the feed area even though the two halves were equal height. */}
       <div className="flex min-h-0 flex-[1.4] flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
         <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleTextareaKeyDown}
-            placeholder="여기에 이어서 편하게 적어주세요…"
-            disabled={busy}
-            rows={3}
-            className="min-h-0 flex-1 resize-none bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
-          />
+          {/* The textarea's own text is transparent (only its caret shows) —
+              what the learner actually reads is this backdrop underneath,
+              rendered from the exact same string with suggestion matches
+              marked. Long content makes those matches hard to spot again
+              by eye alone, so this mirrors the review screen's highlight
+              treatment right in the box instead of leaving it only in the
+              feed above. Kept in sync on scroll since only the (topmost,
+              interactive) textarea actually receives scroll input. */}
+          <div className="relative min-h-0 flex-1">
+            <div
+              ref={backdropRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)]"
+            >
+              {renderBoxHighlight(rounds, pendingText)}
+            </div>
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleTextareaKeyDown}
+              onScroll={(e) => {
+                if (backdropRef.current) backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+              }}
+              placeholder="여기에 이어서 편하게 적어주세요…"
+              disabled={busy}
+              className="absolute inset-0 resize-none whitespace-pre-wrap break-words bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-transparent caret-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
+            />
+          </div>
           <div className="flex shrink-0 justify-end">
             <button
               type="button"
