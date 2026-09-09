@@ -6,15 +6,47 @@ import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
-import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
-import type { DiaryEntry, SessionStamp } from "@/types/diary";
+import { photoPublicUrl, saveEntry, uploadStampPhoto } from "@/lib/diary/client";
+import type { DiaryEntry, SessionStamp, StampKind } from "@/types/diary";
+
+interface EditableParagraph {
+  session: number;
+  text: string;
+}
+
+/** An entry saved before per-session `stamps` existed has an empty array
+ * — same fallback used everywhere else (ReviewView, collectStamps):
+ * synthesize the one implicit stamp it does have from the top-level
+ * columns instead of finding nothing for session 0. */
+function resolveStamps(entry: DiaryEntry): SessionStamp[] {
+  if (entry.stamps.length > 0) return entry.stamps;
+  return [
+    {
+      session: 0,
+      stampKind: entry.stamp_kind,
+      stampKey: entry.stamp_key,
+      photoPath: entry.photo_path,
+      createdAt: entry.reviewed_at ?? entry.updated_at,
+    },
+  ];
+}
 
 /**
  * Edits an already-reviewed entry. Unlike the paragraph-by-paragraph
  * ChatEditor, this re-reviews the whole edited text as one pass (through
  * the same /api/review-paragraph + /api/review-finalize calls) — simpler,
- * and the old per-paragraph exchange for this day is stale once its text
- * changes anyway.
+ * and the old per-paragraph *feedback* for this day is stale once its
+ * text changes anyway (so, unlike `stamps`, `paragraphs` is never passed
+ * to saveEntry here — it resets to `[]`, same as before this file's own
+ * per-session split existed).
+ *
+ * The text itself, though, is still edited one sitting at a time — one
+ * box per session, each with its own stamp shown right next to it. That
+ * turns two things that used to only happen implicitly into something
+ * the learner can see and act on directly: editing a sitting's text
+ * updates *its own* stamp (a keyword one, anyway — see below), and
+ * deleting a sitting removes its stamp along with it, instead of leaving
+ * a stamp behind for text that no longer exists anywhere in the entry.
  */
 export default function EditEntry({
   userId,
@@ -32,7 +64,12 @@ export default function EditEntry({
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [text, setText] = useState(entry.content);
+  const originalStamps = resolveStamps(entry);
+  const [paragraphs, setParagraphs] = useState<EditableParagraph[]>(() =>
+    entry.paragraphs.length > 0
+      ? entry.paragraphs.map((p) => ({ session: p.session ?? 0, text: p.text }))
+      : [{ session: originalStamps[0]?.session ?? 0, text: entry.content }]
+  );
   const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(null);
@@ -71,43 +108,73 @@ export default function EditEntry({
     setKeepExistingPhoto(false);
   }
 
-  const hasPhoto = Boolean(croppedPreviewUrl) || keepExistingPhoto;
-  const previewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? existingPhotoUrl : null);
-  const previewStampKey = hasPhoto ? null : pickStamp(text);
+  function updateParagraphText(index: number, text: string) {
+    setParagraphs((prev) => prev.map((p, i) => (i === index ? { ...p, text } : p)));
+  }
+
+  function deleteParagraph(index: number) {
+    setParagraphs((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  // The front (index 0) stamp is the only one this screen's photo
+  // controls ever touch — matches saveEntry's own convention (the
+  // calendar always shows stamps[0]) and keeps every other sitting's own
+  // photo/keyword stamp completely out of this whole-entry photo flow.
+  const frontHasPhoto = Boolean(croppedPreviewUrl) || keepExistingPhoto;
+  const frontPreviewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? existingPhotoUrl : null);
+
+  /** What a paragraph's own stamp looks like *right now*, live — a
+   * keyword stamp recomputes instantly from its own current text (pure,
+   * local, no AI call needed), while a sitting that was originally a
+   * photo keeps that exact photo untouched by any text edit here (only
+   * the front slot's own photo controls above can ever change a photo
+   * stamp) — editing session 2's text was never going to know anything
+   * about a photo taken for session 2 in the first place. */
+  function previewFor(p: EditableParagraph, index: number) {
+    if (index === 0 && frontHasPhoto) {
+      return { stampKind: "photo" as StampKind, stampKey: null, photoUrl: frontPreviewPhotoUrl };
+    }
+    const original = originalStamps.find((s) => s.session === p.session);
+    if (original?.stampKind === "photo" && original.photoPath) {
+      return { stampKind: "photo" as StampKind, stampKey: null, photoUrl: photoPublicUrl(original.photoPath) };
+    }
+    return { stampKind: "keyword" as StampKind, stampKey: pickStamp(p.text), photoUrl: null };
+  }
 
   async function handleSave() {
-    const trimmed = text.trim();
-    if (!trimmed) {
+    const trimmed = paragraphs
+      .map((p) => ({ ...p, text: p.text.trim() }))
+      .filter((p) => p.text);
+    if (trimmed.length === 0) {
       setError("일기 내용을 적어주세요.");
       return;
     }
     setError(null);
     setSaving(true);
     try {
-      let photoPath: string | null = null;
-      const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
+      let frontPhotoPath: string | null = null;
       if (croppedBlob) {
-        photoPath = await uploadStampPhoto(userId, entry.entry_date, croppedBlob);
+        frontPhotoPath = await uploadStampPhoto(userId, entry.entry_date, croppedBlob);
       } else if (keepExistingPhoto) {
-        photoPath = entry.photo_path;
+        frontPhotoPath = entry.photo_path;
       }
+
+      const fullText = trimmed.map((p) => p.text).join("\n\n");
 
       // Independent Claude calls — review-paragraph's word-level feedback
       // and finalize's overall comment don't read each other's output, so
-      // there's nothing forcing them to wait on one another. Used to run
-      // one after the other here, stacking two full LLM round trips on
-      // every single "수정 완료" (see the same fix in ChatEditor's
-      // handleFinish, which had the identical issue).
+      // there's nothing forcing them to wait on one another (see the same
+      // fix in ChatEditor's handleFinish).
       const [reviewRes, finalizeRes] = await Promise.all([
         fetch("/api/review-paragraph", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paragraph: trimmed, priorText: "" }),
+          body: JSON.stringify({ paragraph: fullText, priorText: "" }),
         }),
         fetch("/api/review-finalize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullText: trimmed }),
+          body: JSON.stringify({ fullText }),
         }),
       ]);
       const reviewData = await reviewRes.json();
@@ -116,33 +183,41 @@ export default function EditEntry({
       const finalizeData = await finalizeRes.json();
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
-      const stampKey = stampKind === "keyword" ? pickStamp(trimmed) : null;
-      // Unlike `paragraphs` (not passed here — see the doc comment above;
-      // a direct edit flattens the day into one fresh pass, and the old
-      // per-sitting text breakdown doesn't correspond to that anymore),
-      // a day's other sittings each still happened and each still earned
-      // their own stamp regardless of a later typo fix — collapsing
-      // `stamps` down to just this one would erase that history for no
-      // reason. Only the front stamp (session 0 — see ChatEditor, the
-      // calendar always shows this one) gets replaced with whatever this
-      // edit just re-derived; every other sitting's own stamp carries
-      // over untouched.
-      const stamps: SessionStamp[] =
-        entry.stamps.length > 0
-          ? entry.stamps.map((s, i) =>
-              i === 0
-                ? { ...s, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() }
-                : s
-            )
-          : [{ session: 0, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() }];
+      // One stamp per surviving paragraph, in the same order — a deleted
+      // paragraph's stamp simply isn't in this list at all, and whichever
+      // paragraph now sits at index 0 (even if it wasn't originally the
+      // day's first) becomes the new front/calendar stamp, exactly as
+      // reordering `paragraphs` implies it should.
+      const stamps: SessionStamp[] = trimmed.map((p, i) => {
+        if (i === 0 && frontHasPhoto) {
+          return {
+            session: p.session,
+            stampKind: "photo",
+            stampKey: null,
+            photoPath: frontPhotoPath,
+            createdAt: new Date().toISOString(),
+          };
+        }
+        const original = originalStamps.find((s) => s.session === p.session);
+        if (i !== 0 && original?.stampKind === "photo") {
+          return original;
+        }
+        return {
+          session: p.session,
+          stampKind: "keyword",
+          stampKey: pickStamp(p.text),
+          photoPath: null,
+          createdAt: new Date().toISOString(),
+        };
+      });
 
       await saveEntry({
         userId,
         dateKey: entry.entry_date,
-        content: trimmed,
-        stampKind,
-        stampKey,
-        photoPath,
+        content: fullText,
+        stampKind: stamps[0].stampKind,
+        stampKey: stamps[0].stampKey,
+        photoPath: stamps[0].photoPath,
         status: "reviewed",
         overallComment: finalizeData.overallComment,
         suggestions: reviewData.suggestions ?? [],
@@ -161,51 +236,70 @@ export default function EditEntry({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={saving}
-          className="min-h-[30vh] flex-1 resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
-        />
-        <div className="flex flex-row items-start gap-4 sm:w-36 sm:flex-col">
-          <div className="w-28 sm:w-full">
-            <DiaryStamp
-              stampKind={hasPhoto ? "photo" : "keyword"}
-              stampKey={previewStampKey}
-              photoUrl={previewPhotoUrl}
-              className="w-full drop-shadow-md"
-            />
-          </div>
-          <div className="flex flex-1 flex-col gap-2 sm:flex-none sm:w-full">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
-            >
-              <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
-                📷
-              </UiIcon>
-              사진 첨부
-            </button>
-            {hasPhoto && (
-              <button
-                type="button"
-                onClick={handleRemovePhoto}
-                className="text-xs text-[var(--ink-soft)] underline underline-offset-2"
-              >
-                사진 지우고 자동 우표로
-              </button>
-            )}
-          </div>
-        </div>
+      <div className="flex flex-col gap-4">
+        {paragraphs.map((p, i) => {
+          const preview = previewFor(p, i);
+          return (
+            <div key={p.session} className="flex flex-col gap-4 sm:flex-row">
+              <textarea
+                value={p.text}
+                onChange={(e) => updateParagraphText(i, e.target.value)}
+                disabled={saving}
+                className="min-h-[16vh] flex-1 resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
+              />
+              <div className="flex flex-row items-start gap-4 sm:w-36 sm:flex-col">
+                <div className="w-28 sm:w-full">
+                  <DiaryStamp
+                    stampKind={preview.stampKind}
+                    stampKey={preview.stampKey}
+                    photoUrl={preview.photoUrl}
+                    className="w-full drop-shadow-md"
+                  />
+                </div>
+                {i === 0 && (
+                  <div className="flex flex-1 flex-col gap-2 sm:flex-none sm:w-full">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
+                    >
+                      <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
+                        📷
+                      </UiIcon>
+                      사진 첨부
+                    </button>
+                    {frontHasPhoto && (
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="text-xs text-[var(--ink-soft)] underline underline-offset-2"
+                      >
+                        사진 지우고 자동 우표로
+                      </button>
+                    )}
+                  </div>
+                )}
+                {paragraphs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => deleteParagraph(i)}
+                    disabled={saving}
+                    className="text-xs text-[var(--ink-soft)] underline underline-offset-2 disabled:opacity-60"
+                  >
+                    이 부분 삭제
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
