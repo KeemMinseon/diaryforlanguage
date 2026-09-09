@@ -30,6 +30,17 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#f2f2f3" },
     { media: "(prefers-color-scheme: dark)", color: "#1c1c1e" },
   ],
+  // Without this, iOS Safari's default on focusing a text input is to pan
+  // the whole visual viewport up and over the keyboard rather than
+  // shrinking it — ChatEditor's `h-dvh` split-screen layout (feed on top,
+  // input pinned at the bottom) is built assuming the viewport itself
+  // shrinks to fit above the keyboard, so under that default it instead
+  // felt like the entire screen was dragged upward along with it.
+  // "resizes-content" (Chrome, and Safari 16.4+) makes the visual
+  // viewport actually shrink — and `dvh` update to match — when the
+  // keyboard opens, so the layout just reflows into the smaller space
+  // like it would for any other viewport resize, instead of scrolling.
+  interactiveWidget: "resizes-content",
 };
 
 // Sets <html data-theme> from the learner's saved preference (see
