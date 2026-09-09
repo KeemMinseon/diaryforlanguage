@@ -92,19 +92,27 @@ export default function EditEntry({
         photoPath = entry.photo_path;
       }
 
-      const reviewRes = await fetch("/api/review-paragraph", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paragraph: trimmed, priorText: "" }),
-      });
+      // Independent Claude calls — review-paragraph's word-level feedback
+      // and finalize's overall comment don't read each other's output, so
+      // there's nothing forcing them to wait on one another. Used to run
+      // one after the other here, stacking two full LLM round trips on
+      // every single "수정 완료" (see the same fix in ChatEditor's
+      // handleFinish, which had the identical issue).
+      const [reviewRes, finalizeRes] = await Promise.all([
+        fetch("/api/review-paragraph", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paragraph: trimmed, priorText: "" }),
+        }),
+        fetch("/api/review-finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullText: trimmed }),
+        }),
+      ]);
       const reviewData = await reviewRes.json();
       if (!reviewRes.ok) throw new Error(reviewData.error ?? "첨삭에 실패했어요.");
 
-      const finalizeRes = await fetch("/api/review-finalize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullText: trimmed }),
-      });
       const finalizeData = await finalizeRes.json();
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
