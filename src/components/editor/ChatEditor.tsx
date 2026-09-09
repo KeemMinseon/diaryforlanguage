@@ -436,9 +436,16 @@ export default function ChatEditor({
         userId,
         dateKey,
         content: fullText,
-        stampKind,
-        stampKey,
-        photoPath,
+        // The calendar reads the top-level stamp_kind/stamp_key/photo_path
+        // columns directly (see DayCell/StampedDay) rather than the first
+        // entry of `stamps` — kept in sync with `stamps[0]` (the day's
+        // very *first* sitting) here instead, so the calendar keeps
+        // showing the same stamp it always has for this day even after a
+        // later "이어서 쓰기" adds more sittings, rather than jumping to
+        // whichever one was saved most recently.
+        stampKind: stamps[0].stampKind,
+        stampKey: stamps[0].stampKey,
+        photoPath: stamps[0].photoPath,
         status: "pending",
         overallComment: initialEntry?.overall_comment ?? "",
         suggestions: existingSuggestions,
@@ -490,9 +497,9 @@ export default function ChatEditor({
         userId,
         dateKey,
         content: fullText,
-        stampKind,
-        stampKey,
-        photoPath,
+        stampKind: stamps[0].stampKind,
+        stampKey: stamps[0].stampKey,
+        photoPath: stamps[0].photoPath,
         status: "reviewed",
         overallComment: finalizeData.overallComment,
         suggestions: allSuggestions,
@@ -524,9 +531,9 @@ export default function ChatEditor({
           userId,
           dateKey,
           content: fullText,
-          stampKind,
-          stampKey,
-          photoPath,
+          stampKind: stamps[0].stampKind,
+          stampKey: stamps[0].stampKey,
+          photoPath: stamps[0].photoPath,
           status: "failed",
           overallComment: initialEntry?.overall_comment ?? "",
           suggestions: existingSuggestions,

@@ -7,7 +7,7 @@ import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
-import type { DiaryEntry } from "@/types/diary";
+import type { DiaryEntry, SessionStamp } from "@/types/diary";
 
 /**
  * Edits an already-reviewed entry. Unlike the paragraph-by-paragraph
@@ -108,17 +108,36 @@ export default function EditEntry({
       const finalizeData = await finalizeRes.json();
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
+      const stampKey = stampKind === "keyword" ? pickStamp(trimmed) : null;
+      // `paragraphs` isn't passed here either — see the doc comment above,
+      // this flattens the day into one freshly re-reviewed pass, and the
+      // old per-sitting breakdown doesn't correspond to that new single
+      // block of text at all anymore. `stamps` has to flatten the same
+      // way alongside it: leaving old sittings' stamps in place here would
+      // have the calendar/review screen still showing a multi-stamp stack
+      // for sittings whose own text no longer exists anywhere once
+      // `paragraphs` resets, *and* the next "이어서 쓰기" after this edit
+      // would start renumbering sessions from 0 again (since it counts
+      // from the now-empty `paragraphs`) — colliding with whatever
+      // sessions were already sitting in `stamps`. A single fresh entry
+      // keeps both arrays consistent with each other and with what
+      // "이어서 쓰기" computes next.
+      const stamps: SessionStamp[] = [
+        { session: 0, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() },
+      ];
+
       await saveEntry({
         userId,
         dateKey: entry.entry_date,
         content: trimmed,
         stampKind,
-        stampKey: stampKind === "keyword" ? pickStamp(trimmed) : null,
+        stampKey,
         photoPath,
         status: "reviewed",
         overallComment: finalizeData.overallComment,
         suggestions: reviewData.suggestions ?? [],
         readings: reviewData.readings ?? [],
+        stamps,
       });
 
       toast("수정한 일기에 도장이 다시 찍혔어요! 📮");
