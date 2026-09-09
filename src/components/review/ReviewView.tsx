@@ -243,9 +243,14 @@ export default function ReviewView({
                         photoUrl={stampPhotoUrl(s)}
                         className="absolute inset-0 h-full w-full drop-shadow-md"
                       />
-                      {isReviewed && (
-                        // Matches the calendar view's hanko-to-stamp ratio
-                        // (42%, see StampedDay.tsx) instead of its own
+                      {isReviewed && i === 0 && (
+                        // Only the front stamp gets one — a whole day is
+                        // reviewed/stamped as a unit, not once per writing
+                        // session, so the other stamps in the stack don't
+                        // need their own (matches the calendar view, which
+                        // never draws more than one either). Ratio matches
+                        // the calendar view's hanko-to-stamp ratio (42%,
+                        // see StampedDay.tsx) instead of its own
                         // separately-tuned value, so the two screens read
                         // consistently.
                         <HankoStamp className="stamp-pop absolute bottom-[4%] right-[6%] w-[42%] h-[42%] drop-shadow-md" />
