@@ -10,31 +10,8 @@ import FuriganaText from "@/components/review/FuriganaText";
 import ReadingsHint from "@/components/review/ReadingsHint";
 import { deleteEntry, photoPublicUrl } from "@/lib/diary/client";
 import { buildHighlightSegments } from "@/lib/review/highlight";
-import { parseDateKey } from "@/lib/utils/date";
+import { formatSavedAt, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, SessionStamp } from "@/types/diary";
-
-function localDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** Just the time when saved the same local day as the entry itself; full
- * date + time when a paragraph was added on a later day ("이어서 쓰기"
- * on a different day than the entry's own date), so that's not ambiguous. */
-function formatSavedAt(iso: string, entryDateKey: string): string {
-  const saved = new Date(iso);
-  if (localDateKey(saved) === entryDateKey) {
-    return saved.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
-  }
-  return saved.toLocaleString("ko-KR", {
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default function ReviewView({
   userId,

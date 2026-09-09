@@ -11,7 +11,7 @@ import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { buildHighlightSegments } from "@/lib/review/highlight";
-import { parseDateKey } from "@/lib/utils/date";
+import { formatSavedAt, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 interface FeedbackRound {
@@ -166,28 +166,6 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
   );
 }
 
-function localDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-/** Just the time (e.g. "오후 9:12") when saved the same local day as the
- * entry itself; full date + time when it was added on a later day (the
- * "이어서 쓰기" case), so that's not ambiguous. */
-function formatSavedAt(iso: string, entryDateKey: string): string {
-  const saved = new Date(iso);
-  if (localDateKey(saved) === entryDateKey) {
-    return saved.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
-  }
-  return saved.toLocaleString("ko-KR", {
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default function ChatEditor({
   userId,
