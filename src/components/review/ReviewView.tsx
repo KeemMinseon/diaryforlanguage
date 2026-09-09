@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
+import DiaryStamp from "@/components/stamps/DiaryStamp";
+import HankoStamp from "@/components/stamps/HankoStamp";
 import FuriganaText from "@/components/review/FuriganaText";
 import ReadingsHint from "@/components/review/ReadingsHint";
-import { deleteEntry } from "@/lib/diary/client";
+import { deleteEntry, photoPublicUrl } from "@/lib/diary/client";
 import { buildHighlightSegments } from "@/lib/review/highlight";
 import { formatSavedAt, parseDateKey } from "@/lib/utils/date";
-import type { DiaryEntry } from "@/types/diary";
+import type { DiaryEntry, SessionStamp } from "@/types/diary";
 
 export default function ReviewView({
   userId,
@@ -22,6 +24,13 @@ export default function ReviewView({
 }) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // Fanned out by default whenever there's more than one — a pile that
+  // needs a tap before you even notice there's more than one stamp under
+  // it turned out to hide the very thing this feature was for. Starting
+  // open still leaves the tap (below) to collapse it back into a pile,
+  // for whenever that reads better (many stamps, say). See the header
+  // comment on `stamps` below for what each one is.
+  const [fanned, setFanned] = useState(entry.stamps.length > 1);
   // One highlighted word per suggestion index, wherever it actually landed
   // (a specific paragraph, when paragraph history exists) — picking a
   // suggestion card below jumps the content above to that exact word
@@ -45,6 +54,32 @@ export default function ReviewView({
   const isReviewed = entry.status === "reviewed";
   const isPending = entry.status === "pending";
   const isFailed = entry.status === "failed";
+
+  // One per writing session (see `SessionStamp`) — an entry saved before
+  // that existed has an empty array, so synthesize the one implicit stamp
+  // it does have from the top-level stamp_kind/stamp_key/photo_path
+  // instead of showing an empty stack.
+  const stamps: SessionStamp[] =
+    entry.stamps.length > 0
+      ? entry.stamps
+      : [
+          {
+            session: 0,
+            stampKind: entry.stamp_kind,
+            stampKey: entry.stamp_key,
+            photoPath: entry.photo_path,
+            createdAt: entry.reviewed_at ?? entry.updated_at,
+          },
+        ];
+
+  // The current top-level photo_path is already resolved server-side (see
+  // EntryPage) — reused here rather than re-deriving it client-side, but
+  // any *other* session's own photo still needs its own lookup.
+  function stampPhotoUrl(s: SessionStamp): string | null {
+    if (s.stampKind !== "photo" || !s.photoPath) return null;
+    if (s.photoPath === entry.photo_path) return photoUrl;
+    return photoPublicUrl(s.photoPath);
+  }
 
   const dateLabel = parseDateKey(entry.entry_date).toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -184,40 +219,112 @@ export default function ReviewView({
         />
       ) : (
         <>
-          {/* Stamp display (the stamp stack + "우표 N개 · 눌러서 펼치기"
-              hint) is deliberately not shown on this screen for now — it
-              read oddly here (still shows on the calendar view). */}
-          <div className="w-full rounded-2xl bg-[var(--paper-raised)] p-5">
-            {isPending && (
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
-                검토 중이에요…
-              </p>
-            )}
-            {isFailed && (
-              <p className="mb-4 text-xs font-medium text-[var(--ink)]">
-                첨삭 처리 중 문제가 있었어요. 다시 저장하면 재시도돼요.
-              </p>
-            )}
+          <div className="flex flex-col items-center gap-8">
+            {/* The "우표 N개 · 눌러서 펼치기/접기" caption below the stack
+                is deliberately not shown on this screen — it read as
+                clutter here (the calendar view still shows an equivalent
+                hint). The stamp stack itself stays; only that label is
+                gone. */}
+            <div className="flex flex-col items-center gap-2">
+              {/* Explicit aspect ratio (matching the stamp mask itself,
+                  see stampMask.ts) rather than letting a single stamp's own
+                  intrinsic height set it — every stamp in the stack is
+                  `absolute` to lay them on top of each other, and absolutely
+                  positioned children can't contribute to a parent's height
+                  the way normal flow content would. */}
+              {(() => {
+                const stampLayers = stamps.map((s, i) => {
+                  // Collapsed: a slight cascading pile behind the front
+                  // stamp — 0/0 for it, so a single stamp still lands
+                  // exactly where it always has. The front one is always
+                  // i = 0 (the day's first session), matching the calendar
+                  // view (DayCell/StampedDay always show stamps[0]) rather
+                  // than whichever was written last. Fanned: spread evenly
+                  // around the center, 부채꼴 (fan) style.
+                  const mid = (stamps.length - 1) / 2;
+                  const rotate = fanned ? (i - mid) * 16 : -i * 3;
+                  const translateX = fanned ? (i - mid) * 58 : -i * 2;
+                  return (
+                    <div
+                      key={s.session}
+                      className="absolute inset-0 transition-transform duration-300 ease-out"
+                      style={{
+                        transform: `translateX(${translateX}%) rotate(${rotate}deg)`,
+                        zIndex: stamps.length - 1 - i,
+                      }}
+                    >
+                      <DiaryStamp
+                        stampKind={s.stampKind}
+                        stampKey={s.stampKey as never}
+                        photoUrl={stampPhotoUrl(s)}
+                        className="absolute inset-0 h-full w-full drop-shadow-md"
+                      />
+                      {isReviewed && i === 0 && (
+                        // Only the front stamp gets one — a whole day is
+                        // reviewed/stamped as a unit, not once per writing
+                        // session, so the other stamps in the stack don't
+                        // need their own (matches the calendar view, which
+                        // never draws more than one either). Ratio matches
+                        // the calendar view's hanko-to-stamp ratio (42%,
+                        // see StampedDay.tsx) instead of its own
+                        // separately-tuned value, so the two screens read
+                        // consistently.
+                        <HankoStamp className="stamp-pop absolute bottom-[4%] right-[6%] w-[42%] h-[42%] drop-shadow-md" />
+                      )}
+                    </div>
+                  );
+                });
+                const stackClassName = "relative w-[7.7rem] shrink-0 aspect-[499.78/671.48]";
+                // A real <button> only when there's actually a stack to
+                // toggle — a lone stamp (the common case) stays a plain,
+                // non-interactive div, same as before this feature existed.
+                return stamps.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setFanned((f) => !f)}
+                    aria-label={fanned ? "우표 접기" : "우표 펼치기"}
+                    className={`${stackClassName} cursor-pointer appearance-none border-0 bg-transparent p-0`}
+                  >
+                    {stampLayers}
+                  </button>
+                ) : (
+                  <div className={stackClassName}>{stampLayers}</div>
+                );
+              })()}
+            </div>
 
-            {hasParagraphHistory ? (
-              <div className="flex flex-col gap-4">
-                {entry.paragraphs.map((p, pi) => (
-                  <div key={pi} className="flex flex-col gap-1">
-                    <p className="text-xs text-[var(--ink-soft)]">
-                      {formatSavedAt(p.savedAt, entry.entry_date)}
-                    </p>
-                    <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
-                      {renderHighlighted(p.text, `p${pi}`)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
-                {renderHighlighted(entry.content, "flat")}
-              </p>
-            )}
+            <div className="w-full rounded-2xl bg-[var(--paper-raised)] p-5">
+              {isPending && (
+                <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
+                  검토 중이에요…
+                </p>
+              )}
+              {isFailed && (
+                <p className="mb-4 text-xs font-medium text-[var(--ink)]">
+                  첨삭 처리 중 문제가 있었어요. 다시 저장하면 재시도돼요.
+                </p>
+              )}
+
+              {hasParagraphHistory ? (
+                <div className="flex flex-col gap-4">
+                  {entry.paragraphs.map((p, pi) => (
+                    <div key={pi} className="flex flex-col gap-1">
+                      <p className="text-xs text-[var(--ink-soft)]">
+                        {formatSavedAt(p.savedAt, entry.entry_date)}
+                      </p>
+                      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
+                        {renderHighlighted(p.text, `p${pi}`)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
+                  {renderHighlighted(entry.content, "flat")}
+                </p>
+              )}
+            </div>
           </div>
 
           {(isReviewed || isPending || isFailed) && (
