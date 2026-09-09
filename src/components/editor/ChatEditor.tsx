@@ -473,21 +473,34 @@ export default function ChatEditor({
     try {
       // 2) Now review just this visit's own writing — locked history from
       // earlier visits was already reviewed then and is never resent.
+      //
+      // This last paragraph's own review and the whole-day总평 call are
+      // two independent Claude requests — finalize only ever reads
+      // `newContent` (this sitting's full text), never anything reviewChunk
+      // returns — so there's nothing forcing them to happen one after the
+      // other. They used to run sequentially (reviewChunk, then finalize),
+      // which stacked two separate LLM round trips back to back on every
+      // single "마치기" — by far the largest share of the button's total
+      // wait, well past whatever a single save request costs. Running them
+      // together roughly halves that in the common case (an unreviewed
+      // trailing paragraph, which is the whole reason this branch exists).
       let allRounds = rounds;
       let allFeedHistory = feedHistory;
-      if (chunk) {
-        const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
-        const round = await reviewChunk(chunk, priorTextForApi);
+      const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
+      const [round, finalizeRes] = await Promise.all([
+        chunk ? reviewChunk(chunk, priorTextForApi) : Promise.resolve(null),
+        fetch("/api/review-finalize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullText: newContent }),
+        }),
+      ]);
+      if (round) {
         const newRound = { ...round, text: rawChunk };
         allRounds = [...rounds, newRound];
         allFeedHistory = [...feedHistory, newRound];
       }
 
-      const finalizeRes = await fetch("/api/review-finalize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullText: newContent }),
-      });
       const finalizeData = await finalizeRes.json();
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
