@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
-import HankoStamp from "@/components/stamps/HankoStamp";
 import FuriganaText from "@/components/review/FuriganaText";
 import ReadingsHint from "@/components/review/ReadingsHint";
 import { deleteEntry, photoPublicUrl } from "@/lib/diary/client";
@@ -259,18 +258,9 @@ export default function ReviewView({
                         photoUrl={stampPhotoUrl(s)}
                         className="absolute inset-0 h-full w-full drop-shadow-md"
                       />
-                      {isReviewed && i === 0 && (
-                        // Only the front stamp gets one — a whole day is
-                        // reviewed/stamped as a unit, not once per writing
-                        // session, so the other stamps in the stack don't
-                        // need their own (matches the calendar view, which
-                        // never draws more than one either). Ratio matches
-                        // the calendar view's hanko-to-stamp ratio (42%,
-                        // see StampedDay.tsx) instead of its own
-                        // separately-tuned value, so the two screens read
-                        // consistently.
-                        <HankoStamp className="stamp-pop absolute bottom-[4%] right-[6%] w-[42%] h-[42%] drop-shadow-md" />
-                      )}
+                      {/* The 添削 hanko (red ink-seal) is deliberately not
+                          drawn on this screen — it read oddly here. The
+                          calendar view still stamps it. */}
                     </div>
                   );
                 });
