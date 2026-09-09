@@ -161,24 +161,63 @@ export default function EditEntry({
 
       const fullText = trimmed.map((p) => p.text).join("\n\n");
 
-      // Independent Claude calls — review-paragraph's word-level feedback
-      // and finalize's overall comment don't read each other's output, so
-      // there's nothing forcing them to wait on one another (see the same
-      // fix in ChatEditor's handleFinish).
-      const [reviewRes, finalizeRes] = await Promise.all([
-        fetch("/api/review-paragraph", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paragraph: fullText, priorText: "" }),
-        }),
+      // One /api/review-paragraph call per sitting (each with everything
+      // before it as context) instead of one giant call over the whole
+      // day's text — /api/review-paragraph is built and tuned for a
+      // single paragraph's worth of writing (see ChatEditor, where it's
+      // always called this way); handing it a whole multi-sitting day at
+      // once made for a much bigger, slower generation, and a bigger
+      // input is also more likely to trip the missing-readings backfill
+      // (see that route's own fetchMissingReadings) — a second, fully
+      // sequential Claude call on top of the first. Running every
+      // sitting's call together, and alongside finalize (which doesn't
+      // read any of their output), bounds the wait by the slowest single
+      // paragraph-sized call rather than the sum of a whole-day one plus
+      // a second whole-day finalize call.
+      const [finalizeRes, reviewResponses] = await Promise.all([
         fetch("/api/review-finalize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fullText }),
         }),
+        Promise.all(
+          trimmed.map((p, i) =>
+            fetch("/api/review-paragraph", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                paragraph: p.text,
+                priorText: trimmed
+                  .slice(0, i)
+                  .map((pp) => pp.text)
+                  .join("\n\n"),
+              }),
+            })
+          )
+        ),
       ]);
-      const reviewData = await reviewRes.json();
-      if (!reviewRes.ok) throw new Error(reviewData.error ?? "첨삭에 실패했어요.");
+
+      const reviewDataList = await Promise.all(reviewResponses.map((res) => res.json()));
+      const failedIndex = reviewResponses.findIndex((res) => !res.ok);
+      if (failedIndex !== -1) {
+        throw new Error(reviewDataList[failedIndex]?.error ?? "첨삭에 실패했어요.");
+      }
+      const suggestions = reviewDataList.flatMap((d) => d.suggestions ?? []);
+      // Deduped by (text, reading) — unlike suggestions (each occurrence
+      // is its own real mistake worth flagging, wherever it lands in the
+      // text), the same word reviewed independently in two different
+      // sittings would otherwise show up twice in one entry's own
+      // `readings`, inflating 단어장's occurrence count for a word that
+      // just happened to appear in two paragraphs the same day.
+      const seenReadingKeys = new Set<string>();
+      const readings = reviewDataList
+        .flatMap((d) => d.readings ?? [])
+        .filter((r) => {
+          const key = `${r.text}␟${r.reading}`;
+          if (seenReadingKeys.has(key)) return false;
+          seenReadingKeys.add(key);
+          return true;
+        });
 
       const finalizeData = await finalizeRes.json();
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
@@ -220,8 +259,8 @@ export default function EditEntry({
         photoPath: stamps[0].photoPath,
         status: "reviewed",
         overallComment: finalizeData.overallComment,
-        suggestions: reviewData.suggestions ?? [],
-        readings: reviewData.readings ?? [],
+        suggestions,
+        readings,
         stamps,
       });
 
