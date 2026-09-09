@@ -7,6 +7,7 @@ import DayCell from "@/components/calendar/DayCell";
 import UiIcon from "@/components/icons/UiIcon";
 import FuriganaText from "@/components/review/FuriganaText";
 import { fetchMonthEntries } from "@/lib/diary/client";
+import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { buildMonthGrid, parseDateKey, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
 import type { DiaryEntryMap, Reading, Suggestion } from "@/types/diary";
 
@@ -60,6 +61,11 @@ export default function MonthCalendar() {
   const [{ year, month }, setCursor] = useState(() => parseMonthParam(searchParams.get("month")));
   const [entries, setEntries] = useState<DiaryEntryMap>({});
   const [loading, setLoading] = useState(true);
+  // Set for a few seconds right after a "diary:stamped" event names a day
+  // in the currently-shown month — StampedDay uses this to play a real
+  // stamp-landing animation on that one cell instead of the hanko just
+  // silently appearing next time this data happens to re-fetch.
+  const [justStampedDate, setJustStampedDate] = useState<string | null>(null);
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -82,6 +88,23 @@ export default function MonthCalendar() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  useEffect(() => {
+    return onDiaryStamped((dateKey) => {
+      // Plain string comparison works here the same way it does for
+      // Supabase's own gte/lte queries on entry_date — "YYYY-MM-DD" sorts
+      // lexicographically exactly like it sorts chronologically.
+      if (dateKey < monthStartKey || dateKey > monthEndKey) return;
+      load().then(() => {
+        setJustStampedDate(dateKey);
+        // Only actually matters for hygiene — a CSS animation triggers
+        // once when a class is first added to an element, not on every
+        // render it stays present for, so this isn't what stops the
+        // animation from replaying on its own.
+        setTimeout(() => setJustStampedDate(null), 3000);
+      });
+    });
+  }, [load, monthStartKey, monthEndKey]);
 
   function goToMonth(nextYear: number, nextMonth: number) {
     let y = nextYear;
@@ -224,6 +247,7 @@ export default function MonthCalendar() {
                 isToday={key === today}
                 isFuture={key > today}
                 entry={entries[key]}
+                justStamped={key === justStampedDate}
               />
             );
           })

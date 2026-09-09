@@ -7,6 +7,7 @@ import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { photoPublicUrl, saveEntry, uploadStampPhoto } from "@/lib/diary/client";
+import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
 import type { DiaryEntry, DiaryParagraph, SessionStamp, StampKind } from "@/types/diary";
 
 interface EditableParagraph {
@@ -361,6 +362,10 @@ export default function EditEntry({
         });
 
         toast("첨삭이 반영됐어요! 📮");
+        // Lets the calendar, if it's what's showing right now, play a
+        // real stamp-landing animation on this exact day — see
+        // ChatEditor's identical call for the full reasoning.
+        notifyDiaryStamped(entry.entry_date);
         onBackgroundSaveDone?.();
       } catch (err) {
         console.error(err);

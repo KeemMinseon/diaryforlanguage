@@ -10,6 +10,7 @@ import ReadingsHint from "@/components/review/ReadingsHint";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
+import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
 import { buildHighlightSegments } from "@/lib/review/highlight";
 import { formatSavedAt, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
@@ -541,6 +542,12 @@ export default function ChatEditor({
             ? "이어서 쓴 내용까지 도장이 다시 찍혔어요! 📮"
             : "오늘 일기에 도장이 찍혔어요! 📮"
         );
+        // Lets the calendar — if it's the screen showing right now, which
+        // it usually is, since the pending save above already sent the
+        // learner back to it — play a real stamp-landing animation on
+        // this exact day instead of the hanko just silently appearing
+        // next time it happens to re-fetch.
+        notifyDiaryStamped(dateKey);
       } catch (err) {
         console.error(err);
         // The text itself is already safely saved from the pending save

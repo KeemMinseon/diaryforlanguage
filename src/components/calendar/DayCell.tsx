@@ -10,6 +10,7 @@ export default function DayCell({
   isToday,
   isFuture,
   entry,
+  justStamped = false,
 }: {
   date: Date;
   dateKey: string;
@@ -17,6 +18,9 @@ export default function DayCell({
   isToday: boolean;
   isFuture: boolean;
   entry?: DiaryEntry;
+  /** True for the few seconds right after this exact day's entry just
+   * got its final reviewed stamp — see lib/events/diaryStamped.ts. */
+  justStamped?: boolean;
 }) {
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
@@ -68,6 +72,7 @@ export default function DayCell({
             entry={entry}
             photoUrl={photoUrl}
             stampCount={stampCount}
+            justStamped={justStamped}
             className="h-full max-w-full"
           />
         </div>

@@ -12,11 +12,17 @@ export default function StampedDay({
   entry,
   photoUrl,
   stampCount = 1,
+  justStamped = false,
   className,
 }: {
   entry: Pick<DiaryEntry, "stamp_kind" | "stamp_key" | "status">;
   photoUrl?: string | null;
   stampCount?: number;
+  /** True for the few seconds right after this day's entry just got its
+   * final reviewed stamp — plays the hanko's entrance animation instead
+   * of it just being there already, the way it normally renders once
+   * `status === "reviewed"`. See lib/events/diaryStamped.ts. */
+  justStamped?: boolean;
   className?: string;
 }) {
   return (
@@ -44,7 +50,11 @@ export default function StampedDay({
         // edges) so a small margin shows on its right and bottom too,
         // matching the stamp's own outer margins instead of the hanko
         // bleeding into the cell's corner.
-        <HankoStamp className="absolute bottom-[4%] right-[6%] w-[42%] h-[42%] drop-shadow-md" />
+        <HankoStamp
+          className={`absolute bottom-[4%] right-[6%] w-[42%] h-[42%] drop-shadow-md ${
+            justStamped ? "stamp-pop" : ""
+          }`}
+        />
       )}
     </div>
   );
