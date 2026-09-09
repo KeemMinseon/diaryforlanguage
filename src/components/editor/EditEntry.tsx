@@ -40,15 +40,29 @@ function resolveStamps(entry: DiaryEntry): SessionStamp[] {
  * deleting a sitting removes its stamp along with it, instead of leaving
  * a stamp behind for text that no longer exists anywhere in the entry.
  *
- * Each sitting is re-reviewed on its own (one /api/review-paragraph call
- * per surviving sitting, same as ChatEditor), so — unlike an earlier
- * version of this screen, back when the whole day was re-reviewed as one
- * flattened pass and the old per-sitting breakdown genuinely didn't
- * correspond to that anymore — `paragraphs` reflects real, fresh
- * per-sitting feedback now and gets saved right alongside `stamps`
- * instead of being reset to `[]`. Skipping that was also its own bug:
- * with no paragraph history left, the *next* time this screen opened, it
- * had nothing to split into boxes and collapsed back to just one.
+ * "수정 완료" saves in two steps rather than waiting on Claude before
+ * doing anything at all:
+ *
+ * 1. The edited text + stamps (both computed locally — stamps never
+ *    needed Claude to begin with, see `pickStamp`) save immediately and
+ *    this screen closes right away (`onSaved`) — the learner isn't stuck
+ *    staring at "다시 첨삭하는 중…" for a full round trip just to see
+ *    their own edit take effect. `paragraphs` keeps the *previous*
+ *    review data for each surviving sitting for this one moment (still
+ *    something better than blank), since real feedback for the just-
+ *    edited text doesn't exist yet.
+ * 2. Every sitting is then re-reviewed in the background (one
+ *    /api/review-paragraph call per surviving sitting, same as
+ *    ChatEditor, plus one /api/review-finalize — all in parallel, see
+ *    the comment further down), and a second save lands the real
+ *    suggestions/readings/총평/paragraphs a few seconds later, once
+ *    they're ready. `onBackgroundSaveDone` re-triggers whatever the
+ *    caller needs to pick that up (ReviewView re-fetches the page).
+ *
+ * Step 2 runs after this component has already told its caller it's
+ * done and stopped touching its own state — it only ever calls
+ * `saveEntry`/`toast`/`onBackgroundSaveDone`, none of which care whether
+ * this component is still mounted.
  */
 export default function EditEntry({
   userId,
@@ -56,12 +70,18 @@ export default function EditEntry({
   existingPhotoUrl,
   onCancel,
   onSaved,
+  onBackgroundSaveDone,
 }: {
   userId: string;
   entry: DiaryEntry;
   existingPhotoUrl: string | null;
   onCancel: () => void;
   onSaved: () => void;
+  /** Called once the background re-review (see the header comment)
+   * lands its own save — lets the caller refresh again to pick up the
+   * real feedback once it's ready. Not called if that background save
+   * fails (nothing new to pick up then). */
+  onBackgroundSaveDone?: () => void;
 }) {
   const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -153,120 +173,71 @@ export default function EditEntry({
     }
     setError(null);
     setSaving(true);
+
+    let frontPhotoPath: string | null = null;
     try {
-      let frontPhotoPath: string | null = null;
       if (croppedBlob) {
         frontPhotoPath = await uploadStampPhoto(userId, entry.entry_date, croppedBlob);
       } else if (keepExistingPhoto) {
         frontPhotoPath = entry.photo_path;
       }
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "사진 업로드에 실패했어요. 다시 시도해 주세요.");
+      setSaving(false);
+      return;
+    }
 
-      const fullText = trimmed.map((p) => p.text).join("\n\n");
+    const fullText = trimmed.map((p) => p.text).join("\n\n");
 
-      // One /api/review-paragraph call per sitting (each with everything
-      // before it as context) instead of one giant call over the whole
-      // day's text — /api/review-paragraph is built and tuned for a
-      // single paragraph's worth of writing (see ChatEditor, where it's
-      // always called this way); handing it a whole multi-sitting day at
-      // once made for a much bigger, slower generation, and a bigger
-      // input is also more likely to trip the missing-readings backfill
-      // (see that route's own fetchMissingReadings) — a second, fully
-      // sequential Claude call on top of the first. Running every
-      // sitting's call together, and alongside finalize (which doesn't
-      // read any of their output), bounds the wait by the slowest single
-      // paragraph-sized call rather than the sum of a whole-day one plus
-      // a second whole-day finalize call.
-      const [finalizeRes, reviewResponses] = await Promise.all([
-        fetch("/api/review-finalize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullText }),
-        }),
-        Promise.all(
-          trimmed.map((p, i) =>
-            fetch("/api/review-paragraph", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                paragraph: p.text,
-                priorText: trimmed
-                  .slice(0, i)
-                  .map((pp) => pp.text)
-                  .join("\n\n"),
-              }),
-            })
-          )
-        ),
-      ]);
-
-      const reviewDataList = await Promise.all(reviewResponses.map((res) => res.json()));
-      const failedIndex = reviewResponses.findIndex((res) => !res.ok);
-      if (failedIndex !== -1) {
-        throw new Error(reviewDataList[failedIndex]?.error ?? "첨삭에 실패했어요.");
-      }
-      const suggestions = reviewDataList.flatMap((d) => d.suggestions ?? []);
-      // Deduped by (text, reading) — unlike suggestions (each occurrence
-      // is its own real mistake worth flagging, wherever it lands in the
-      // text), the same word reviewed independently in two different
-      // sittings would otherwise show up twice in one entry's own
-      // `readings`, inflating 단어장's occurrence count for a word that
-      // just happened to appear in two paragraphs the same day.
-      const seenReadingKeys = new Set<string>();
-      const readings = reviewDataList
-        .flatMap((d) => d.readings ?? [])
-        .filter((r) => {
-          const key = `${r.text}␟${r.reading}`;
-          if (seenReadingKeys.has(key)) return false;
-          seenReadingKeys.add(key);
-          return true;
-        });
-
-      const finalizeData = await finalizeRes.json();
-      if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
-
-      // One stamp per surviving paragraph, in the same order — a deleted
-      // paragraph's stamp simply isn't in this list at all, and whichever
-      // paragraph now sits at index 0 (even if it wasn't originally the
-      // day's first) becomes the new front/calendar stamp, exactly as
-      // reordering `paragraphs` implies it should.
-      const stamps: SessionStamp[] = trimmed.map((p, i) => {
-        if (i === 0 && frontHasPhoto) {
-          return {
-            session: p.session,
-            stampKind: "photo",
-            stampKey: null,
-            photoPath: frontPhotoPath,
-            createdAt: new Date().toISOString(),
-          };
-        }
-        const original = originalStamps.find((s) => s.session === p.session);
-        if (i !== 0 && original?.stampKind === "photo") {
-          return original;
-        }
+    // Stamps never needed Claude at all — pickStamp is pure and local —
+    // so they're final already, not just a placeholder for step 1 below.
+    // One per surviving paragraph, in the same order — a deleted
+    // paragraph's stamp simply isn't in this list at all, and whichever
+    // paragraph now sits at index 0 (even if it wasn't originally the
+    // day's first) becomes the new front/calendar stamp, exactly as
+    // reordering `paragraphs` implies it should.
+    const stamps: SessionStamp[] = trimmed.map((p, i) => {
+      if (i === 0 && frontHasPhoto) {
         return {
           session: p.session,
-          stampKind: "keyword",
-          stampKey: pickStamp(p.text),
-          photoPath: null,
+          stampKind: "photo",
+          stampKey: null,
+          photoPath: frontPhotoPath,
           createdAt: new Date().toISOString(),
         };
-      });
-
-      // One paragraph per surviving sitting, each with its own review from
-      // the calls above — mirrors ChatEditor's own paragraph shape, and
-      // (see the header comment) is what lets this screen still show the
-      // right number of boxes the *next* time it's opened.
-      const savedAt = new Date().toISOString();
-      const paragraphsOut: DiaryParagraph[] = trimmed.map((p, i) => ({
-        text: p.text,
-        comment:
-          typeof reviewDataList[i]?.comment === "string" ? reviewDataList[i].comment : "",
-        suggestions: reviewDataList[i]?.suggestions ?? [],
-        readings: reviewDataList[i]?.readings ?? [],
-        savedAt,
+      }
+      const original = originalStamps.find((s) => s.session === p.session);
+      if (i !== 0 && original?.stampKind === "photo") {
+        return original;
+      }
+      return {
         session: p.session,
-      }));
+        stampKind: "keyword",
+        stampKey: pickStamp(p.text),
+        photoPath: null,
+        createdAt: new Date().toISOString(),
+      };
+    });
 
+    // Step 1: save the text + stamps right now — carrying over whichever
+    // sitting's *previous* review data still applies (falls back to blank
+    // for a brand new sitting split off just now), since fresh feedback
+    // for the just-edited text doesn't exist yet. This is what the
+    // learner actually sees the instant this screen closes below; step 2
+    // replaces it a few seconds later.
+    const staleParagraphs: DiaryParagraph[] = trimmed.map((p) => {
+      const previous = entry.paragraphs.find((ep) => (ep.session ?? 0) === p.session);
+      return {
+        text: p.text,
+        comment: previous?.comment ?? "",
+        suggestions: previous?.suggestions ?? [],
+        readings: previous?.readings ?? [],
+        savedAt: previous?.savedAt ?? new Date().toISOString(),
+        session: p.session,
+      };
+    });
+    try {
       await saveEntry({
         userId,
         dateKey: entry.entry_date,
@@ -275,20 +246,127 @@ export default function EditEntry({
         stampKey: stamps[0].stampKey,
         photoPath: stamps[0].photoPath,
         status: "reviewed",
-        overallComment: finalizeData.overallComment,
-        suggestions,
-        readings,
-        paragraphs: paragraphsOut,
+        overallComment: entry.overall_comment,
+        suggestions: entry.suggestions,
+        readings: entry.readings,
+        paragraphs: staleParagraphs,
         stamps,
       });
-
-      toast("수정한 일기에 도장이 다시 찍혔어요! 📮");
-      onSaved();
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "저장에 실패했어요. 다시 시도해 주세요.");
       setSaving(false);
+      return;
     }
+
+    toast("수정한 내용을 저장했어요. 첨삭은 잠시 후 반영돼요.");
+    onSaved();
+
+    // Step 2: re-review every surviving sitting for real, in the
+    // background — this screen is already closed (onSaved above), so
+    // nothing from here on touches this component's own state.
+    //
+    // One /api/review-paragraph call per sitting (each with everything
+    // before it as context) instead of one giant call over the whole
+    // day's text — /api/review-paragraph is built and tuned for a single
+    // paragraph's worth of writing (see ChatEditor, where it's always
+    // called this way); handing it a whole multi-sitting day at once made
+    // for a much bigger, slower generation, and a bigger input is also
+    // more likely to trip the missing-readings backfill (see that
+    // route's own fetchMissingReadings) — a second, fully sequential
+    // Claude call on top of the first. Running every sitting's call
+    // together, and alongside finalize (which doesn't read any of their
+    // output), bounds the wait by the slowest single paragraph-sized call
+    // rather than the sum of a whole-day one plus a second whole-day
+    // finalize call.
+    void (async () => {
+      try {
+        const [finalizeRes, reviewResponses] = await Promise.all([
+          fetch("/api/review-finalize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fullText }),
+          }),
+          Promise.all(
+            trimmed.map((p, i) =>
+              fetch("/api/review-paragraph", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  paragraph: p.text,
+                  priorText: trimmed
+                    .slice(0, i)
+                    .map((pp) => pp.text)
+                    .join("\n\n"),
+                }),
+              })
+            )
+          ),
+        ]);
+
+        const reviewDataList = await Promise.all(reviewResponses.map((res) => res.json()));
+        const failedIndex = reviewResponses.findIndex((res) => !res.ok);
+        if (failedIndex !== -1) {
+          throw new Error(reviewDataList[failedIndex]?.error ?? "첨삭에 실패했어요.");
+        }
+        const suggestions = reviewDataList.flatMap((d) => d.suggestions ?? []);
+        // Deduped by (text, reading) — unlike suggestions (each occurrence
+        // is its own real mistake worth flagging, wherever it lands in the
+        // text), the same word reviewed independently in two different
+        // sittings would otherwise show up twice in one entry's own
+        // `readings`, inflating 단어장's occurrence count for a word that
+        // just happened to appear in two paragraphs the same day.
+        const seenReadingKeys = new Set<string>();
+        const readings = reviewDataList
+          .flatMap((d) => d.readings ?? [])
+          .filter((r) => {
+            const key = `${r.text}␟${r.reading}`;
+            if (seenReadingKeys.has(key)) return false;
+            seenReadingKeys.add(key);
+            return true;
+          });
+
+        const finalizeData = await finalizeRes.json();
+        if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
+
+        // One paragraph per surviving sitting, each with its own fresh
+        // review from the calls above — mirrors ChatEditor's own
+        // paragraph shape, and (see the header comment) is what lets this
+        // screen still show the right number of boxes the *next* time
+        // it's opened.
+        const savedAt = new Date().toISOString();
+        const paragraphsOut: DiaryParagraph[] = trimmed.map((p, i) => ({
+          text: p.text,
+          comment:
+            typeof reviewDataList[i]?.comment === "string" ? reviewDataList[i].comment : "",
+          suggestions: reviewDataList[i]?.suggestions ?? [],
+          readings: reviewDataList[i]?.readings ?? [],
+          savedAt,
+          session: p.session,
+        }));
+
+        await saveEntry({
+          userId,
+          dateKey: entry.entry_date,
+          content: fullText,
+          stampKind: stamps[0].stampKind,
+          stampKey: stamps[0].stampKey,
+          photoPath: stamps[0].photoPath,
+          status: "reviewed",
+          overallComment: finalizeData.overallComment,
+          suggestions,
+          readings,
+          paragraphs: paragraphsOut,
+          stamps,
+        });
+
+        toast("첨삭이 반영됐어요! 📮");
+        onBackgroundSaveDone?.();
+      } catch (err) {
+        console.error(err);
+        toast("첨삭을 갱신하지 못했어요. 다시 열어서 저장해 보세요.");
+      }
+    })();
   }
 
   return (

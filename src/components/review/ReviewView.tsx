@@ -209,6 +209,13 @@ export default function ReviewView({
             setEditing(false);
             router.refresh();
           }}
+          // The real suggestions/readings/총평 land a few seconds later,
+          // in the background, well after this screen already closed
+          // (see EditEntry's own header comment) — refresh again to pick
+          // that up once it's actually ready, rather than only ever
+          // showing whatever was still true the instant "수정 완료" was
+          // clicked.
+          onBackgroundSaveDone={() => router.refresh()}
         />
       ) : (
         <>
