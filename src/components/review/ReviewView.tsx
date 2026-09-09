@@ -24,9 +24,13 @@ export default function ReviewView({
 }) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  // Collapsed (stacked, like a pile of stamps) until tapped, then fanned
-  // out — see the header comment on `stamps` below for what each one is.
-  const [fanned, setFanned] = useState(false);
+  // Fanned out by default whenever there's more than one — a pile that
+  // needs a tap before you even notice there's more than one stamp under
+  // it turned out to hide the very thing this feature was for. Starting
+  // open still leaves the tap (below) to collapse it back into a pile,
+  // for whenever that reads better (many stamps, say). See the header
+  // comment on `stamps` below for what each one is.
+  const [fanned, setFanned] = useState(entry.stamps.length > 1);
   // One highlighted word per suggestion index, wherever it actually landed
   // (a specific paragraph, when paragraph history exists) — picking a
   // suggestion card below jumps the content above to that exact word
