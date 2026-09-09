@@ -40,6 +40,16 @@ npm run dev
 - 이 키는 `/api/review-paragraph`, `/api/review-finalize` 라우트 핸들러(서버) 안에서만 쓰입니다 — 클라이언트 번들에는 절대 포함되지 않습니다.
 - 문단별 첨삭·최종 총평 모두 사용자가 그 화면에 머무는 동안 동기적으로 처리됩니다 — 별도의 백그라운드 작업이나 폴링은 없습니다.
 
+### 암호화
+
+일기의 내용을 담고 있는 필드는 Supabase에 평문으로 남기지 않고, 서버(Vercel의 API 라우트)만 아는 키로 암호화해서 저장합니다.
+
+- **암호화 대상**: 일기 본문(`content`), 문단별/전체 添削 코멘트·교정 제안(`suggestions`, 문단마다의 `comment`), 총평(`overall_comment`).
+- **평문 유지**: 우표 메타데이터(`stamp_kind`/`stamp_key`/`photo_path`/`stamps`), 단어장의 단어/읽는 법/뜻 자체(`readings`) — 이것만으로는 그날 일기에 뭐라고 썼는지 드러나지 않습니다.
+- **키 관리**: `DIARY_ENCRYPTION_KEY` (서버 환경변수, `openssl rand -base64 32`로 생성) 하나로 AES-256-GCM 암호화/복호화. 학습자 본인만 아는 별도 비밀번호는 없습니다 — "DB를 직접 열어봐도/백업이 유출돼도 평문이 안 보이게" 하는 것이 목적이고, 서버(이 앱의 API 라우트) 자체는 항상 복호화할 수 있습니다. 첨삭을 위해 Claude에게 평문을 보내야 하는 경로도 어차피 있어서, "서버조차 못 읽는" 종단간 암호화는 이 앱의 목표가 아닙니다.
+- **적용 범위**: 이 기능이 배포된 이후의 모든 저장(`saveEntry`)부터 암호화됩니다 — 새 일기든, 예전에 평문으로 저장된 날짜를 다시 열어 이어쓰거나 수정한 경우든 그 저장 시점부터. 기존에 이미 평문으로 저장된 내용을 한 번에 다시 암호화하는 마이그레이션은 하지 않습니다 (한 번도 다시 저장되지 않은 옛날 일기는 계속 평문으로 남습니다).
+- 구현: `src/lib/crypto/serverEncryption.ts`(원시 암복호화), `src/lib/crypto/entryFields.ts`(어떤 필드를 건드리는지), `/api/diary/encrypt-fields`·`/api/diary/decrypt-fields`(브라우저가 Supabase에 쓰기/읽기 전후로 호출) — `entry/[date]/page.tsx`는 이미 서버에서 실행되므로 이 라우트를 거치지 않고 `decryptEntryFields`를 바로 호출합니다.
+
 ## 폴더 구조
 
 ```

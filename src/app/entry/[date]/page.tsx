@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ChatEditor from "@/components/editor/ChatEditor";
 import ReviewView from "@/components/review/ReviewView";
+import { decryptEntryFields } from "@/lib/crypto/entryFields";
 import type { DiaryEntry } from "@/types/diary";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,7 +38,21 @@ export default async function EntryPage({
     return <ChatEditor userId={userId} dateKey={date} />;
   }
 
-  const typedEntry = entry as DiaryEntry;
+  const rawEntry = entry as DiaryEntry;
+  // This page already runs server-side, so decrypting happens in-process
+  // here rather than over HTTP (unlike the browser's own fetchEntry/
+  // fetchMonthEntries in lib/diary/client.ts, which call the
+  // /api/diary/decrypt-fields route instead — see README's "암호화"
+  // section for what's encrypted and why).
+  const typedEntry: DiaryEntry = {
+    ...rawEntry,
+    ...decryptEntryFields({
+      content: rawEntry.content,
+      overall_comment: rawEntry.overall_comment,
+      suggestions: rawEntry.suggestions,
+      paragraphs: rawEntry.paragraphs,
+    }),
+  };
   let photoUrl: string | null = null;
   if (typedEntry.stamp_kind === "photo" && typedEntry.photo_path) {
     photoUrl = supabase.storage.from("diary-photos").getPublicUrl(typedEntry.photo_path).data
