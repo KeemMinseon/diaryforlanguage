@@ -28,6 +28,19 @@ interface MonthWordGroup {
   vocab: Reading[];
 }
 
+/** A reading whose exact text never actually appears in what the learner
+ * themselves wrote (`entry.content`) only ever got there through a
+ * suggestion's corrected phrasing — a word the correction introduced,
+ * not one the learner already used (and, in a very concrete sense,
+ * therefore already knows) on their own. Readings the learner's own
+ * writing already contains are filtered out of the month list below —
+ * they're not what "새로 배운 단어" is about, and 단어장 (which shows
+ * every word regardless, since that's meant to be the full running
+ * list) is still the place for those. */
+function isFromSuggestionOnly(reading: Reading, content: string): boolean {
+  return !content.includes(reading.text);
+}
+
 /** This month's word/expression suggestions plus actual vocabulary,
  * grouped by the day they were written, most recent day first — every
  * suggestion from the entry, not just ones that started out as Korean
@@ -35,9 +48,10 @@ interface MonthWordGroup {
  * which made a day's grammar/phrasing suggestions disappear from this
  * list even though they're just as worth reviewing). Vocabulary (added
  * later, per user feedback that a list of corrections alone didn't feel
- * like it captured what was actually *learned* that day) is exactly
- * 단어장's own source data, `readings` — just grouped per-day instead of
- * collapsed across every entry ever written. */
+ * like it captured what was actually *learned* that day) is 단어장's own
+ * source data, `readings` — grouped per-day instead of collapsed across
+ * every entry ever written, and narrowed to words the learner didn't
+ * already know how to write themselves (see `isFromSuggestionOnly`). */
 function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
   const sortedEntries = Object.values(entries).sort((a, b) =>
     a.entry_date < b.entry_date ? 1 : -1
@@ -57,6 +71,7 @@ function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
     const vocab: Reading[] = [];
     for (const r of entry.readings) {
       if (!r.text || !r.reading) continue;
+      if (!isFromSuggestionOnly(r, entry.content)) continue;
       const key = wordKey(r.text, r.reading);
       if (seenVocab.has(key)) continue;
       seenVocab.add(key);
