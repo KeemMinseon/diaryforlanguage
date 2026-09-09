@@ -74,7 +74,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                 아직 받은 우표가 없어요. 일기를 쓰면 여기에 쌓여요.
               </p>
             ) : (
-              <div className="grid grid-cols-4 gap-x-3 gap-y-5">
+              <div className="grid grid-cols-4 gap-x-5 gap-y-6">
                 {collection.keywordCounts.map(({ stampKey, count }) => (
                   <div key={stampKey} className="flex flex-col items-center gap-1.5">
                     <DiaryStamp
@@ -99,7 +99,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                 아직 사진으로 찍은 우표가 없어요.
               </p>
             ) : (
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 gap-5">
                 {collection.photoStamps.map((p) => (
                   <button
                     key={`${p.entryDate}-${p.session}`}
