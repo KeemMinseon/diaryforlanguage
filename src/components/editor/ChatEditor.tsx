@@ -426,14 +426,11 @@ export default function ChatEditor({
     let stamps: SessionStamp[] = initialEntry?.stamps ?? [];
 
     try {
-      // 1) Save the text itself first — it shouldn't sit in the browser
+      // Save the text itself first — it shouldn't sit in the browser
       // waiting on an AI round trip to be safe. It always lands as
       // "pending" here (there's always something from this visit still
-      // unreviewed at this point); step 2 below then reviews just that
-      // and re-saves as "reviewed". Previously this review pass ran
-      // *before* saving, so the feed would visibly pick up the new round
-      // while the button still said "마무리하는 중…" — as if saving were
-      // still waiting on it.
+      // unreviewed at this point); the background pass below then
+      // reviews just that and re-saves as "reviewed".
       if (croppedBlob) {
         photoPath = await uploadStampPhoto(userId, dateKey, croppedBlob);
       }
@@ -470,86 +467,57 @@ export default function ChatEditor({
       return;
     }
 
-    try {
-      // 2) Now review just this visit's own writing — locked history from
-      // earlier visits was already reviewed then and is never resent.
-      //
-      // This last paragraph's own review and the whole-day总평 call are
-      // two independent Claude requests — finalize only ever reads
-      // `newContent` (this sitting's full text), never anything reviewChunk
-      // returns — so there's nothing forcing them to happen one after the
-      // other. They used to run sequentially (reviewChunk, then finalize),
-      // which stacked two separate LLM round trips back to back on every
-      // single "마치기" — by far the largest share of the button's total
-      // wait, well past whatever a single save request costs. Running them
-      // together roughly halves that in the common case (an unreviewed
-      // trailing paragraph, which is the whole reason this branch exists).
-      let allRounds = rounds;
-      let allFeedHistory = feedHistory;
-      const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
-      const [round, finalizeRes] = await Promise.all([
-        chunk ? reviewChunk(chunk, priorTextForApi) : Promise.resolve(null),
-        fetch("/api/review-finalize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullText: newContent }),
-        }),
-      ]);
-      if (round) {
-        const newRound = { ...round, text: rawChunk };
-        allRounds = [...rounds, newRound];
-        allFeedHistory = [...feedHistory, newRound];
-      }
+    // The text + stamp are already safely saved — leave this screen right
+    // away instead of making the learner wait through a full Claude round
+    // trip just to get back to the calendar (same pattern as EditEntry's
+    // own 수정 완료). Word-level feedback + 총평 finish in the background
+    // below and land a moment later via a second save; nothing from here
+    // on needs to block returning to the calendar.
+    toast("일기를 저장했어요. 더 나은 첨삭을 잠시 후 보여드릴게요.");
+    const month = dateKey.slice(0, 7);
+    router.push(`/?month=${month}`);
 
-      const finalizeData = await finalizeRes.json();
-      if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
-
-      const allBlocks = [...lockedRounds, ...allRounds];
-      const allSuggestions = allBlocks.flatMap((r) => r.suggestions);
-      const allReadings = allBlocks.flatMap((r) => r.readings);
-      const paragraphs: DiaryParagraph[] = allBlocks.map((r) => ({
-        text: r.text,
-        comment: r.comment,
-        suggestions: r.suggestions,
-        readings: r.readings,
-        savedAt: r.savedAt,
-        session: r.session,
-      }));
-
-      await saveEntry({
-        userId,
-        dateKey,
-        content: fullText,
-        stampKind: stamps[0].stampKind,
-        stampKey: stamps[0].stampKey,
-        photoPath: stamps[0].photoPath,
-        status: "reviewed",
-        overallComment: finalizeData.overallComment,
-        suggestions: allSuggestions,
-        readings: allReadings,
-        paragraphs,
-        stamps,
-      });
-
-      setRounds(allRounds);
-      setFeedHistory(allFeedHistory);
-      setReviewedPrefix(content);
-
-      toast(
-        initialEntry
-          ? "이어서 쓴 내용까지 도장이 다시 찍혔어요! 📮"
-          : "오늘 일기에 도장이 찍혔어요! 📮"
-      );
-      const month = dateKey.slice(0, 7);
-      router.push(`/?month=${month}`);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "마무리에 실패했어요. 다시 시도해 주세요.");
-      setFinishing(false);
-      // The text itself is already safely saved from step 1 — just mark
-      // it so reopening the entry shows "다시 저장하면 재시도돼요"
-      // instead of looking like nothing was ever attempted.
+    void (async () => {
       try {
+        // Review just this visit's own writing — locked history from
+        // earlier visits was already reviewed then and is never resent.
+        //
+        // This last paragraph's own review and the whole-day 총평 call
+        // are two independent Claude requests — finalize only ever reads
+        // `newContent` (this sitting's full text), never anything
+        // reviewChunk returns — so there's nothing forcing them to happen
+        // one after the other. Running them together roughly halves the
+        // wait in the common case (an unreviewed trailing paragraph,
+        // which is the whole reason this branch exists) — though now
+        // that this runs after the screen has already moved on, that
+        // mostly just means the background work finishes sooner, not
+        // that the learner is staring at a spinner for less time.
+        const priorTextForApi = [priorContentForBlock, reviewedPrefix].filter(Boolean).join("\n\n");
+        const [round, finalizeRes] = await Promise.all([
+          chunk ? reviewChunk(chunk, priorTextForApi) : Promise.resolve(null),
+          fetch("/api/review-finalize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fullText: newContent }),
+          }),
+        ]);
+        const allRounds = round ? [...rounds, { ...round, text: rawChunk }] : rounds;
+
+        const finalizeData = await finalizeRes.json();
+        if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
+
+        const allBlocks = [...lockedRounds, ...allRounds];
+        const allSuggestions = allBlocks.flatMap((r) => r.suggestions);
+        const allReadings = allBlocks.flatMap((r) => r.readings);
+        const paragraphs: DiaryParagraph[] = allBlocks.map((r) => ({
+          text: r.text,
+          comment: r.comment,
+          suggestions: r.suggestions,
+          readings: r.readings,
+          savedAt: r.savedAt,
+          session: r.session,
+        }));
+
         await saveEntry({
           userId,
           dateKey,
@@ -557,17 +525,50 @@ export default function ChatEditor({
           stampKind: stamps[0].stampKind,
           stampKey: stamps[0].stampKey,
           photoPath: stamps[0].photoPath,
-          status: "failed",
-          overallComment: initialEntry?.overall_comment ?? "",
-          suggestions: existingSuggestions,
-          readings: existingReadings,
-          paragraphs: existingParagraphs,
+          status: "reviewed",
+          overallComment: finalizeData.overallComment,
+          suggestions: allSuggestions,
+          readings: allReadings,
+          paragraphs,
           stamps,
         });
-      } catch (markErr) {
-        console.error(markErr);
+
+        // Not setRounds/setFeedHistory/setReviewedPrefix — this component
+        // is already gone (the screen moved on right after the pending
+        // save above), so there's no feed left here to update.
+        toast(
+          initialEntry
+            ? "이어서 쓴 내용까지 도장이 다시 찍혔어요! 📮"
+            : "오늘 일기에 도장이 찍혔어요! 📮"
+        );
+      } catch (err) {
+        console.error(err);
+        // The text itself is already safely saved from the pending save
+        // above — just mark it so reopening the entry shows "다시
+        // 저장하면 재시도돼요" instead of looking like nothing was ever
+        // attempted. No setError/setFinishing here either, for the same
+        // reason — this screen is already gone.
+        try {
+          await saveEntry({
+            userId,
+            dateKey,
+            content: fullText,
+            stampKind: stamps[0].stampKind,
+            stampKey: stamps[0].stampKey,
+            photoPath: stamps[0].photoPath,
+            status: "failed",
+            overallComment: initialEntry?.overall_comment ?? "",
+            suggestions: existingSuggestions,
+            readings: existingReadings,
+            paragraphs: existingParagraphs,
+            stamps,
+          });
+        } catch (markErr) {
+          console.error(markErr);
+        }
+        toast("첨삭을 완료하지 못했어요. 그 날짜를 다시 열어서 저장해 보세요.");
       }
-    }
+    })();
   }
 
   function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
