@@ -47,6 +47,26 @@ export async function fetchAllEntriesForWords(userId: string): Promise<WordSourc
   return (data ?? []) as WordSourceEntry[];
 }
 
+/** Just enough of every entry to build the 우표 모아보기 collection — the
+ * per-session `stamps` array plus the legacy top-level columns it falls
+ * back to for an entry saved before that array existed (see
+ * collectStamps's `resolveStamps`). */
+export type StampSourceEntry = Pick<
+  DiaryEntry,
+  "entry_date" | "stamps" | "stamp_kind" | "stamp_key" | "photo_path"
+>;
+
+export async function fetchAllEntriesForStamps(userId: string): Promise<StampSourceEntry[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("diary_entries")
+    .select("entry_date, stamps, stamp_kind, stamp_key, photo_path")
+    .eq("user_id", userId)
+    .order("entry_date", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as StampSourceEntry[];
+}
+
 export async function fetchWordProgress(userId: string): Promise<WordProgress[]> {
   const supabase = createClient();
   const { data, error } = await supabase.from("word_progress").select("*").eq("user_id", userId);

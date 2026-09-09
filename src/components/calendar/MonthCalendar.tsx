@@ -131,6 +131,20 @@ export default function MonthCalendar({ userId }: { userId: string }) {
             </UiIcon>
           </Link>
           <Link
+            href="/stamps"
+            aria-label="우표 모음"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
+          >
+            <UiIcon name="stamp-grid-line" className="h-5 w-5" alt="우표 모음">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth={1.6} />
+                <rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth={1.6} />
+                <rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth={1.6} />
+                <rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth={1.6} />
+              </svg>
+            </UiIcon>
+          </Link>
+          <Link
             href="/settings"
             aria-label="설정"
             className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
