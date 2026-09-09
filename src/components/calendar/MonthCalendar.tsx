@@ -297,7 +297,7 @@ export default function MonthCalendar() {
                 {group.vocab.map((r) => (
                   <span
                     key={wordKey(r.text, r.reading)}
-                    className="flex shrink-0 flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-3 py-2"
+                    className="flex shrink-0 flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-4 py-2"
                   >
                     <span className="font-[family-name:var(--font-diary)] text-[15px] font-medium whitespace-nowrap text-[var(--ink)]">
                       <FuriganaText text={r.text} readings={[r]} />
