@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const getUser = vi.fn();
+const getSession = vi.fn();
 let upsertPayload: unknown = null;
 let upsertResult: { data: unknown; error: unknown } = { data: null, error: null };
 
@@ -16,19 +16,19 @@ function fakeBuilder() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ auth: { getUser }, from: () => fakeBuilder() }),
+  createClient: async () => ({ auth: { getSession }, from: () => fakeBuilder() }),
 }));
 
 beforeEach(() => {
   vi.resetModules();
-  getUser.mockReset();
+  getSession.mockReset();
   upsertPayload = null;
   process.env.DIARY_ENCRYPTION_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 });
 
 describe("POST /api/diary/save", () => {
   it("rejects an unauthenticated request", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    getSession.mockResolvedValue({ data: { session: null } });
     const { POST } = await import("@/app/api/diary/save/route");
     const res = await POST(
       new Request("http://x/api/diary/save", {
@@ -40,7 +40,7 @@ describe("POST /api/diary/save", () => {
   });
 
   it("rejects a malformed body", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const { POST } = await import("@/app/api/diary/save/route");
     const res = await POST(
       new Request("http://x/api/diary/save", { method: "POST", body: JSON.stringify({}) })
@@ -49,7 +49,7 @@ describe("POST /api/diary/save", () => {
   });
 
   it("encrypts content/overall_comment/suggestions/paragraphs before upserting, using the session's own user id", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     upsertResult = {
       data: {
         id: "e1",

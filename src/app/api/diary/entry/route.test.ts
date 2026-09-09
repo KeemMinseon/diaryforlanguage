@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encryptEntryFields } from "@/lib/crypto/entryFields";
 
-const getUser = vi.fn();
+const getSession = vi.fn();
 let selectResult: { data: unknown; error: unknown } = { data: null, error: null };
 
 function fakeBuilder() {
@@ -13,32 +13,32 @@ function fakeBuilder() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ auth: { getUser }, from: () => fakeBuilder() }),
+  createClient: async () => ({ auth: { getSession }, from: () => fakeBuilder() }),
 }));
 
 beforeEach(() => {
   vi.resetModules();
-  getUser.mockReset();
+  getSession.mockReset();
   process.env.DIARY_ENCRYPTION_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 });
 
 describe("GET /api/diary/entry", () => {
   it("rejects an unauthenticated request", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    getSession.mockResolvedValue({ data: { session: null } });
     const { GET } = await import("@/app/api/diary/entry/route");
     const res = await GET(new Request("http://x/api/diary/entry?date=2026-09-08"));
     expect(res.status).toBe(401);
   });
 
   it("rejects a request with no date", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const { GET } = await import("@/app/api/diary/entry/route");
     const res = await GET(new Request("http://x/api/diary/entry"));
     expect(res.status).toBe(400);
   });
 
   it("returns entry: null when nothing exists for that date", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     selectResult = { data: null, error: null };
     const { GET } = await import("@/app/api/diary/entry/route");
     const res = await GET(new Request("http://x/api/diary/entry?date=2026-01-01"));
@@ -47,7 +47,7 @@ describe("GET /api/diary/entry", () => {
   });
 
   it("decrypts a found row", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const encrypted = encryptEntryFields({
       content: "今日は映画を見た。",
       overall_comment: "재밌었겠다!",

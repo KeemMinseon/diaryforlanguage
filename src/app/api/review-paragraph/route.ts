@@ -264,9 +264,23 @@ async function fetchMissingReadings(
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
+  // getSession() reads the session from cookies with no network round trip
+  // — getUser() re-verifies the token against Supabase's Auth server on
+  // every call, which was real, measurable latency here given how often
+  // this route fires (once per paragraph while writing, or once per
+  // sitting when re-reviewing an edit — see EditEntry). This route isn't
+  // covered by the middleware's own network-verified getUser() check the
+  // way a page route is (see HomePage) — it's deliberately excluded from
+  // that middleware (see proxy.ts) so an expired/missing session gets a
+  // clean JSON 401 here instead of an HTML redirect — but getSession()
+  // still verifies the token's signature and expiry locally; the gap
+  // versus getUser() is only "has this specific, still-unexpired token
+  // been explicitly revoked server-side since," which isn't worth a
+  // network round trip on every single paragraph for this app.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
   if (!user) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encryptEntryFields } from "@/lib/crypto/entryFields";
 
-const getUser = vi.fn();
+const getSession = vi.fn();
 let selectResult: { data: unknown; error: unknown } = { data: [], error: null };
 
 function fakeBuilder() {
@@ -15,32 +15,32 @@ function fakeBuilder() {
 }
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({ auth: { getUser }, from: () => fakeBuilder() }),
+  createClient: async () => ({ auth: { getSession }, from: () => fakeBuilder() }),
 }));
 
 beforeEach(() => {
   vi.resetModules();
-  getUser.mockReset();
+  getSession.mockReset();
   process.env.DIARY_ENCRYPTION_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 });
 
 describe("GET /api/diary/entries", () => {
   it("rejects an unauthenticated request", async () => {
-    getUser.mockResolvedValue({ data: { user: null } });
+    getSession.mockResolvedValue({ data: { session: null } });
     const { GET } = await import("@/app/api/diary/entries/route");
     const res = await GET(new Request("http://x/api/diary/entries?start=2026-09-01&end=2026-09-30"));
     expect(res.status).toBe(401);
   });
 
   it("rejects a request missing start/end", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const { GET } = await import("@/app/api/diary/entries/route");
     const res = await GET(new Request("http://x/api/diary/entries"));
     expect(res.status).toBe(400);
   });
 
   it("decrypts every row in the range", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } } });
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const encryptedA = encryptEntryFields({
       content: "一日目",
       overall_comment: null,
