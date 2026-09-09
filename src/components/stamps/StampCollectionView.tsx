@@ -80,7 +80,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     <DiaryStamp
                       stampKind="keyword"
                       stampKey={stampKey}
-                      className="w-16 drop-shadow-sm"
+                      className="w-full drop-shadow-sm"
                     />
                     <span className="text-xs font-medium text-[var(--ink)]">
                       {STAMP_LABELS[stampKey]}
