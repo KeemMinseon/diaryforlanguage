@@ -10,21 +10,15 @@ import { fetchMonthEntries } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { wordKey } from "@/lib/words/collectWords";
 import { buildMonthGrid, parseDateKey, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
-import type { DiaryEntryMap, Reading, Suggestion } from "@/types/diary";
-
-/** One suggestion plus the readings from the entry it came from — kept
- * together so FuriganaText has the right context to annotate it with. */
-type MonthSuggestion = Suggestion & { readings: Reading[] };
+import type { DiaryEntryMap, Reading } from "@/types/diary";
 
 interface MonthWordGroup {
   entryDate: string;
-  suggestions: MonthSuggestion[];
   /** The day's own vocabulary (읽는 법 + 뜻) — same source 단어장 itself
    * reads from, just scoped to this one day instead of collapsed across
    * the whole account. The same word turning up again on some other day
-   * this month isn't deduped away here — only within a single day, same
-   * as `suggestions` below — this list is "what came up that day", not a
-   * running once-per-month tally. */
+   * this month isn't deduped away here — only within a single day — this
+   * list is "what came up that day", not a running once-per-month tally. */
   vocab: Reading[];
 }
 
@@ -41,32 +35,20 @@ function isFromSuggestionOnly(reading: Reading, content: string): boolean {
   return !content.includes(reading.text);
 }
 
-/** This month's word/expression suggestions plus actual vocabulary,
- * grouped by the day they were written, most recent day first — every
- * suggestion from the entry, not just ones that started out as Korean
- * mixed into the Japanese (that used to be the only case shown here,
- * which made a day's grammar/phrasing suggestions disappear from this
- * list even though they're just as worth reviewing). Vocabulary (added
- * later, per user feedback that a list of corrections alone didn't feel
- * like it captured what was actually *learned* that day) is 단어장's own
- * source data, `readings` — grouped per-day instead of collapsed across
- * every entry ever written, and narrowed to words the learner didn't
- * already know how to write themselves (see `isFromSuggestionOnly`). */
+/** This month's vocabulary, grouped by the day it was written, most
+ * recent day first. This used to also show the entry's raw suggestion
+ * phrases, but with a full month of entries the list got long fast (and
+ * a corrected sentence isn't really a "word" to review) — narrowed down
+ * to just 단어장's own source data, `readings`, grouped per-day instead
+ * of collapsed across every entry ever written, and further narrowed to
+ * words the learner didn't already know how to write themselves (see
+ * `isFromSuggestionOnly`). */
 function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
   const sortedEntries = Object.values(entries).sort((a, b) =>
     a.entry_date < b.entry_date ? 1 : -1
   );
   const groups: MonthWordGroup[] = [];
   for (const entry of sortedEntries) {
-    const seenSuggestions = new Set<string>();
-    const suggestions: MonthSuggestion[] = [];
-    for (const s of entry.suggestions) {
-      const key = `${s.original} ${s.suggestion}`;
-      if (seenSuggestions.has(key)) continue;
-      seenSuggestions.add(key);
-      suggestions.push({ ...s, readings: entry.readings });
-    }
-
     const seenVocab = new Set<string>();
     const vocab: Reading[] = [];
     for (const r of entry.readings) {
@@ -78,8 +60,8 @@ function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
       vocab.push(r);
     }
 
-    if (suggestions.length > 0 || vocab.length > 0) {
-      groups.push({ entryDate: entry.entry_date, suggestions, vocab });
+    if (vocab.length > 0) {
+      groups.push({ entryDate: entry.entry_date, vocab });
     }
   }
   return groups;
@@ -307,32 +289,24 @@ export default function MonthCalendar() {
                   day: "numeric",
                 })}
               </p>
-              <div className="flex flex-col gap-1.5">
+              {/* Horizontal scroll rather than a vertical stack — early on
+                  there are enough new words in one day's entry that
+                  stacking them made the month list's total height grow
+                  fast as the month fills in. */}
+              <div className="flex flex-row gap-2 overflow-x-auto pb-1">
                 {group.vocab.map((r) => (
                   <span
                     key={wordKey(r.text, r.reading)}
-                    className="flex w-full flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-3 py-2"
+                    className="flex shrink-0 flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-3 py-2"
                   >
-                    <span className="font-[family-name:var(--font-diary)] text-[15px] font-medium text-[var(--ink)]">
+                    <span className="font-[family-name:var(--font-diary)] text-[15px] font-medium whitespace-nowrap text-[var(--ink)]">
                       <FuriganaText text={r.text} readings={[r]} />
                     </span>
                     {r.meaning && (
-                      <span className="text-[12px] text-[var(--ink-soft)]">{r.meaning}</span>
+                      <span className="text-[12px] whitespace-nowrap text-[var(--ink-soft)]">
+                        {r.meaning}
+                      </span>
                     )}
-                  </span>
-                ))}
-                {group.suggestions.map((s, i) => (
-                  <span
-                    key={i}
-                    className="flex w-full flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-3 py-2"
-                  >
-                    {/* Color alone (soft original above, full-ink suggestion
-                        below) already reads as "before → after" — a
-                        strikethrough and arrow on top of that was redundant. */}
-                    <span className="text-[12px] text-[var(--ink-soft)]">{s.original}</span>
-                    <span className="font-[family-name:var(--font-diary)] text-[15px] font-medium text-[var(--ink)]">
-                      <FuriganaText text={s.suggestion} readings={s.readings} />
-                    </span>
                   </span>
                 ))}
               </div>
