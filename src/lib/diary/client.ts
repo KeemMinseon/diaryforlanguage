@@ -10,61 +10,36 @@ import type {
   Suggestion,
   WordProgress,
 } from "@/types/diary";
-// Type-only — erased at compile time, so this never drags the server-only
-// crypto module (see entryFields.ts -> serverEncryption.ts, Node `crypto`)
-// into this "use client" file's browser bundle. The actual encrypt/decrypt
-// work happens behind the two API routes below, never in the browser.
-import type { EncryptableEntryFields } from "@/lib/crypto/entryFields";
 
 const PHOTO_BUCKET = "diary-photos";
 
-/** `content`/`overall_comment`/`suggestions`/`paragraphs` are the fields
- * that get encrypted at rest (see entryFields.ts) — slice a fetched row
- * down to just those before sending it to /api/diary/decrypt-fields. */
-function pickEncryptableFields(row: DiaryEntry): EncryptableEntryFields {
-  return {
-    content: row.content,
-    overall_comment: row.overall_comment,
-    suggestions: row.suggestions,
-    paragraphs: row.paragraphs,
-  };
-}
-
-function withFields(row: DiaryEntry, fields: EncryptableEntryFields): DiaryEntry {
-  return { ...row, ...fields };
-}
-
-async function callCryptoApi(
-  direction: "encrypt" | "decrypt",
-  items: EncryptableEntryFields[]
-): Promise<EncryptableEntryFields[]> {
-  if (items.length === 0) return [];
-  const res = await fetch(`/api/diary/${direction}-fields`, {
-    method: "POST",
+/** Encrypting/decrypting the content-bearing fields (see
+ * lib/crypto/entryFields.ts) only ever happens server-side — never in
+ * this "use client" file — so every read/write of those fields goes
+ * through one of /api/diary/{save,entry,entries} instead of talking to
+ * Supabase directly the way the other functions below still do. Each
+ * used to be two separate round trips (an encrypt/decrypt-only call,
+ * then a direct Supabase query) until that turned out to cost real,
+ * user-visible latency for no benefit once both steps had to happen
+ * server-side anyway — collapsed down to one call each. */
+async function callDiaryApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api/diary/${path}`, {
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items }),
+    ...init,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "처리에 실패했어요.");
-  return data.items as EncryptableEntryFields[];
+  return data as T;
 }
 
 export async function fetchMonthEntries(
-  userId: string,
   monthStartKey: string,
   monthEndKey: string
 ): Promise<DiaryEntry[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("diary_entries")
-    .select("*")
-    .eq("user_id", userId)
-    .gte("entry_date", monthStartKey)
-    .lte("entry_date", monthEndKey);
-  if (error) throw error;
-  const rows = (data ?? []) as DiaryEntry[];
-  const decrypted = await callCryptoApi("decrypt", rows.map(pickEncryptableFields));
-  return rows.map((row, i) => withFields(row, decrypted[i]));
+  const { entries } = await callDiaryApi<{ entries: DiaryEntry[] }>(
+    `entries?start=${encodeURIComponent(monthStartKey)}&end=${encodeURIComponent(monthEndKey)}`
+  );
+  return entries;
 }
 
 /** Just enough of every entry to build the 단어장 word list — every day,
@@ -131,19 +106,11 @@ export async function setWordMemorized(
   if (error) throw error;
 }
 
-export async function fetchEntry(userId: string, dateKey: string): Promise<DiaryEntry | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("diary_entries")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("entry_date", dateKey)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  const row = data as DiaryEntry;
-  const [decrypted] = await callCryptoApi("decrypt", [pickEncryptableFields(row)]);
-  return withFields(row, decrypted);
+export async function fetchEntry(dateKey: string): Promise<DiaryEntry | null> {
+  const { entry } = await callDiaryApi<{ entry: DiaryEntry | null }>(
+    `entry?date=${encodeURIComponent(dateKey)}`
+  );
+  return entry;
 }
 
 export function photoPublicUrl(path: string | null | undefined): string | null {
@@ -191,47 +158,24 @@ interface SaveEntryInput {
 }
 
 export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
-  const supabase = createClient();
-  const status = input.status ?? "reviewed";
-  // Encrypted just before this write, never before — every save from
-  // here on writes ciphertext for these four fields, regardless of
-  // whether the row already existed with legacy plaintext (that's what
-  // "새 일기부터만 적용" turns into once collapsed onto a single upsert
-  // path: the day it's next touched, not the day it was first written).
-  const plaintextFields: EncryptableEntryFields = {
-    content: input.content,
-    overall_comment: input.overallComment ?? null,
-    suggestions: input.suggestions ?? [],
-    paragraphs: input.paragraphs ?? [],
-  };
-  const [encrypted] = await callCryptoApi("encrypt", [plaintextFields]);
-  const { data, error } = await supabase
-    .from("diary_entries")
-    .upsert(
-      {
-        user_id: input.userId,
-        entry_date: input.dateKey,
-        content: encrypted.content,
-        stamp_kind: input.stampKind,
-        stamp_key: input.stampKey,
-        photo_path: input.photoPath,
-        status,
-        overall_comment: encrypted.overall_comment,
-        suggestions: encrypted.suggestions,
-        readings: input.readings ?? [],
-        paragraphs: encrypted.paragraphs,
-        stamps: input.stamps ?? [],
-        reviewed_at: status === "reviewed" ? (input.reviewedAt ?? new Date().toISOString()) : null,
-      },
-      { onConflict: "user_id,entry_date" }
-    )
-    .select("*")
-    .single();
-  if (error) throw error;
-  // The row Supabase just echoed back carries ciphertext for these four
-  // fields (we just wrote it that way) — merge back the plaintext this
-  // function already has in memory instead of an extra decrypt round trip.
-  return withFields(data as DiaryEntry, plaintextFields);
+  const { entry } = await callDiaryApi<{ entry: DiaryEntry }>("save", {
+    method: "POST",
+    body: JSON.stringify({
+      dateKey: input.dateKey,
+      content: input.content,
+      stampKind: input.stampKind,
+      stampKey: input.stampKey,
+      photoPath: input.photoPath,
+      status: input.status,
+      overallComment: input.overallComment,
+      suggestions: input.suggestions,
+      readings: input.readings,
+      paragraphs: input.paragraphs,
+      stamps: input.stamps,
+      reviewedAt: input.reviewedAt,
+    }),
+  });
+  return entry;
 }
 
 /** Deletes an entry and its attached photo (if any). RLS keeps this to the owner's own row. */

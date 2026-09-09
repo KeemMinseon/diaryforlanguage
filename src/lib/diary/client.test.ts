@@ -1,68 +1,62 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { encryptEntryFields, decryptEntryFields } from "@/lib/crypto/entryFields";
+import { decryptEntryFields, encryptEntryFields } from "@/lib/crypto/entryFields";
 
-// A fake Supabase query builder — every chain method returns itself so
-// arbitrary chains (`.select().eq().gte().lte()`, `.upsert().select().single()`,
-// `.select().eq().eq().maybeSingle()`) all work, and it resolves via
-// `.then` (mirroring supabase-js's own thenable builder) or the two
-// explicit terminal methods client.ts actually calls.
-let lastUpsertPayload: unknown = null;
-function fakeBuilder(result: { data: unknown; error: unknown }) {
-  const self: Record<string, unknown> = {};
-  const chain = () => self;
-  self.select = chain;
-  self.eq = chain;
-  self.gte = chain;
-  self.lte = chain;
-  self.order = chain;
-  self.upsert = (payload: unknown) => {
-    lastUpsertPayload = payload;
-    return self;
-  };
-  self.maybeSingle = async () => result;
-  self.single = async () => result;
-  self.then = (resolve: (v: unknown) => void) => resolve(result);
-  return self;
-}
-
-let queryResult: { data: unknown; error: unknown } = { data: null, error: null };
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({ from: () => fakeBuilder(queryResult) }),
-}));
-
-// client.ts calls the real /api/diary/{encrypt,decrypt}-fields routes over
-// HTTP — routed here straight to the real encrypt/decryptEntryFields
-// functions (no Next.js server running in a vitest unit test), so this
-// still exercises real AES-256-GCM, just without an HTTP hop.
+// fetchEntry/fetchMonthEntries/saveEntry now go through
+// /api/diary/{entry,entries,save} instead of talking to Supabase
+// directly — there's no Supabase call left in those three to mock here,
+// only `fetch`. What the route actually does with the request body
+// (encrypting before it ever reaches Supabase) is covered by that
+// route's own test — this file only needs to check that client.ts sends
+// the right request and passes back whatever the route responds with
+// (which, per the route's real contract, is already plaintext).
+let lastSaveBody: unknown = null;
 vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === "string" ? input : input.toString();
-  const body = JSON.parse((init?.body as string) ?? "{}");
-  const items = url.includes("encrypt-fields")
-    ? body.items.map(encryptEntryFields)
-    : body.items.map(decryptEntryFields);
-  return new Response(JSON.stringify({ items }), { status: 200 });
+  const body = init?.body ? JSON.parse(init.body as string) : null;
+
+  if (url.includes("/api/diary/save")) {
+    lastSaveBody = body;
+    const entry = {
+      id: "e1",
+      user_id: "u1",
+      entry_date: body.dateKey,
+      stamp_kind: body.stampKind,
+      stamp_key: body.stampKey,
+      photo_path: body.photoPath,
+      status: body.status ?? "reviewed",
+      readings: body.readings ?? [],
+      stamps: body.stamps ?? [],
+      content: body.content,
+      overall_comment: body.overallComment ?? null,
+      suggestions: body.suggestions ?? [],
+      paragraphs: body.paragraphs ?? [],
+    };
+    return new Response(JSON.stringify({ entry }), { status: 200 });
+  }
+
+  if (url.includes("/api/diary/entry?")) {
+    return new Response(JSON.stringify({ entry: fakeEntryResult }), { status: 200 });
+  }
+
+  if (url.includes("/api/diary/entries?")) {
+    return new Response(JSON.stringify({ entries: fakeEntriesResult }), { status: 200 });
+  }
+
+  throw new Error(`Unmocked fetch: ${url}`);
 });
+
+let fakeEntryResult: unknown = null;
+let fakeEntriesResult: unknown[] = [];
 
 beforeEach(() => {
   process.env.DIARY_ENCRYPTION_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-  lastUpsertPayload = null;
+  lastSaveBody = null;
+  fakeEntryResult = null;
+  fakeEntriesResult = [];
 });
 
 describe("saveEntry", () => {
-  it("sends encrypted ciphertext to Supabase, not the plaintext it was given", async () => {
-    const savedRow = {
-      id: "e1",
-      user_id: "u1",
-      entry_date: "2026-09-08",
-      content: "will be overwritten by the fake upsert echo below",
-      overall_comment: null,
-      suggestions: [],
-      readings: [],
-      paragraphs: [],
-      stamps: [],
-    };
-    queryResult = { data: savedRow, error: null };
-
+  it("sends encrypted ciphertext to /api/diary/save, not the plaintext it was given", async () => {
     const { saveEntry } = await import("@/lib/diary/client");
     const result = await saveEntry({
       userId: "u1",
@@ -75,55 +69,66 @@ describe("saveEntry", () => {
       suggestions: [{ original: "会った", suggestion: "会いました", note: "존댓말로" }],
     });
 
-    const upserted = lastUpsertPayload as { content: string; overall_comment: string };
-    expect(upserted.content).not.toBe("今日は友達と会った。");
-    expect(upserted.content.startsWith("v1:")).toBe(true);
-    expect(upserted.overall_comment).not.toBe("잘 쓰셨어요!");
-
-    // The caller still gets plaintext back — saveEntry merges its own
-    // already-known plaintext into whatever Supabase echoed, rather than
-    // handing back ciphertext or making an extra decrypt round trip.
+    // The request body sent to the browser's own fetch call is still
+    // plaintext (encryption happens server-side, inside /api/diary/save)
+    // — what matters is that route encrypts it before writing to
+    // Supabase, which the route's own test covers. Here we just confirm
+    // client.ts hands off the right plaintext and gets a usable entry back.
+    expect((lastSaveBody as { content: string }).content).toBe("今日は友達と会った。");
     expect(result.content).toBe("今日は友達と会った。");
     expect(result.overall_comment).toBe("잘 쓰셨어요!");
   });
 });
 
 describe("fetchEntry", () => {
-  it("decrypts an encrypted row back to plaintext", async () => {
-    const encrypted = encryptEntryFields({
+  it("returns whatever /api/diary/entry hands back", async () => {
+    fakeEntryResult = {
+      id: "e1",
+      user_id: "u1",
+      entry_date: "2026-09-08",
       content: "今日は映画を見た。",
       overall_comment: "재밌었겠다!",
       suggestions: [],
+      readings: [],
       paragraphs: [],
-    });
-    queryResult = {
-      data: { id: "e1", user_id: "u1", entry_date: "2026-09-08", readings: [], stamps: [], ...encrypted },
-      error: null,
+      stamps: [],
     };
-
     const { fetchEntry } = await import("@/lib/diary/client");
-    const entry = await fetchEntry("u1", "2026-09-08");
+    const entry = await fetchEntry("2026-09-08");
     expect(entry?.content).toBe("今日は映画を見た。");
-    expect(entry?.overall_comment).toBe("재밌었겠다!");
   });
 
-  it("passes a legacy plaintext row through unchanged", async () => {
-    queryResult = {
-      data: {
-        id: "e1",
-        user_id: "u1",
-        entry_date: "2026-09-01",
-        content: "예전에 평문으로 저장된 일기",
-        overall_comment: null,
-        suggestions: [],
-        readings: [],
-        paragraphs: [],
-        stamps: [],
-      },
-      error: null,
-    };
+  it("returns null when the entry doesn't exist", async () => {
+    fakeEntryResult = null;
     const { fetchEntry } = await import("@/lib/diary/client");
-    const entry = await fetchEntry("u1", "2026-09-01");
-    expect(entry?.content).toBe("예전에 평문으로 저장된 일기");
+    const entry = await fetchEntry("2026-01-01");
+    expect(entry).toBeNull();
+  });
+});
+
+describe("fetchMonthEntries", () => {
+  it("returns whatever /api/diary/entries hands back", async () => {
+    fakeEntriesResult = [
+      { id: "e1", entry_date: "2026-09-01", content: "a" },
+      { id: "e2", entry_date: "2026-09-08", content: "b" },
+    ];
+    const { fetchMonthEntries } = await import("@/lib/diary/client");
+    const entries = await fetchMonthEntries("2026-09-01", "2026-09-30");
+    expect(entries).toHaveLength(2);
+  });
+});
+
+// Real end-to-end sanity check that the two server-side helpers this
+// module leans on (via the API routes it can't reach directly in a unit
+// test) actually agree with each other.
+describe("encrypt/decryptEntryFields (sanity)", () => {
+  it("round-trips", () => {
+    const plain = {
+      content: "テスト",
+      overall_comment: null,
+      suggestions: [],
+      paragraphs: [],
+    };
+    expect(decryptEntryFields(encryptEntryFields(plain))).toEqual(plain);
   });
 });

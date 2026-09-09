@@ -53,7 +53,7 @@ function parseMonthParam(value: string | null): { year: number; month: number } 
   return { year: now.getFullYear(), month: now.getMonth() };
 }
 
-export default function MonthCalendar({ userId }: { userId: string }) {
+export default function MonthCalendar() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -67,14 +67,14 @@ export default function MonthCalendar({ userId }: { userId: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await fetchMonthEntries(userId, monthStartKey, monthEndKey);
+      const rows = await fetchMonthEntries(monthStartKey, monthEndKey);
       const map: DiaryEntryMap = {};
       for (const row of rows) map[row.entry_date] = row;
       setEntries(map);
     } finally {
       setLoading(false);
     }
-  }, [userId, monthStartKey, monthEndKey]);
+  }, [monthStartKey, monthEndKey]);
 
   useEffect(() => {
     // `load` sets loading state before awaiting Supabase — that's the point
