@@ -109,22 +109,24 @@ export default function EditEntry({
       if (!finalizeRes.ok) throw new Error(finalizeData.error ?? "총평 생성에 실패했어요.");
 
       const stampKey = stampKind === "keyword" ? pickStamp(trimmed) : null;
-      // `paragraphs` isn't passed here either — see the doc comment above,
-      // this flattens the day into one freshly re-reviewed pass, and the
-      // old per-sitting breakdown doesn't correspond to that new single
-      // block of text at all anymore. `stamps` has to flatten the same
-      // way alongside it: leaving old sittings' stamps in place here would
-      // have the calendar/review screen still showing a multi-stamp stack
-      // for sittings whose own text no longer exists anywhere once
-      // `paragraphs` resets, *and* the next "이어서 쓰기" after this edit
-      // would start renumbering sessions from 0 again (since it counts
-      // from the now-empty `paragraphs`) — colliding with whatever
-      // sessions were already sitting in `stamps`. A single fresh entry
-      // keeps both arrays consistent with each other and with what
-      // "이어서 쓰기" computes next.
-      const stamps: SessionStamp[] = [
-        { session: 0, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() },
-      ];
+      // Unlike `paragraphs` (not passed here — see the doc comment above;
+      // a direct edit flattens the day into one fresh pass, and the old
+      // per-sitting text breakdown doesn't correspond to that anymore),
+      // a day's other sittings each still happened and each still earned
+      // their own stamp regardless of a later typo fix — collapsing
+      // `stamps` down to just this one would erase that history for no
+      // reason. Only the front stamp (session 0 — see ChatEditor, the
+      // calendar always shows this one) gets replaced with whatever this
+      // edit just re-derived; every other sitting's own stamp carries
+      // over untouched.
+      const stamps: SessionStamp[] =
+        entry.stamps.length > 0
+          ? entry.stamps.map((s, i) =>
+              i === 0
+                ? { ...s, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() }
+                : s
+            )
+          : [{ session: 0, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() }];
 
       await saveEntry({
         userId,

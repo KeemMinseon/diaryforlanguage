@@ -200,8 +200,18 @@ export default function ChatEditor({
   // there's none, i.e. this is the day's very first sitting) — this
   // visit's own new rounds/paragraphs, and the one stamp they'll get, all
   // carry this same number. See `SessionStamp`.
-  const currentSession =
-    lockedRounds.length > 0 ? Math.max(...lockedRounds.map((r) => r.session)) + 1 : 0;
+  //
+  // Takes whichever of `paragraphs` or `stamps` implies *more* prior
+  // sessions, rather than trusting `paragraphs` (via `lockedRounds`)
+  // alone — the two normally agree, but EditEntry's "수정" flattens
+  // `paragraphs` back to one untagged block on a direct text edit while
+  // deliberately leaving `stamps` alone (see its own comment on why), so
+  // right after an edit `lockedRounds` alone would undercount and hand
+  // out a session number that's already taken in `stamps`.
+  const currentSession = Math.max(
+    lockedRounds.length > 0 ? Math.max(...lockedRounds.map((r) => r.session)) + 1 : 0,
+    initialEntry?.stamps.length ?? 0
+  );
   // Prior context for the AI only — never part of the editable box, so it
   // can't desync with anything the learner types. Sent alongside whatever
   // this visit has reviewed so far, so a "이어서 쓰기" visit's very first
