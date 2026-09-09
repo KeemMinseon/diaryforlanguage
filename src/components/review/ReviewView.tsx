@@ -219,17 +219,23 @@ export default function ReviewView({
               {(() => {
                 const stampLayers = stamps.map((s, i) => {
                   // Collapsed: a slight cascading pile behind the front
-                  // (most recent, i = last) stamp — 0/0 for it, so a single
-                  // stamp still lands exactly where it always has. Fanned:
-                  // spread evenly around the center, 부채꼴 (fan) style.
+                  // stamp — 0/0 for it, so a single stamp still lands
+                  // exactly where it always has. The front one is always
+                  // i = 0 (the day's first session), matching the calendar
+                  // view (DayCell/StampedDay always show stamps[0]) rather
+                  // than whichever was written last. Fanned: spread evenly
+                  // around the center, 부채꼴 (fan) style.
                   const mid = (stamps.length - 1) / 2;
-                  const rotate = fanned ? (i - mid) * 16 : (i - (stamps.length - 1)) * 3;
-                  const translateX = fanned ? (i - mid) * 58 : (i - (stamps.length - 1)) * 2;
+                  const rotate = fanned ? (i - mid) * 16 : -i * 3;
+                  const translateX = fanned ? (i - mid) * 58 : -i * 2;
                   return (
                     <div
                       key={s.session}
                       className="absolute inset-0 transition-transform duration-300 ease-out"
-                      style={{ transform: `translateX(${translateX}%) rotate(${rotate}deg)`, zIndex: i }}
+                      style={{
+                        transform: `translateX(${translateX}%) rotate(${rotate}deg)`,
+                        zIndex: stamps.length - 1 - i,
+                      }}
                     >
                       <DiaryStamp
                         stampKind={s.stampKind}
