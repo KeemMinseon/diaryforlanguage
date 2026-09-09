@@ -6,6 +6,7 @@ import type {
   DiaryParagraph,
   ReadingKind,
   Reading,
+  SessionStamp,
   Suggestion,
   WordProgress,
 } from "@/types/diary";
@@ -123,6 +124,8 @@ interface SaveEntryInput {
   suggestions?: Suggestion[];
   readings?: Reading[];
   paragraphs?: DiaryParagraph[];
+  /** One per writing session — see `SessionStamp`. */
+  stamps?: SessionStamp[];
   reviewedAt?: string | null;
 }
 
@@ -144,6 +147,7 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
         suggestions: input.suggestions ?? [],
         readings: input.readings ?? [],
         paragraphs: input.paragraphs ?? [],
+        stamps: input.stamps ?? [],
         reviewed_at: status === "reviewed" ? (input.reviewedAt ?? new Date().toISOString()) : null,
       },
       { onConflict: "user_id,entry_date" }

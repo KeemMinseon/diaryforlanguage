@@ -20,6 +20,10 @@ export default function DayCell({
 }) {
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
+  // At least 1 once there's an entry at all — an entry saved before
+  // per-session stamps existed just has an empty `stamps` array, but
+  // still has exactly one (implicit) stamp via stamp_kind/stamp_key.
+  const stampCount = entry ? Math.max(entry.stamps?.length ?? 0, 1) : 0;
 
   const content = (
     <div
@@ -60,7 +64,12 @@ export default function DayCell({
         // (aspect-[1/1.35] → aspect-[1/1.44]) to fit a stamp this size
         // with all three margins actually even.
         <div className="absolute inset-x-[19%] top-[29%] bottom-[13%] flex items-center justify-center">
-          <StampedDay entry={entry} photoUrl={photoUrl} className="h-full max-w-full" />
+          <StampedDay
+            entry={entry}
+            photoUrl={photoUrl}
+            stampCount={stampCount}
+            className="h-full max-w-full"
+          />
         </div>
       )}
     </div>

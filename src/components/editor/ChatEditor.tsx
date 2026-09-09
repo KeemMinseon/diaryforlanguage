@@ -12,7 +12,7 @@ import { pickStamp } from "@/lib/stamps/keywordMap";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { buildHighlightSegments } from "@/lib/review/highlight";
 import { parseDateKey } from "@/lib/utils/date";
-import type { DiaryEntry, DiaryParagraph, Reading, Suggestion } from "@/types/diary";
+import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 interface FeedbackRound {
   text: string;
@@ -20,6 +20,9 @@ interface FeedbackRound {
   suggestions: Suggestion[];
   readings: Reading[];
   savedAt: string;
+  /** Which "이어서 쓰기" sitting this round belongs to — see
+   * `DiaryParagraph.session`/`SessionStamp`. */
+  session: number;
 }
 
 /** How much of `text` matches `prefix` from the start. */
@@ -44,6 +47,9 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
       suggestions: p.suggestions,
       readings: p.readings,
       savedAt: p.savedAt,
+      // Missing on a paragraph saved before sessions existed — treat the
+      // whole thing as one single prior sitting (session 0).
+      session: p.session ?? 0,
     }));
   }
   if (!entry.content.trim()) return [];
@@ -54,6 +60,7 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
       suggestions: entry.suggestions,
       readings: entry.readings,
       savedAt: entry.reviewed_at ?? entry.updated_at,
+      session: 0,
     },
   ];
 }
@@ -186,14 +193,12 @@ export default function ChatEditor({
   userId,
   dateKey,
   initialEntry,
-  existingPhotoUrl,
 }: {
   userId: string;
   dateKey: string;
   /** When reopening a day that already has an entry, to add more to it
    * ("이어서 쓰기") — pre-fills the box and feed from what's already saved. */
   initialEntry?: DiaryEntry;
-  existingPhotoUrl?: string | null;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -213,6 +218,12 @@ export default function ChatEditor({
   // sidesteps both: nothing already reviewed can ever go stale again, and
   // every visit's own writing stays visually its own thing.
   const lockedRounds = initialRoundsFrom(initialEntry);
+  // One higher than the last session already saved for this day (0 if
+  // there's none, i.e. this is the day's very first sitting) — this
+  // visit's own new rounds/paragraphs, and the one stamp they'll get, all
+  // carry this same number. See `SessionStamp`.
+  const currentSession =
+    lockedRounds.length > 0 ? Math.max(...lockedRounds.map((r) => r.session)) + 1 : 0;
   // Prior context for the AI only — never part of the editable box, so it
   // can't desync with anything the learner types. Sent alongside whatever
   // this visit has reviewed so far, so a "이어서 쓰기" visit's very first
@@ -241,12 +252,12 @@ export default function ChatEditor({
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // This visit's own stamp photo, if any — like `content`, always starts
+  // blank even on "이어서 쓰기": a new sitting gets its own stamp
+  // (see `currentSession`/`SessionStamp`), not last sitting's carried over.
   const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(null);
-  const [keepExistingPhoto, setKeepExistingPhoto] = useState(
-    Boolean(initialEntry && initialEntry.stamp_kind === "photo" && initialEntry.photo_path)
-  );
 
   useEffect(() => {
     return () => {
@@ -269,17 +280,20 @@ export default function ChatEditor({
   // matching what was already reviewed, not a fixed offset — so editing
   // something earlier in the box doesn't desync the split point too badly).
   const pendingText = content.slice(commonPrefixLength(reviewedPrefix, content));
-  // Locked history + this visit's box, joined only for things that should
-  // reflect the whole day (the saved `content` column, the keyword stamp) —
-  // the box itself never contains the locked part.
+  // Locked history + this visit's box, joined only for the saved `content`
+  // column, which should reflect the whole day — the box itself never
+  // contains the locked part. The keyword stamp, by contrast, is picked
+  // from `content` alone (this visit's own writing only): each sitting
+  // gets its own stamp now (see `currentSession`/`SessionStamp`), not one
+  // shared across the whole day.
   const combinedContent = priorContentForBlock
     ? content
       ? `${priorContentForBlock}\n\n${content}`
       : priorContentForBlock
     : content;
-  const hasPhoto = Boolean(croppedPreviewUrl) || keepExistingPhoto;
-  const previewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? (existingPhotoUrl ?? null) : null);
-  const previewStampKey = hasPhoto ? null : pickStamp(combinedContent);
+  const hasPhoto = Boolean(croppedPreviewUrl);
+  const previewPhotoUrl = croppedPreviewUrl;
+  const previewStampKey = hasPhoto ? null : pickStamp(content);
 
   function handleContentChange(next: string) {
     setContent(next);
@@ -328,7 +342,6 @@ export default function ChatEditor({
     if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
     setCroppedBlob(blob);
     setCroppedPreviewUrl(URL.createObjectURL(blob));
-    setKeepExistingPhoto(false);
     if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
     setRawImageUrl(null);
   }
@@ -337,7 +350,6 @@ export default function ChatEditor({
     if (croppedPreviewUrl) URL.revokeObjectURL(croppedPreviewUrl);
     setCroppedBlob(null);
     setCroppedPreviewUrl(null);
-    setKeepExistingPhoto(false);
   }
 
   async function reviewChunk(chunk: string, priorText: string): Promise<FeedbackRound> {
@@ -354,6 +366,7 @@ export default function ChatEditor({
       suggestions: data.suggestions ?? [],
       readings: data.readings ?? [],
       savedAt: new Date().toISOString(),
+      session: currentSession,
     };
   }
 
@@ -401,8 +414,12 @@ export default function ChatEditor({
     const chunk = rawChunk.trim();
 
     let photoPath: string | null = null;
+    // This sitting's own stamp — picked from `newContent` alone, not the
+    // whole day's `fullText`: each sitting gets its own stamp (see
+    // `currentSession`), so a keyword mentioned only in an earlier sitting
+    // shouldn't decide *this* one's.
     const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
-    const stampKey = stampKind === "keyword" ? pickStamp(fullText) : null;
+    const stampKey = stampKind === "keyword" ? pickStamp(newContent) : null;
     const allSoFar = [...lockedRounds, ...rounds];
     const existingSuggestions = allSoFar.flatMap((r) => r.suggestions);
     const existingReadings = allSoFar.flatMap((r) => r.readings);
@@ -412,7 +429,13 @@ export default function ChatEditor({
       suggestions: r.suggestions,
       readings: r.readings,
       savedAt: r.savedAt,
+      session: r.session,
     }));
+    // Every earlier sitting's own stamp, plus this one's — appended once
+    // here (after `photoPath` is settled) and reused for every save below,
+    // pending/reviewed/failed alike, so a sitting's stamp is visible even
+    // before its own review finishes.
+    let stamps: SessionStamp[] = initialEntry?.stamps ?? [];
 
     try {
       // 1) Save the text itself first — it shouldn't sit in the browser
@@ -425,9 +448,11 @@ export default function ChatEditor({
       // still waiting on it.
       if (croppedBlob) {
         photoPath = await uploadStampPhoto(userId, dateKey, croppedBlob);
-      } else if (keepExistingPhoto) {
-        photoPath = initialEntry?.photo_path ?? null;
       }
+      stamps = [
+        ...stamps,
+        { session: currentSession, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() },
+      ];
 
       await saveEntry({
         userId,
@@ -441,6 +466,7 @@ export default function ChatEditor({
         suggestions: existingSuggestions,
         readings: existingReadings,
         paragraphs: existingParagraphs,
+        stamps,
       });
     } catch (err) {
       console.error(err);
@@ -479,6 +505,7 @@ export default function ChatEditor({
         suggestions: r.suggestions,
         readings: r.readings,
         savedAt: r.savedAt,
+        session: r.session,
       }));
 
       await saveEntry({
@@ -493,6 +520,7 @@ export default function ChatEditor({
         suggestions: allSuggestions,
         readings: allReadings,
         paragraphs,
+        stamps,
       });
 
       setRounds(allRounds);
@@ -526,6 +554,7 @@ export default function ChatEditor({
           suggestions: existingSuggestions,
           readings: existingReadings,
           paragraphs: existingParagraphs,
+          stamps,
         });
       } catch (markErr) {
         console.error(markErr);

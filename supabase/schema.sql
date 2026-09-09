@@ -16,6 +16,7 @@ create table if not exists public.diary_entries (
   suggestions jsonb not null default '[]'::jsonb,
   readings jsonb not null default '[]'::jsonb,
   paragraphs jsonb not null default '[]'::jsonb,
+  stamps jsonb not null default '[]'::jsonb,
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -32,6 +33,14 @@ alter table public.diary_entries add column if not exists readings jsonb not nul
 -- entry saved before this column existed just has an empty array; the
 -- review screen falls back to showing its `content` as one untimed block.
 alter table public.diary_entries add column if not exists paragraphs jsonb not null default '[]'::jsonb;
+-- One stamp per writing session — {session, stampKind, stampKey,
+-- photoPath, createdAt} — instead of one stamp for the whole day. Each
+-- paragraph in `paragraphs` above also carries its own `session` number
+-- (missing = 0) tying it to one of these. An entry saved before this
+-- column existed just has an empty array; the calendar and review screen
+-- both fall back to synthesizing a single stamp from
+-- stamp_kind/stamp_key/photo_path in that case.
+alter table public.diary_entries add column if not exists stamps jsonb not null default '[]'::jsonb;
 
 create index if not exists diary_entries_user_month_idx
   on public.diary_entries (user_id, entry_date);

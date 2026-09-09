@@ -48,14 +48,7 @@ export default async function EntryPage({
   // with what's already saved, rather than the read-only review.
   const { continue: shouldContinue } = await searchParams;
   if (shouldContinue) {
-    return (
-      <ChatEditor
-        userId={userId}
-        dateKey={date}
-        initialEntry={typedEntry}
-        existingPhotoUrl={photoUrl}
-      />
-    );
+    return <ChatEditor userId={userId} dateKey={date} initialEntry={typedEntry} />;
   }
 
   return <ReviewView userId={userId} entry={typedEntry} photoUrl={photoUrl} />;

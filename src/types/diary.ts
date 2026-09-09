@@ -34,6 +34,26 @@ export interface DiaryParagraph {
   suggestions: Suggestion[];
   readings: Reading[];
   savedAt: string; // ISO timestamp
+  /** Which sitting this paragraph was written in — 0 for the entry's first
+   * visit, incremented by one each time "이어서 쓰기" reopens it. Missing
+   * (treat as 0) on a paragraph saved before this existed. See
+   * `SessionStamp` — one of these gets its own stamp per session. */
+  session?: number;
+}
+
+/** One session's own stamp — a day with several "이어서 쓰기" sittings
+ * gets one of these per sitting instead of a single stamp for the whole
+ * day, each picked from (or a photo attached during) just that sitting's
+ * own new writing. `session` matches the same field on `DiaryParagraph`.
+ * The calendar shows only the latest (last in this array) plus a hint
+ * layer when there's more than one; the entry detail screen shows the
+ * full stack, fanned out on tap. */
+export interface SessionStamp {
+  session: number;
+  stampKind: StampKind;
+  stampKey: string | null;
+  photoPath: string | null;
+  createdAt: string; // ISO timestamp
 }
 
 export interface DiaryEntry {
@@ -52,6 +72,11 @@ export interface DiaryEntry {
   /** Empty for an entry saved before this existed — the review screen
    * falls back to showing `content` as one untimed block in that case. */
   paragraphs: DiaryParagraph[];
+  /** One per writing session (see `SessionStamp`) — empty for an entry
+   * saved before this existed, or one that's never been reopened via
+   * "이어서 쓰기" since. The review screen falls back to synthesizing a
+   * single one from `stamp_kind`/`stamp_key`/`photo_path` in that case. */
+  stamps: SessionStamp[];
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
