@@ -7,7 +7,7 @@ import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { photoPublicUrl, saveEntry, uploadStampPhoto } from "@/lib/diary/client";
-import type { DiaryEntry, SessionStamp, StampKind } from "@/types/diary";
+import type { DiaryEntry, DiaryParagraph, SessionStamp, StampKind } from "@/types/diary";
 
 interface EditableParagraph {
   session: number;
@@ -32,21 +32,23 @@ function resolveStamps(entry: DiaryEntry): SessionStamp[] {
 }
 
 /**
- * Edits an already-reviewed entry. Unlike the paragraph-by-paragraph
- * ChatEditor, this re-reviews the whole edited text as one pass (through
- * the same /api/review-paragraph + /api/review-finalize calls) — simpler,
- * and the old per-paragraph *feedback* for this day is stale once its
- * text changes anyway (so, unlike `stamps`, `paragraphs` is never passed
- * to saveEntry here — it resets to `[]`, same as before this file's own
- * per-session split existed).
- *
- * The text itself, though, is still edited one sitting at a time — one
+ * Edits an already-reviewed entry, one sitting (session) at a time — one
  * box per session, each with its own stamp shown right next to it. That
  * turns two things that used to only happen implicitly into something
  * the learner can see and act on directly: editing a sitting's text
  * updates *its own* stamp (a keyword one, anyway — see below), and
  * deleting a sitting removes its stamp along with it, instead of leaving
  * a stamp behind for text that no longer exists anywhere in the entry.
+ *
+ * Each sitting is re-reviewed on its own (one /api/review-paragraph call
+ * per surviving sitting, same as ChatEditor), so — unlike an earlier
+ * version of this screen, back when the whole day was re-reviewed as one
+ * flattened pass and the old per-sitting breakdown genuinely didn't
+ * correspond to that anymore — `paragraphs` reflects real, fresh
+ * per-sitting feedback now and gets saved right alongside `stamps`
+ * instead of being reset to `[]`. Skipping that was also its own bug:
+ * with no paragraph history left, the *next* time this screen opened, it
+ * had nothing to split into boxes and collapsed back to just one.
  */
 export default function EditEntry({
   userId,
@@ -250,6 +252,21 @@ export default function EditEntry({
         };
       });
 
+      // One paragraph per surviving sitting, each with its own review from
+      // the calls above — mirrors ChatEditor's own paragraph shape, and
+      // (see the header comment) is what lets this screen still show the
+      // right number of boxes the *next* time it's opened.
+      const savedAt = new Date().toISOString();
+      const paragraphsOut: DiaryParagraph[] = trimmed.map((p, i) => ({
+        text: p.text,
+        comment:
+          typeof reviewDataList[i]?.comment === "string" ? reviewDataList[i].comment : "",
+        suggestions: reviewDataList[i]?.suggestions ?? [],
+        readings: reviewDataList[i]?.readings ?? [],
+        savedAt,
+        session: p.session,
+      }));
+
       await saveEntry({
         userId,
         dateKey: entry.entry_date,
@@ -261,6 +278,7 @@ export default function EditEntry({
         overallComment: finalizeData.overallComment,
         suggestions,
         readings,
+        paragraphs: paragraphsOut,
         stamps,
       });
 
