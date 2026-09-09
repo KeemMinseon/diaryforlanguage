@@ -313,14 +313,14 @@ export default function ReviewView({
                       <p className="text-xs text-[var(--ink-soft)]">
                         {formatSavedAt(p.savedAt, entry.entry_date)}
                       </p>
-                      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
+                      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
                         {renderHighlighted(p.text, `p${pi}`)}
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-lg leading-loose text-[var(--ink)]">
+                <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
                   {renderHighlighted(entry.content, "flat")}
                 </p>
               )}
