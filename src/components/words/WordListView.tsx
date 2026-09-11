@@ -147,17 +147,45 @@ export default function WordListView({ userId }: { userId: string }) {
 
       {/* Below the min, a round would either be too short to bother with
           or not really be the "10" the feature is about — quietly hidden
-          rather than offered half-empty. */}
+          rather than offered half-empty. Styled as its own card in the
+          app's postmark red rather than another outlined pill (which just
+          blended into the filter chips above it) — it's a distinct little
+          game, not one more list filter. */}
       {!quizzing && quizPool.length >= QUIZ_MIN_WORDS && (
         <button
           type="button"
           onClick={() => setQuizzing(true)}
-          className="flex items-center justify-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm font-medium text-[var(--ink)]"
+          className="flex items-center gap-3 rounded-2xl bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
         >
-          <UiIcon name="stamp-grid-line" className="h-4 w-4" alt="">
-            🎴
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+            <UiIcon name="cards-line" className="h-5 w-5" alt="">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                <rect x="3" y="7.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth={1.6} />
+                <path
+                  d="M8 7.5V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 1-1.5 1.5h-1.5"
+                  stroke="currentColor"
+                  strokeWidth={1.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </UiIcon>
+          </span>
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold">단어 테스트</span>
+            <span className="text-xs text-white/75">단어와 뜻을 짝지어 맞혀보세요</span>
+          </span>
+          <UiIcon name="chevron-right-line" className="ml-auto h-4 w-4 shrink-0 text-white/70" alt="">
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </UiIcon>
-          단어 테스트
         </button>
       )}
 
