@@ -31,7 +31,16 @@ export default function StampFrame({
       <g clipPath={`url(#${clipId})`}>
         <rect x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT} fill={tint} />
         <foreignObject x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT}>
-          <div style={{ width: "100%", height: "100%" }}>{children}</div>
+          {/* `position: relative` so a child that needs to overlay the
+              whole frame (a loading placeholder, say) can do it with
+              `absolute inset-0` anchored right here — that's one step
+              cheaper, percentage-height-resolution-wise, than a child
+              introducing its own nested 100%-height wrapper div to hang
+              an overlay off of. This foreignObject's own 100% has to
+              resolve correctly regardless (every photo stamp depends on
+              it), so anything anchored to *this* box inherits that once,
+              instead of re-deriving it. */}
+          <div style={{ width: "100%", height: "100%", position: "relative" }}>{children}</div>
         </foreignObject>
       </g>
     </svg>

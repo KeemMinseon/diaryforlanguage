@@ -47,8 +47,14 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
   return (
     <StampFrame tint={stampKind === "photo" ? "#f7f7f7" : style.tint} className={className}>
       {stampKind === "photo" && photoUrl ? (
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <>
           {!loaded && (
+            // Anchored to StampFrame's own box (see its `position:
+            // relative`), not a wrapper div introduced here — an extra
+            // 100%-height div in this chain is exactly what broke photo
+            // stamps in Safari before (see the comment on the <img>
+            // below); `absolute inset-0` against an ancestor that
+            // already resolves correctly costs nothing further.
             <div
               aria-hidden="true"
               className="animate-pulse"
@@ -67,7 +73,10 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
               plain <img> with an explicit inline width/height:100% (sized in
               normal flow, not via absolute positioning) — this is what
               rendered correctly before the next/image change, on every
-              device this app has actually been used on. */}
+              device this app has actually been used on. Sized in normal
+              flow here too (not wrapped in its own positioned box) for
+              the exact same reason — see the loading-skeleton regression
+              this fixed, above. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- see above; next/image broke this in production */}
           <img
             ref={imgRef}
@@ -83,7 +92,7 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
               transition: "opacity 0.2s ease-out",
             }}
           />
-        </div>
+        </>
       ) : (
         <div style={{ width: "100%", height: "100%", color: style.ink }}>
           <KeywordIcon id={id} className="h-full w-full" />
