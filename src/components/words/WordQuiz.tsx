@@ -150,7 +150,15 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 disabled={matched.has(key)}
                 className={`flex h-16 items-center rounded-xl border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass(key, selected?.side === "word" && selected.key === key)}`}
               >
-                <span className="line-clamp-2">
+                {/* Single-line truncation, not line-clamp-2: WebKit's line
+                    box counting for `-webkit-line-clamp` doesn't reckon
+                    with <ruby>'s extra annotation box the way it does plain
+                    text, so it can clip mid-ruby and leave only a trailing
+                    sliver of the furigana <rt> visible instead of the
+                    kanji. Vocabulary words are short enough that a single
+                    truncated line reads fine; the meaning column (plain
+                    text, can run long) keeps the 2-line clamp. */}
+                <span className="block w-full truncate">
                   <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
                 </span>
               </button>
