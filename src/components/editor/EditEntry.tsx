@@ -380,15 +380,17 @@ export default function EditEntry({
         {paragraphs.map((p, i) => {
           const preview = previewFor(p, i);
           return (
-            <div key={p.session} className="flex flex-col gap-4 sm:flex-row">
-              <textarea
-                value={p.text}
-                onChange={(e) => updateParagraphText(i, e.target.value)}
-                disabled={saving}
-                className="min-h-[16vh] flex-1 resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
-              />
-              <div className="flex flex-row items-start gap-4 sm:w-36 sm:flex-col">
-                <div className="w-28 sm:w-full">
+            <div key={p.session} className="flex flex-col gap-3">
+              {/* Stamp beside the text box (not below it, and not just
+                  at wider viewports) — the stamp reads as this sitting's
+                  own label/marker for its text, so it sits right next to
+                  it always. Camera/delete controls moved out into their
+                  own full-width row underneath instead of stacking in
+                  the stamp's own narrow column, which used to visually
+                  tie them to the stamp rather than to the sitting as a
+                  whole. */}
+              <div className="flex flex-row items-start gap-4">
+                <div className="w-28 shrink-0">
                   <DiaryStamp
                     stampKind={preview.stampKind}
                     stampKey={preview.stampKey}
@@ -396,42 +398,52 @@ export default function EditEntry({
                     className="w-full drop-shadow-md"
                   />
                 </div>
-                {i === 0 && (
-                  <div className="flex flex-1 flex-col gap-2 sm:flex-none sm:w-full">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
-                    >
-                      <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
-                        📷
-                      </UiIcon>
-                      사진 첨부
-                    </button>
-                    {frontHasPhoto && (
+                <textarea
+                  value={p.text}
+                  onChange={(e) => updateParagraphText(i, e.target.value)}
+                  disabled={saving}
+                  className="min-h-[16vh] flex-1 resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  {i === 0 && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
                       <button
                         type="button"
-                        onClick={handleRemovePhoto}
-                        className="text-xs text-[var(--ink-soft)] underline underline-offset-2"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
                       >
-                        사진 지우고 자동 우표로
+                        <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
+                          📷
+                        </UiIcon>
+                        사진 첨부
                       </button>
-                    )}
-                  </div>
-                )}
+                      {frontHasPhoto && (
+                        <button
+                          type="button"
+                          onClick={handleRemovePhoto}
+                          className="text-xs text-[var(--ink-soft)] underline underline-offset-2"
+                        >
+                          사진 지우고 자동 우표로
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
                 {paragraphs.length > 1 && (
                   <button
                     type="button"
                     onClick={() => deleteParagraph(i)}
                     disabled={saving}
-                    className="text-xs text-[var(--ink-soft)] underline underline-offset-2 disabled:opacity-60"
+                    className="shrink-0 text-xs text-[var(--ink-soft)] underline underline-offset-2 disabled:opacity-60"
                   >
                     이 부분 삭제
                   </button>
