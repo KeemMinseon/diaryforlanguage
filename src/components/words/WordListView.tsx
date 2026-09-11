@@ -11,7 +11,14 @@ import {
   setWordMemorized,
 } from "@/lib/diary/client";
 import { collectWords, wordKey, type WordItem } from "@/lib/words/collectWords";
+import WordQuiz from "@/components/words/WordQuiz";
 import { parseDateKey } from "@/lib/utils/date";
+
+/** Below this many words-with-a-meaning, a match-the-pairs round would
+ * either be trivially short or, worse, not fit the "10" the feature is
+ * named after in even a loose sense — quieter to just not offer it yet
+ * than to offer a 2-card round. */
+const QUIZ_MIN_WORDS = 4;
 
 type Filter = "all" | "memorized" | "learning";
 
@@ -25,6 +32,7 @@ export default function WordListView({ userId }: { userId: string }) {
   const push = useToast();
   const [words, setWords] = useState<WordItem[] | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [quizzing, setQuizzing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +72,11 @@ export default function WordListView({ userId }: { userId: string }) {
       a.lastSeen === b.lastSeen ? 0 : a.lastSeen < b.lastSeen ? 1 : -1
     );
   }, [words, filter]);
+
+  // A word with no `meaning` (saved before that was collected) has
+  // nothing on the "meaning" side of the quiz to match against, so it's
+  // left out of the draw entirely rather than shown with a blank card.
+  const quizPool = useMemo(() => words?.filter((w) => w.meaning) ?? [], [words]);
 
   async function toggle(word: WordItem) {
     const next = !word.memorized;
@@ -108,7 +121,7 @@ export default function WordListView({ userId }: { userId: string }) {
         <span className="w-[52px]" aria-hidden="true" />
       </header>
 
-      {words && words.length > 0 && (
+      {words && words.length > 0 && !quizzing && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-[var(--ink-soft)]">
             {words.length}개 중 {memorizedCount}개 외웠어요
@@ -132,56 +145,81 @@ export default function WordListView({ userId }: { userId: string }) {
         </div>
       )}
 
-      {words === null && <p className="text-sm text-[var(--ink-soft)]">불러오는 중…</p>}
-
-      {words !== null && words.length === 0 && (
-        <p className="text-sm text-[var(--ink-soft)]">
-          아직 모은 단어가 없어요. 일기를 쓰고 첨삭을 받으면 여기에 쌓여요.
-        </p>
+      {/* Below the min, a round would either be too short to bother with
+          or not really be the "10" the feature is about — quietly hidden
+          rather than offered half-empty. */}
+      {!quizzing && quizPool.length >= QUIZ_MIN_WORDS && (
+        <button
+          type="button"
+          onClick={() => setQuizzing(true)}
+          className="flex items-center justify-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm font-medium text-[var(--ink)]"
+        >
+          <UiIcon name="stamp-grid-line" className="h-4 w-4" alt="">
+            🎴
+          </UiIcon>
+          단어 테스트
+        </button>
       )}
 
-      {words !== null && words.length > 0 && visible.length === 0 && (
-        <p className="text-sm text-[var(--ink-soft)]">해당하는 단어가 없어요.</p>
-      )}
+      {quizzing ? (
+        <WordQuiz pool={quizPool} onClose={() => setQuizzing(false)} />
+      ) : (
+        <>
+          {words === null && <p className="text-sm text-[var(--ink-soft)]">불러오는 중…</p>}
 
-      <div className="flex flex-col gap-2">
-        {visible.map((w) => {
-          const key = wordKey(w.text, w.reading);
-          return (
-            <div
-              key={key}
-              className="flex items-center justify-between gap-3 rounded-xl bg-[var(--paper-raised)] p-4"
-            >
-              <div className="flex flex-1 flex-col gap-1">
-                <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
-                  <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
-                </span>
-                {/* Empty for a word saved before `meaning` was collected —
-                    no placeholder text, just one fewer line for that card. */}
-                {w.meaning && <p className="text-sm text-[var(--ink)]">{w.meaning}</p>}
-                <span className="text-[11px] text-[var(--ink-soft)]">
-                  {parseDateKey(w.lastSeen).toLocaleDateString("ko-KR", {
-                    month: "long",
-                    day: "numeric",
-                  })}
-                  {w.occurrences > 1 && ` · ${w.occurrences}번 등장`}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => toggle(w)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  w.memorized
-                    ? "bg-[var(--shu)] text-white"
-                    : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
-                }`}
-              >
-                {w.memorized ? "외웠어요" : "아직이에요"}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+          {words !== null && words.length === 0 && (
+            <p className="text-sm text-[var(--ink-soft)]">
+              아직 모은 단어가 없어요. 일기를 쓰고 첨삭을 받으면 여기에 쌓여요.
+            </p>
+          )}
+
+          {words !== null && words.length > 0 && visible.length === 0 && (
+            <p className="text-sm text-[var(--ink-soft)]">해당하는 단어가 없어요.</p>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {visible.map((w) => {
+              const key = wordKey(w.text, w.reading);
+              return (
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--paper-raised)] p-4"
+                >
+                  <div className="flex flex-1 flex-col gap-1">
+                    <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
+                      <FuriganaText
+                        text={w.text}
+                        readings={[{ text: w.text, reading: w.reading, kind: w.kind }]}
+                      />
+                    </span>
+                    {/* Empty for a word saved before `meaning` was collected —
+                        no placeholder text, just one fewer line for that card. */}
+                    {w.meaning && <p className="text-sm text-[var(--ink)]">{w.meaning}</p>}
+                    <span className="text-[11px] text-[var(--ink-soft)]">
+                      {parseDateKey(w.lastSeen).toLocaleDateString("ko-KR", {
+                        month: "long",
+                        day: "numeric",
+                      })}
+                      {w.occurrences > 1 && ` · ${w.occurrences}번 등장`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggle(w)}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                      w.memorized
+                        ? "bg-[var(--shu)] text-white"
+                        : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                    }`}
+                  >
+                    {w.memorized ? "외웠어요" : "아직이에요"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

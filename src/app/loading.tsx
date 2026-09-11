@@ -23,7 +23,23 @@ export default function HomeLoading() {
 
       <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
         {Array.from({ length: 42 }).map((_, i) => (
-          <div key={i} className="aspect-[1/1.25] rounded-xl bg-[var(--paper-line)]" />
+          <div key={i} className="aspect-[1/1.44] rounded-xl bg-[var(--paper-line)]" />
+        ))}
+      </div>
+
+      {/* "이번 달" vocab list below the grid — each day is a label plus a
+          horizontally-scrolling row of word chips (see MonthCalendar). */}
+      <div className="flex flex-col gap-4">
+        <div className="h-4 w-16 rounded-full bg-[var(--paper-line)]" />
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <div className="h-3 w-16 rounded-full bg-[var(--paper-line)]" />
+            <div className="flex flex-row gap-2">
+              {Array.from({ length: 4 }).map((_, j) => (
+                <div key={j} className="h-14 w-20 shrink-0 rounded-[10px] bg-[var(--paper-raised)]" />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>

@@ -1,0 +1,177 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import FuriganaText from "@/components/review/FuriganaText";
+import { wordKey, type WordItem } from "@/lib/words/collectWords";
+
+/** How many word/meaning pairs one round shows — "10개" per the feature
+ * request, but capped to however many the learner actually has a
+ * `meaning` for (see `pickable` in WordListView), so a small early
+ * vocabulary still gets a round instead of nothing. */
+const ROUND_SIZE = 10;
+
+function shuffled<T>(items: T[]): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** One round's word list (left column, its own draw order) and meaning
+ * list (right column, independently reshuffled — otherwise row N of
+ * both columns would always be the same pair, turning the "match them"
+ * game into "read down the left column"). */
+function drawRound(pool: WordItem[]): { words: WordItem[]; meanings: WordItem[] } {
+  const words = shuffled(pool).slice(0, Math.min(ROUND_SIZE, pool.length));
+  return { words, meanings: shuffled(words) };
+}
+
+type Selected = { side: "word" | "meaning"; key: string } | null;
+
+/** A tap-to-match quiz: pick a word, then pick its meaning (or the other
+ * order) — no drag-and-drop, so it works as well with a mouse as with a
+ * thumb. A correct pair locks in green; a wrong one flashes red on both
+ * cards for a moment, then clears the selection so the learner can try
+ * again. Finishes once every pair in the round is matched. */
+export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose: () => void }) {
+  const [round, setRound] = useState(() => drawRound(pool));
+  const [selected, setSelected] = useState<Selected>(null);
+  const [matched, setMatched] = useState<Set<string>>(new Set());
+  const [wrongKeys, setWrongKeys] = useState<Set<string>>(new Set());
+  const [misses, setMisses] = useState(0);
+
+  const total = round.words.length;
+  const done = matched.size === total && total > 0;
+
+  const keyOf = useMemo(() => (w: WordItem) => wordKey(w.text, w.reading), []);
+
+  function restart() {
+    setRound(drawRound(pool));
+    setSelected(null);
+    setMatched(new Set());
+    setWrongKeys(new Set());
+    setMisses(0);
+  }
+
+  function tap(side: "word" | "meaning", key: string) {
+    if (matched.has(key) || wrongKeys.size > 0) return;
+
+    if (!selected) {
+      setSelected({ side, key });
+      return;
+    }
+    if (selected.side === side) {
+      // Tapping another card on the same side just moves the selection —
+      // no penalty, since nothing was actually compared yet.
+      setSelected(selected.key === key ? null : { side, key });
+      return;
+    }
+    if (selected.key === key) {
+      setMatched((prev) => new Set(prev).add(key));
+      setSelected(null);
+      return;
+    }
+    setMisses((m) => m + 1);
+    setWrongKeys(new Set([selected.key, key]));
+    setTimeout(() => {
+      setWrongKeys(new Set());
+      setSelected(null);
+    }, 500);
+  }
+
+  function cardClass(key: string, isSelected: boolean): string {
+    if (matched.has(key)) {
+      return "border-[var(--paper-line)] bg-[var(--paper-raised)] opacity-40";
+    }
+    if (wrongKeys.has(key)) {
+      return "border-red-400 bg-red-50";
+    }
+    if (isSelected) {
+      return "border-[var(--ink)] bg-black/5";
+    }
+    return "border-transparent bg-[var(--paper-raised)]";
+  }
+
+  if (done) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-2xl bg-[var(--paper-raised)] px-6 py-10 text-center">
+        <p className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
+          {total}개 다 맞췄어요! 📮
+        </p>
+        <p className="text-sm text-[var(--ink-soft)]">
+          {misses === 0 ? "한 번에 다 맞혔어요." : `틀린 횟수 ${misses}번`}
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={restart}
+            className="rounded-full bg-[var(--cta)] px-6 py-2.5 text-sm font-medium text-white"
+          >
+            다시하기
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[var(--paper-line)] px-6 py-2.5 text-sm text-[var(--ink-soft)]"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-[var(--ink-soft)]">
+          {matched.size}/{total}개 맞음 · 단어를 누르고 뜻을 눌러 짝지어 보세요
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+        >
+          그만하기
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2">
+          {round.words.map((w) => {
+            const key = keyOf(w);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => tap("word", key)}
+                disabled={matched.has(key)}
+                className={`rounded-xl border px-3 py-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass(key, selected?.side === "word" && selected.key === key)}`}
+              >
+                <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-2">
+          {round.meanings.map((w) => {
+            const key = keyOf(w);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => tap("meaning", key)}
+                disabled={matched.has(key)}
+                className={`rounded-xl border px-3 py-3 text-left text-sm text-[var(--ink)] transition ${cardClass(key, selected?.side === "meaning" && selected.key === key)}`}
+              >
+                {w.meaning}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

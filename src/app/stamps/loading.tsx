@@ -12,10 +12,10 @@ export default function StampsLoading() {
 
       <div className="flex flex-col gap-3">
         <div className="h-4 w-32 rounded-full bg-[var(--paper-line)]" />
-        <div className="grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-4">
+        <div className="grid grid-cols-4 gap-x-5 gap-y-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center gap-1.5">
-              <div className="aspect-[499.78/671.48] w-16 rounded-2xl bg-[var(--paper-raised)]" />
+              <div className="aspect-[499.78/671.48] w-full rounded-2xl bg-[var(--paper-raised)]" />
               <div className="h-3 w-10 rounded-full bg-[var(--paper-line)]" />
               <div className="h-3 w-6 rounded-full bg-[var(--paper-line)]" />
             </div>
@@ -25,8 +25,8 @@ export default function StampsLoading() {
 
       <div className="flex flex-col gap-3">
         <div className="h-4 w-20 rounded-full bg-[var(--paper-line)]" />
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid grid-cols-4 gap-5">
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="aspect-[499.78/671.48] w-full rounded-2xl bg-[var(--paper-raised)]" />
           ))}
         </div>
