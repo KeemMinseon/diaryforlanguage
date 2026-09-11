@@ -92,7 +92,7 @@ export default function LoginPage() {
           <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
             <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
               <span aria-hidden="true">📮 </span>
-              <strong>{email}</strong> 주소로 6자리 코드를 보냈어요.
+              <strong>{email}</strong> 주소로 코드를 보냈어요.
               <br />
               메일에 있는 코드를 입력해 주세요.
             </p>
@@ -101,7 +101,7 @@ export default function LoginPage() {
               inputMode="numeric"
               autoComplete="one-time-code"
               required
-              placeholder="123456"
+              placeholder="인증 코드"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               className="rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-center text-lg tracking-[0.3em] text-[var(--ink)] outline-none focus:border-[var(--ink)]"
