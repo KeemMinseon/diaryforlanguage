@@ -10,9 +10,9 @@ import { createClient } from "@/lib/supabase/client";
  * started in (the PKCE code-exchange session lives there) — clicking it
  * from a mail app that opens a different browser (or a different
  * browser entirely) lands back on a plain login screen with nothing to
- * show for it. Typing the 6-digit code back into this same tab has no
- * such requirement. Supabase sends both the link and the code in the
- * same email (as long as the "Magic Link" template includes
+ * show for it. Typing the code back into this same tab has no such
+ * requirement. Supabase sends both the link and the code in the same
+ * email (as long as the "Magic Link"/"Confirm signup" templates include
  * `{{ .Token }}`) — this screen just leads with the code.
  */
 export default function LoginPage() {
@@ -85,16 +85,18 @@ export default function LoginPage() {
               disabled={loading}
               className="rounded-lg bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              {loading ? "보내는 중…" : "이메일로 로그인 코드 받기"}
+              {loading ? "보내는 중…" : "이메일로 인증 코드 받기"}
             </button>
           </form>
         ) : (
           <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
             <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
               <span aria-hidden="true">📮 </span>
-              <strong>{email}</strong> 주소로 코드를 보냈어요.
+              <strong>{email}</strong> 주소로 인증 코드를 보냈어요.
               <br />
               메일에 있는 코드를 입력해 주세요.
+              <br />
+              <span className="text-[var(--ink-soft)]">메일이 안 보이면 스팸함도 확인해 주세요.</span>
             </p>
             <input
               type="text"
