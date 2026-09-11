@@ -8,16 +8,39 @@ import { STAMP_MASK_HEIGHT, STAMP_MASK_PATH, STAMP_MASK_WIDTH } from "@/componen
  * auto-picked keyword icon, clipped to the stamp's own scalloped outline
  * (see stampMask.ts) with a flat tint behind it — no border rule, no
  * shading, nothing else layered on top of the shape itself.
+ *
+ * A photo is drawn with SVG's own native <image> element, not an HTML
+ * <img> inside a <foreignObject> — that HTML-in-SVG path (tried with
+ * next/image's fill mode, then a plain <img> at width/height:100%, then
+ * again at explicit pixel dimensions) kept blowing photos up to their
+ * natural size on real iPhone/Safari no matter how it was arranged;
+ * Safari's foreignObject-descendant sizing has just never been reliable
+ * for a replaced element like <img>. A native <image> is positioned and
+ * sized entirely in SVG's own coordinate system (x/y/width/height,
+ * preserveAspectRatio) — no CSS box resolution involved at all, so that
+ * whole bug class doesn't apply to it. The keyword icon still goes
+ * through <foreignObject> (as `children`) since it's plain inline SVG
+ * markup either way, not a replaced HTML element — that path has never
+ * shown this bug.
  */
 export default function StampFrame({
   children,
   tint = "#eeeeee",
   className,
+  photoUrl,
+  photoLoaded = true,
+  onPhotoLoad,
 }: {
-  children: React.ReactNode;
+  /** Keyword-icon content, rendered via foreignObject. Ignored when `photoUrl` is set. */
+  children?: React.ReactNode;
   tint?: string;
   /** Background tint behind the artwork, e.g. a pale color per stamp id. */
   className?: string;
+  /** When set, draws this photo (native SVG <image>) instead of `children`. */
+  photoUrl?: string;
+  /** Shows a pulse placeholder over the photo while false. */
+  photoLoaded?: boolean;
+  onPhotoLoad?: () => void;
 }) {
   const clipId = `stamp-mask-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
 
@@ -30,24 +53,35 @@ export default function StampFrame({
       </defs>
       <g clipPath={`url(#${clipId})`}>
         <rect x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT} fill={tint} />
-        <foreignObject x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT}>
-          {/* Explicit pixel dimensions (matching this foreignObject's own
-              coordinate box exactly), not width/height:100% — Safari has
-              a long-standing bug resolving *percentage* sizes for
-              foreignObject descendants (worst for replaced elements like
-              <img>), which is exactly what kept blowing photo stamps up
-              to their natural size there no matter how the percentage
-              chain above them was arranged. A literal pixel size sidesteps
-              the resolution step entirely instead of trying to get it
-              right. `position: relative` so a child that needs to overlay
-              the whole frame (a loading placeholder) can do it with
-              `absolute inset-0` anchored right here. */}
-          <div
-            style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, position: "relative" }}
-          >
-            {children}
-          </div>
-        </foreignObject>
+        {photoUrl ? (
+          <>
+            <image
+              href={photoUrl}
+              x={0}
+              y={0}
+              width={STAMP_MASK_WIDTH}
+              height={STAMP_MASK_HEIGHT}
+              preserveAspectRatio="xMidYMid slice"
+              onLoad={onPhotoLoad}
+              style={{ opacity: photoLoaded ? 1 : 0, transition: "opacity 0.2s ease-out" }}
+            />
+            {!photoLoaded && (
+              <rect
+                aria-hidden="true"
+                className="animate-pulse"
+                x={0}
+                y={0}
+                width={STAMP_MASK_WIDTH}
+                height={STAMP_MASK_HEIGHT}
+                fill="var(--paper-line)"
+              />
+            )}
+          </>
+        ) : (
+          <foreignObject x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT}>
+            <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT }}>{children}</div>
+          </foreignObject>
+        )}
       </g>
     </svg>
   );

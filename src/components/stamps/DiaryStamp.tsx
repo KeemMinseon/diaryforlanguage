@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import StampFrame from "@/components/stamps/StampFrame";
 import KeywordIcon from "@/components/stamps/KeywordIcon";
 import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMask";
@@ -24,7 +24,6 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
   // connection (or a calendar full of them) there's a real gap between
   // the cell appearing and the photo actually painting in. Track it per
   // stamp so that gap gets a pulse placeholder instead of sitting blank.
-  const imgRef = useRef<HTMLImageElement | null>(null);
   const [loaded, setLoaded] = useState(false);
   // Resetting `loaded` when `photoUrl` changes (a new photo picked over an
   // already-loaded preview, say) during render rather than in an effect —
@@ -37,69 +36,35 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
   }
 
   useEffect(() => {
-    // Guards against the SSR/hydration race: the <img> can start loading
-    // (and finish) from its server-rendered `src` before this effect ever
-    // attaches an onLoad handler, in which case onLoad never fires again
-    // and the pulse would otherwise sit there forever hiding a photo
-    // that's already there.
-    if (imgRef.current?.complete) setLoaded(true);
+    if (!photoUrl) return;
+    // SVG's <image> has no `.complete` property to check for the
+    // SSR/hydration race (unlike HTML's <img>) — a server-rendered page
+    // that already embeds the photo URL can have it finish loading before
+    // React ever attaches the onLoad handler, so this safety-net timeout
+    // clears the pulse regardless if `onLoad` didn't already do it. Long
+    // enough to never pre-empt a real load on a normal connection, short
+    // enough that the rare miss doesn't leave the pulse showing for long.
+    const timer = setTimeout(() => setLoaded(true), 2000);
+    return () => clearTimeout(timer);
   }, [photoUrl]);
 
+  if (stampKind === "photo" && photoUrl) {
+    return (
+      <StampFrame
+        tint="#f7f7f7"
+        className={className}
+        photoUrl={photoUrl}
+        photoLoaded={loaded}
+        onPhotoLoad={() => setLoaded(true)}
+      />
+    );
+  }
+
   return (
-    <StampFrame tint={stampKind === "photo" ? "#f7f7f7" : style.tint} className={className}>
-      {stampKind === "photo" && photoUrl ? (
-        <>
-          {!loaded && (
-            // Anchored to StampFrame's own box (see its `position:
-            // relative`), not a wrapper div introduced here — an extra
-            // 100%-height div in this chain is exactly what broke photo
-            // stamps in Safari before (see the comment on the <img>
-            // below); `absolute inset-0` against an ancestor that
-            // already resolves correctly costs nothing further.
-            <div
-              aria-hidden="true"
-              className="animate-pulse"
-              style={{ position: "absolute", inset: 0, background: "var(--paper-line)" }}
-            />
-          )}
-          {/* Plain <img>, not next/image — this renders inside an SVG
-              <foreignObject> (see StampFrame), and next/image's `fill` mode
-              (position:absolute + percentage width/height) depends on that
-              percentage height actually resolving against a definite
-              ancestor size. That broke on an actual iPhone/Safari in
-              production (never caught by this project's Chromium-only QA
-              screenshots): the photo lost its size constraint entirely and
-              rendered at its natural size, spilling out past the stamp
-              frame, the calendar cell, and the screen edge.
-              width/height:100% turned out not to be a real fix either —
-              still percentages, and Safari's bug resolving percentage
-              sizes for foreignObject descendants (worst for replaced
-              elements like <img>) kept resurfacing however the ancestor
-              chain above it was arranged. Explicit pixel dimensions
-              matching StampFrame's own coordinate box (STAMP_MASK_WIDTH/
-              HEIGHT) sidestep that resolution step entirely instead of
-              trying to get it right. */}
-          {/* eslint-disable-next-line @next/next/no-img-element -- see above; next/image broke this in production */}
-          <img
-            ref={imgRef}
-            src={photoUrl}
-            alt=""
-            onLoad={() => setLoaded(true)}
-            style={{
-              width: STAMP_MASK_WIDTH,
-              height: STAMP_MASK_HEIGHT,
-              objectFit: "cover",
-              display: "block",
-              opacity: loaded ? 1 : 0,
-              transition: "opacity 0.2s ease-out",
-            }}
-          />
-        </>
-      ) : (
-        <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, color: style.ink }}>
-          <KeywordIcon id={id} className="h-full w-full" />
-        </div>
-      )}
+    <StampFrame tint={style.tint} className={className}>
+      <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, color: style.ink }}>
+        <KeywordIcon id={id} className="h-full w-full" />
+      </div>
     </StampFrame>
   );
 }
