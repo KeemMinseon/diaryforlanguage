@@ -135,7 +135,7 @@ export default function ReviewView({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+      <header className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -146,9 +146,6 @@ export default function ReviewView({
           </UiIcon>
           캘린더
         </button>
-        <p className="whitespace-nowrap text-center font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink-soft)]">
-          {dateLabel}
-        </p>
         <div className="flex items-center justify-end gap-3">
           {!editing && !confirmingDelete && (
             <>
@@ -170,6 +167,14 @@ export default function ReviewView({
           )}
         </div>
       </header>
+
+      {/* Its own line below the header rather than squeezed into the
+          header's middle column — reads as the screen's actual title
+          now, in full ink rather than the softer tone it had sharing a
+          row with the nav controls. */}
+      <p className="whitespace-nowrap text-center font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
+        {dateLabel}
+      </p>
 
       {confirmingDelete && (
         <div className="flex items-center justify-between rounded-xl bg-[var(--paper-raised)] px-4 py-3">

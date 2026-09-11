@@ -148,15 +148,15 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
           {r.suggestions.map((s, j) => (
             <span
               key={j}
-              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-0.5 text-[12.5px]"
+              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
             >
-              <span className="text-[var(--ink-soft)] line-through">
+              <span className="text-[13px] text-[var(--ink-soft)] line-through">
                 <FuriganaText text={s.original} readings={r.readings} />
               </span>
               <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
                 <span aria-hidden="true">→</span>
               </UiIcon>
-              <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
+              <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
                 <FuriganaText text={s.suggestion} readings={r.readings} />
               </span>
             </span>
@@ -639,15 +639,15 @@ export default function ChatEditor({
               {r.suggestions.map((s, j) => (
                 <span
                   key={j}
-                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-0.5 text-[12.5px]"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
                 >
-                  <span className="text-[var(--ink-soft)] line-through">
+                  <span className="text-[13px] text-[var(--ink-soft)] line-through">
                     <FuriganaText text={s.original} readings={r.readings} />
                   </span>
                   <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
                     <span aria-hidden="true">→</span>
                   </UiIcon>
-                  <span className="font-[family-name:var(--font-diary)] text-[var(--ink)]">
+                  <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
                     <FuriganaText text={s.suggestion} readings={r.readings} />
                   </span>
                 </span>

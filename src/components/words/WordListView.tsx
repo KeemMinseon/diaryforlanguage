@@ -153,7 +153,7 @@ export default function WordListView({ userId }: { userId: string }) {
               className="flex items-center justify-between gap-3 rounded-xl bg-[var(--paper-raised)] p-4"
             >
               <div className="flex flex-1 flex-col gap-1">
-                <span className="font-[family-name:var(--font-diary)] text-lg font-medium text-[var(--ink)]">
+                <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
                   <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
                 </span>
                 {/* Empty for a word saved before `meaning` was collected —
