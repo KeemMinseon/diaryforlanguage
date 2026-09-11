@@ -148,9 +148,11 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 type="button"
                 onClick={() => tap("word", key)}
                 disabled={matched.has(key)}
-                className={`rounded-xl border px-3 py-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass(key, selected?.side === "word" && selected.key === key)}`}
+                className={`flex h-16 items-center rounded-xl border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass(key, selected?.side === "word" && selected.key === key)}`}
               >
-                <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
+                <span className="line-clamp-2">
+                  <FuriganaText text={w.text} readings={[{ text: w.text, reading: w.reading, kind: w.kind }]} />
+                </span>
               </button>
             );
           })}
@@ -164,9 +166,9 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 type="button"
                 onClick={() => tap("meaning", key)}
                 disabled={matched.has(key)}
-                className={`rounded-xl border px-3 py-3 text-left text-sm text-[var(--ink)] transition ${cardClass(key, selected?.side === "meaning" && selected.key === key)}`}
+                className={`flex h-16 items-center rounded-xl border px-3 text-left text-sm text-[var(--ink)] transition ${cardClass(key, selected?.side === "meaning" && selected.key === key)}`}
               >
-                {w.meaning}
+                <span className="line-clamp-2">{w.meaning}</span>
               </button>
             );
           })}
