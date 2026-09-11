@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import StampFrame from "@/components/stamps/StampFrame";
 import KeywordIcon from "@/components/stamps/KeywordIcon";
+import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMask";
 import { STAMP_STYLE } from "@/lib/stamps/stampStyle";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
@@ -69,14 +70,15 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
               production (never caught by this project's Chromium-only QA
               screenshots): the photo lost its size constraint entirely and
               rendered at its natural size, spilling out past the stamp
-              frame, the calendar cell, and the screen edge. Reverted to a
-              plain <img> with an explicit inline width/height:100% (sized in
-              normal flow, not via absolute positioning) — this is what
-              rendered correctly before the next/image change, on every
-              device this app has actually been used on. Sized in normal
-              flow here too (not wrapped in its own positioned box) for
-              the exact same reason — see the loading-skeleton regression
-              this fixed, above. */}
+              frame, the calendar cell, and the screen edge.
+              width/height:100% turned out not to be a real fix either —
+              still percentages, and Safari's bug resolving percentage
+              sizes for foreignObject descendants (worst for replaced
+              elements like <img>) kept resurfacing however the ancestor
+              chain above it was arranged. Explicit pixel dimensions
+              matching StampFrame's own coordinate box (STAMP_MASK_WIDTH/
+              HEIGHT) sidestep that resolution step entirely instead of
+              trying to get it right. */}
           {/* eslint-disable-next-line @next/next/no-img-element -- see above; next/image broke this in production */}
           <img
             ref={imgRef}
@@ -84,8 +86,8 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
             alt=""
             onLoad={() => setLoaded(true)}
             style={{
-              width: "100%",
-              height: "100%",
+              width: STAMP_MASK_WIDTH,
+              height: STAMP_MASK_HEIGHT,
               objectFit: "cover",
               display: "block",
               opacity: loaded ? 1 : 0,
@@ -94,7 +96,7 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
           />
         </>
       ) : (
-        <div style={{ width: "100%", height: "100%", color: style.ink }}>
+        <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, color: style.ink }}>
           <KeywordIcon id={id} className="h-full w-full" />
         </div>
       )}

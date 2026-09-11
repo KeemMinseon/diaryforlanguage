@@ -31,16 +31,22 @@ export default function StampFrame({
       <g clipPath={`url(#${clipId})`}>
         <rect x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT} fill={tint} />
         <foreignObject x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT}>
-          {/* `position: relative` so a child that needs to overlay the
-              whole frame (a loading placeholder, say) can do it with
-              `absolute inset-0` anchored right here — that's one step
-              cheaper, percentage-height-resolution-wise, than a child
-              introducing its own nested 100%-height wrapper div to hang
-              an overlay off of. This foreignObject's own 100% has to
-              resolve correctly regardless (every photo stamp depends on
-              it), so anything anchored to *this* box inherits that once,
-              instead of re-deriving it. */}
-          <div style={{ width: "100%", height: "100%", position: "relative" }}>{children}</div>
+          {/* Explicit pixel dimensions (matching this foreignObject's own
+              coordinate box exactly), not width/height:100% — Safari has
+              a long-standing bug resolving *percentage* sizes for
+              foreignObject descendants (worst for replaced elements like
+              <img>), which is exactly what kept blowing photo stamps up
+              to their natural size there no matter how the percentage
+              chain above them was arranged. A literal pixel size sidesteps
+              the resolution step entirely instead of trying to get it
+              right. `position: relative` so a child that needs to overlay
+              the whole frame (a loading placeholder) can do it with
+              `absolute inset-0` anchored right here. */}
+          <div
+            style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, position: "relative" }}
+          >
+            {children}
+          </div>
         </foreignObject>
       </g>
     </svg>
