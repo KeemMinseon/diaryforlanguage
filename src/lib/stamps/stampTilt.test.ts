@@ -6,11 +6,11 @@ describe("stampTiltDeg", () => {
     expect(stampTiltDeg("2026-09-11")).toBe(stampTiltDeg("2026-09-11"));
   });
 
-  it("stays within the ±2° range", () => {
+  it("stays within the ±5° range", () => {
     for (let d = 1; d <= 28; d++) {
       const deg = stampTiltDeg(`2026-01-${String(d).padStart(2, "0")}`);
-      expect(deg).toBeGreaterThanOrEqual(-2);
-      expect(deg).toBeLessThan(2);
+      expect(deg).toBeGreaterThanOrEqual(-5);
+      expect(deg).toBeLessThan(5);
     }
   });
 

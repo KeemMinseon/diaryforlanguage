@@ -13,9 +13,10 @@ export function stampTiltDeg(seed: string): number {
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) | 0;
   }
-  // "정갈하게 붙어있다" (too neatly straight) was the complaint, not
-  // "crooked envelope stamp" — keep this subtle rather than dramatic.
-  const MAX_DEG = 2;
+  // Started at ±2° ("정갈하게 붙어있다" — too neatly straight — was the
+  // complaint, not "crooked envelope stamp"), bumped to ±5° on request:
+  // still reads as hand-placed rather than knocked over.
+  const MAX_DEG = 5;
   const normalized = (Math.abs(hash) % 1000) / 1000; // 0 – 0.999
-  return (normalized * 2 - 1) * MAX_DEG; // -2 – 2
+  return (normalized * 2 - 1) * MAX_DEG; // -5 – 5
 }
