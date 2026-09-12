@@ -301,7 +301,7 @@ export default function WordListView({ userId }: { userId: string }) {
                     className={`shrink-0 rounded-full transition ${
                       w.memorized
                         ? "bg-[var(--shu)] px-3 py-1.5 text-xs font-medium text-white"
-                        : "border border-[var(--paper-line)] px-3 py-2"
+                        : "p-2"
                     }`}
                   >
                     {w.memorized ? (
