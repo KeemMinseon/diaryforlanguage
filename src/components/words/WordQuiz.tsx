@@ -30,16 +30,27 @@ function drawRound(pool: WordItem[]): { words: WordItem[]; meanings: WordItem[] 
 
 type Selected = { side: "word" | "meaning"; key: string } | null;
 
+/** The word column and meaning column show the *same* `WordItem`s (see
+ * `drawRound` — `meanings` is just `words` reshuffled), so a plain
+ * `Set<string>` of "wrong" keys doesn't work: word 十二月's key also
+ * belongs to its own meaning card sitting at some other row, so marking
+ * that key "wrong" would light up BOTH — including that other row, which
+ * is exactly where the correct answer lives. Tracking wrong-ness per side
+ * (one word-side key, one meaning-side key) keeps the flash on only the
+ * two cards actually tapped. */
+type WrongPair = { wordKey: string; meaningKey: string } | null;
+
 /** A tap-to-match quiz: pick a word, then pick its meaning (or the other
  * order) — no drag-and-drop, so it works as well with a mouse as with a
- * thumb. A correct pair locks in green; a wrong one flashes red on both
- * cards for a moment, then clears the selection so the learner can try
- * again. Finishes once every pair in the round is matched. */
+ * thumb. A correct pair locks in green; a wrong one flashes red on just
+ * the two tapped cards for a moment, then clears the selection so the
+ * learner can try again. Finishes once every pair in the round is
+ * matched. */
 export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose: () => void }) {
   const [round, setRound] = useState(() => drawRound(pool));
   const [selected, setSelected] = useState<Selected>(null);
   const [matched, setMatched] = useState<Set<string>>(new Set());
-  const [wrongKeys, setWrongKeys] = useState<Set<string>>(new Set());
+  const [wrongPair, setWrongPair] = useState<WrongPair>(null);
   const [misses, setMisses] = useState(0);
 
   const total = round.words.length;
@@ -51,12 +62,12 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
     setRound(drawRound(pool));
     setSelected(null);
     setMatched(new Set());
-    setWrongKeys(new Set());
+    setWrongPair(null);
     setMisses(0);
   }
 
   function tap(side: "word" | "meaning", key: string) {
-    if (matched.has(key) || wrongKeys.size > 0) return;
+    if (matched.has(key) || wrongPair) return;
 
     if (!selected) {
       setSelected({ side, key });
@@ -74,18 +85,22 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
       return;
     }
     setMisses((m) => m + 1);
-    setWrongKeys(new Set([selected.key, key]));
+    setWrongPair({
+      wordKey: side === "word" ? key : selected.key,
+      meaningKey: side === "meaning" ? key : selected.key,
+    });
     setTimeout(() => {
-      setWrongKeys(new Set());
+      setWrongPair(null);
       setSelected(null);
     }, 500);
   }
 
-  function cardClass(key: string, isSelected: boolean): string {
+  function cardClass(side: "word" | "meaning", key: string, isSelected: boolean): string {
     if (matched.has(key)) {
       return "border-[var(--paper-line)] bg-[var(--paper-raised)] opacity-40";
     }
-    if (wrongKeys.has(key)) {
+    const isWrong = side === "word" ? wrongPair?.wordKey === key : wrongPair?.meaningKey === key;
+    if (isWrong) {
       return "border-red-400 bg-red-50";
     }
     if (isSelected) {
@@ -148,7 +163,7 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 type="button"
                 onClick={() => tap("word", key)}
                 disabled={matched.has(key)}
-                className={`flex h-16 items-center rounded-xl border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass(key, selected?.side === "word" && selected.key === key)}`}
+                className={`flex h-16 items-center rounded-xl border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass("word", key, selected?.side === "word" && selected.key === key)}`}
               >
                 {/* Single-line truncation, not line-clamp-2: WebKit's line
                     box counting for `-webkit-line-clamp` doesn't reckon
@@ -174,7 +189,7 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 type="button"
                 onClick={() => tap("meaning", key)}
                 disabled={matched.has(key)}
-                className={`flex h-16 items-center rounded-xl border px-3 text-left text-sm text-[var(--ink)] transition ${cardClass(key, selected?.side === "meaning" && selected.key === key)}`}
+                className={`flex h-16 items-center rounded-xl border px-3 text-left text-sm text-[var(--ink)] transition ${cardClass("meaning", key, selected?.side === "meaning" && selected.key === key)}`}
               >
                 <span className="line-clamp-2">{w.meaning}</span>
               </button>

@@ -175,17 +175,24 @@ export default function WordListView({ userId }: { userId: string }) {
             <span className="text-sm font-semibold">단어 테스트</span>
             <span className="text-xs text-white/75">단어와 뜻을 짝지어 맞혀보세요</span>
           </span>
-          <UiIcon name="chevron-right-line" className="ml-auto h-4 w-4 shrink-0 text-white/70" alt="">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-              <path
-                d="M9 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </UiIcon>
+          {/* Layout/color classes go on this wrapping span, not on UiIcon's
+              own `className` — its no-override fallback renders `children`
+              inside a plain hardcoded span and doesn't forward the prop, so
+              `ml-auto` etc. would silently never reach the DOM (matches the
+              pattern already used for MonthCalendar's nav icons). */}
+          <span className="ml-auto flex h-4 w-4 shrink-0 items-center justify-center text-white/70">
+            <UiIcon name="chevron-right-line" className="h-4 w-4" alt="">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                <path
+                  d="M9 6l6 6-6 6"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </UiIcon>
+          </span>
         </button>
       )}
 
