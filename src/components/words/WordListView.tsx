@@ -282,16 +282,42 @@ export default function WordListView({ userId }: { userId: string }) {
                       {w.occurrences > 1 && ` · ${w.occurrences}번 등장`}
                     </span>
                   </div>
+                  {/* Still the same manual toggle as before (tap to mark
+                      memorized, tap again to un-mark) — only the "not yet"
+                      state's content changed, from a plain "아직이에요"
+                      label to QUIZ_MEMORIZE_THRESHOLD little stamp dots,
+                      one lighting up solid per correct 단어 테스트 match, so
+                      the card itself shows how close a word is to being
+                      auto-memorized instead of that only being visible
+                      inside the quiz. */}
                   <button
                     type="button"
                     onClick={() => toggle(w)}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    aria-label={
                       w.memorized
-                        ? "bg-[var(--shu)] text-white"
-                        : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                        ? "외웠어요 — 눌러서 취소"
+                        : `퀴즈 통과 ${Math.min(w.quizCorrectCount, QUIZ_MEMORIZE_THRESHOLD)}/${QUIZ_MEMORIZE_THRESHOLD} — 눌러서 외운 단어로 표시`
+                    }
+                    className={`shrink-0 rounded-full transition ${
+                      w.memorized
+                        ? "bg-[var(--shu)] px-3 py-1.5 text-xs font-medium text-white"
+                        : "border border-[var(--paper-line)] px-3 py-2"
                     }`}
                   >
-                    {w.memorized ? "외웠어요" : "아직이에요"}
+                    {w.memorized ? (
+                      "외웠어요"
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        {Array.from({ length: QUIZ_MEMORIZE_THRESHOLD }).map((_, i) => (
+                          <span
+                            key={i}
+                            className={`h-2 w-2 rounded-full ${
+                              i < w.quizCorrectCount ? "bg-[var(--shu)]" : "border border-[var(--paper-line)]"
+                            }`}
+                          />
+                        ))}
+                      </span>
+                    )}
                   </button>
                 </div>
               );
