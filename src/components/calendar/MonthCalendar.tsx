@@ -88,6 +88,11 @@ export default function MonthCalendar() {
   // stamp-landing animation on that one cell instead of the hanko just
   // silently appearing next time this data happens to re-fetch.
   const [justStampedDate, setJustStampedDate] = useState<string | null>(null);
+  // Experimental toggle: tapping the "우표일기" title flips this — not
+  // persisted anywhere, just a quick way to preview the day cells with
+  // their box (background/border/rounded corners) stripped, leaving only
+  // the date number and the stamp itself. See DayCell's `frameless`.
+  const [frameless, setFrameless] = useState(false);
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -149,9 +154,17 @@ export default function MonthCalendar() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
+        {/* Doubles as the frameless-preview toggle below — see `frameless`
+            state. Plain text otherwise, so no visual change for anyone who
+            doesn't know to tap it. */}
+        <button
+          type="button"
+          onClick={() => setFrameless((f) => !f)}
+          aria-pressed={frameless}
+          className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]"
+        >
           우표일기
-        </h1>
+        </button>
         <div className="flex items-center gap-1">
           <Link
             href="/words"
@@ -270,6 +283,7 @@ export default function MonthCalendar() {
                 isFuture={key > today}
                 entry={entries[key]}
                 justStamped={key === justStampedDate}
+                frameless={frameless}
               />
             );
           })

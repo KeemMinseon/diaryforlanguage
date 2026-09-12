@@ -11,6 +11,7 @@ export default function DayCell({
   isFuture,
   entry,
   justStamped = false,
+  frameless = false,
 }: {
   date: Date;
   dateKey: string;
@@ -21,6 +22,12 @@ export default function DayCell({
   /** True for the few seconds right after this exact day's entry just
    * got its final reviewed stamp — see lib/events/diaryStamped.ts. */
   justStamped?: boolean;
+  /** Experimental "우표일기" title toggle (MonthCalendar) — drops the
+   * cell's own box (rounded corners, background, border) so only the
+   * date number and the stamp itself show, floating in the grid with no
+   * frame around them. Everything else about the cell (size, stamp
+   * position, clickability) is unchanged. */
+  frameless?: boolean;
 }) {
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
@@ -31,11 +38,15 @@ export default function DayCell({
 
   const content = (
     <div
-      className={`group relative flex aspect-[1/1.44] flex-col overflow-visible rounded-xl p-1.5 transition ${
-        isToday ? "border-[1.5px] border-[var(--ink)]" : "hover:border hover:border-[var(--paper-line)]"
-      } ${inCurrentMonth ? "bg-[var(--paper-raised)]" : "bg-transparent opacity-40"} ${
-        clickable ? "cursor-pointer" : "cursor-default opacity-50"
-      }`}
+      className={`group relative flex aspect-[1/1.44] flex-col overflow-visible p-1.5 transition ${
+        frameless
+          ? ""
+          : `rounded-xl ${
+              isToday
+                ? "border-[1.5px] border-[var(--ink)]"
+                : "hover:border hover:border-[var(--paper-line)]"
+            } ${inCurrentMonth ? "bg-[var(--paper-raised)]" : "bg-transparent"}`
+      } ${inCurrentMonth ? "" : "opacity-40"} ${clickable ? "cursor-pointer" : "cursor-default opacity-50"}`}
     >
       <span
         className={`z-10 text-[11px] leading-none ${
