@@ -40,16 +40,24 @@ type Selected = { side: "word" | "meaning"; key: string } | null;
  * two cards actually tapped. */
 type WrongPair = { wordKey: string; meaningKey: string } | null;
 
+/** How long a correct pair sits green-and-bouncing before settling into
+ * the permanent gray "matched" look — long enough to read as a small
+ * celebration, short enough not to stall the next pair. */
+const CELEBRATE_MS = 550;
+
 /** A tap-to-match quiz: pick a word, then pick its meaning (or the other
  * order) — no drag-and-drop, so it works as well with a mouse as with a
- * thumb. A correct pair locks in green; a wrong one flashes red on just
- * the two tapped cards for a moment, then clears the selection so the
- * learner can try again. Finishes once every pair in the round is
- * matched. */
+ * thumb. A correct pair pops green for a beat, then fades to the
+ * permanent gray "matched" look; a wrong one flashes red on just the two
+ * tapped cards for a moment, then clears the selection so the learner can
+ * try again. Finishes once every pair in the round is matched. */
 export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose: () => void }) {
   const [round, setRound] = useState(() => drawRound(pool));
   const [selected, setSelected] = useState<Selected>(null);
   const [matched, setMatched] = useState<Set<string>>(new Set());
+  // A key sits here for CELEBRATE_MS right after a correct match, before
+  // moving into `matched` — see cardClass and the `match-pop` keyframe.
+  const [celebrating, setCelebrating] = useState<Set<string>>(new Set());
   const [wrongPair, setWrongPair] = useState<WrongPair>(null);
   const [misses, setMisses] = useState(0);
 
@@ -62,12 +70,13 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
     setRound(drawRound(pool));
     setSelected(null);
     setMatched(new Set());
+    setCelebrating(new Set());
     setWrongPair(null);
     setMisses(0);
   }
 
   function tap(side: "word" | "meaning", key: string) {
-    if (matched.has(key) || wrongPair) return;
+    if (matched.has(key) || celebrating.has(key) || wrongPair) return;
 
     if (!selected) {
       setSelected({ side, key });
@@ -80,8 +89,16 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
       return;
     }
     if (selected.key === key) {
-      setMatched((prev) => new Set(prev).add(key));
       setSelected(null);
+      setCelebrating((prev) => new Set(prev).add(key));
+      setTimeout(() => {
+        setMatched((prev) => new Set(prev).add(key));
+        setCelebrating((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }, CELEBRATE_MS);
       return;
     }
     setMisses((m) => m + 1);
@@ -96,6 +113,9 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
   }
 
   function cardClass(side: "word" | "meaning", key: string, isSelected: boolean): string {
+    if (celebrating.has(key)) {
+      return "border-emerald-400 bg-emerald-50 match-pop";
+    }
     if (matched.has(key)) {
       return "border-[var(--paper-line)] bg-[var(--paper-raised)] opacity-40";
     }
@@ -162,7 +182,7 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 key={key}
                 type="button"
                 onClick={() => tap("word", key)}
-                disabled={matched.has(key)}
+                disabled={matched.has(key) || celebrating.has(key)}
                 className={`flex h-16 items-center rounded-xl border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass("word", key, selected?.side === "word" && selected.key === key)}`}
               >
                 {/* Single-line truncation, not line-clamp-2: WebKit's line
@@ -188,7 +208,7 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
                 key={key}
                 type="button"
                 onClick={() => tap("meaning", key)}
-                disabled={matched.has(key)}
+                disabled={matched.has(key) || celebrating.has(key)}
                 className={`flex h-16 items-center rounded-xl border px-3 text-left text-sm text-[var(--ink)] transition ${cardClass("meaning", key, selected?.side === "meaning" && selected.key === key)}`}
               >
                 <span className="line-clamp-2">{w.meaning}</span>
