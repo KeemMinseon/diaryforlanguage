@@ -4,11 +4,11 @@ import { useMemo, useState } from "react";
 import FuriganaText from "@/components/review/FuriganaText";
 import { wordKey, type WordItem } from "@/lib/words/collectWords";
 
-/** How many word/meaning pairs one round shows — "10개" per the feature
- * request, but capped to however many the learner actually has a
- * `meaning` for (see `pickable` in WordListView), so a small early
- * vocabulary still gets a round instead of nothing. */
-const ROUND_SIZE = 10;
+/** How many word/meaning pairs one round shows — capped to however many
+ * the learner actually has a `meaning` for (see `quizPool` in
+ * WordListView), so a small early vocabulary still gets a round instead
+ * of nothing. */
+const ROUND_SIZE = 6;
 
 function shuffled<T>(items: T[]): T[] {
   const out = [...items];
@@ -51,7 +51,20 @@ const CELEBRATE_MS = 550;
  * permanent gray "matched" look; a wrong one flashes red on just the two
  * tapped cards for a moment, then clears the selection so the learner can
  * try again. Finishes once every pair in the round is matched. */
-export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose: () => void }) {
+export default function WordQuiz({
+  pool,
+  onClose,
+  onCorrect,
+}: {
+  pool: WordItem[];
+  onClose: () => void;
+  /** Called once a pair is confirmed correct (right as the celebration
+   * starts, not after it settles) — WordListView owns the actual
+   * "memorize after N correct matches" bookkeeping; this only needs to
+   * know whether that tap just crossed the threshold, for the round-end
+   * summary below. */
+  onCorrect?: (word: WordItem) => Promise<boolean> | boolean;
+}) {
   const [round, setRound] = useState(() => drawRound(pool));
   const [selected, setSelected] = useState<Selected>(null);
   const [matched, setMatched] = useState<Set<string>>(new Set());
@@ -60,11 +73,18 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
   const [celebrating, setCelebrating] = useState<Set<string>>(new Set());
   const [wrongPair, setWrongPair] = useState<WrongPair>(null);
   const [misses, setMisses] = useState(0);
+  // Words `onCorrect` reported as newly memorized this round — shown as a
+  // small extra line on the round-end summary.
+  const [newlyMemorized, setNewlyMemorized] = useState(0);
 
   const total = round.words.length;
   const done = matched.size === total && total > 0;
 
   const keyOf = useMemo(() => (w: WordItem) => wordKey(w.text, w.reading), []);
+  const wordByKey = useMemo(
+    () => new Map(round.words.map((w) => [keyOf(w), w])),
+    [round.words, keyOf]
+  );
 
   function restart() {
     setRound(drawRound(pool));
@@ -73,6 +93,7 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
     setCelebrating(new Set());
     setWrongPair(null);
     setMisses(0);
+    setNewlyMemorized(0);
   }
 
   function tap(side: "word" | "meaning", key: string) {
@@ -91,6 +112,14 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
     if (selected.key === key) {
       setSelected(null);
       setCelebrating((prev) => new Set(prev).add(key));
+      const word = wordByKey.get(key);
+      if (word && onCorrect) {
+        Promise.resolve(onCorrect(word))
+          .then((justMemorized) => {
+            if (justMemorized) setNewlyMemorized((n) => n + 1);
+          })
+          .catch((err) => console.error(err));
+      }
       setTimeout(() => {
         setMatched((prev) => new Set(prev).add(key));
         setCelebrating((prev) => {
@@ -138,6 +167,11 @@ export default function WordQuiz({ pool, onClose }: { pool: WordItem[]; onClose:
         <p className="text-sm text-[var(--ink-soft)]">
           {misses === 0 ? "한 번에 다 맞혔어요." : `틀린 횟수 ${misses}번`}
         </p>
+        {newlyMemorized > 0 && (
+          <p className="text-sm font-medium text-[var(--shu)]">
+            외운 단어로 새로 등록된 단어 {newlyMemorized}개 🎉
+          </p>
+        )}
         <div className="flex gap-2">
           <button
             type="button"

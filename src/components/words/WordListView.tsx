@@ -8,6 +8,7 @@ import { useToast } from "@/components/toast/ToastProvider";
 import {
   fetchAllEntriesForWords,
   fetchWordProgress,
+  recordQuizCorrect,
   setWordMemorized,
 } from "@/lib/diary/client";
 import { collectWords, wordKey, type WordItem } from "@/lib/words/collectWords";
@@ -15,10 +16,17 @@ import WordQuiz from "@/components/words/WordQuiz";
 import { parseDateKey } from "@/lib/utils/date";
 
 /** Below this many words-with-a-meaning, a match-the-pairs round would
- * either be trivially short or, worse, not fit the "10" the feature is
- * named after in even a loose sense — quieter to just not offer it yet
- * than to offer a 2-card round. */
+ * be too short to feel like a real round — quieter to just not offer it
+ * yet than to offer a 2-card one. */
 const QUIZ_MIN_WORDS = 4;
+
+/** A word gets auto-marked memorized once 단어 테스트 (WordQuiz) has
+ * matched it correctly this many times — cumulative across every round
+ * ever played, not a consecutive streak (see recordQuizCorrect). A miss
+ * doesn't reset the count, and the flag only ever gets set, never
+ * cleared, by the quiz — the learner can still manually un-mark a word
+ * with the "외웠어요" button below regardless of this count. */
+const QUIZ_MEMORIZE_THRESHOLD = 3;
 
 type Filter = "all" | "memorized" | "learning";
 
@@ -101,6 +109,42 @@ export default function WordListView({ userId }: { userId: string }) {
           ) ?? prev
       );
     }
+  }
+
+  /** Bumps a word's quiz-correct count and, once it crosses
+   * QUIZ_MEMORIZE_THRESHOLD, its `memorized` flag — passed to WordQuiz as
+   * `onCorrect`. Returns whether this exact tap is the one that just
+   * crossed the threshold (for WordQuiz's round-end summary). Not
+   * reverted on failure the way `toggle` reverts its optimistic flip:
+   * this fires many times in a row while the learner is mid-quiz, and a
+   * failed background sync isn't worth a reversion (or a toast)
+   * interrupting that — the next `load()` reconciles it regardless. */
+  async function handleQuizCorrect(word: WordItem): Promise<boolean> {
+    const key = wordKey(word.text, word.reading);
+    const nextCount = word.quizCorrectCount + 1;
+    const justMemorized = !word.memorized && nextCount >= QUIZ_MEMORIZE_THRESHOLD;
+    setWords(
+      (prev) =>
+        prev?.map((w) =>
+          wordKey(w.text, w.reading) === key
+            ? { ...w, quizCorrectCount: nextCount, memorized: w.memorized || justMemorized }
+            : w
+        ) ?? prev
+    );
+    try {
+      await recordQuizCorrect(
+        userId,
+        word.text,
+        word.reading,
+        word.kind,
+        word.quizCorrectCount,
+        word.memorized,
+        QUIZ_MEMORIZE_THRESHOLD
+      );
+    } catch (err) {
+      console.error(err);
+    }
+    return justMemorized;
   }
 
   return (
@@ -197,7 +241,7 @@ export default function WordListView({ userId }: { userId: string }) {
       )}
 
       {quizzing ? (
-        <WordQuiz pool={quizPool} onClose={() => setQuizzing(false)} />
+        <WordQuiz pool={quizPool} onClose={() => setQuizzing(false)} onCorrect={handleQuizCorrect} />
       ) : (
         <>
           {words === null && <p className="text-sm text-[var(--ink-soft)]">불러오는 중…</p>}

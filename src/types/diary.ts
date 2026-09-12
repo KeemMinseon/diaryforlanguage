@@ -97,5 +97,8 @@ export interface WordProgress {
   reading: string;
   kind: ReadingKind;
   memorized: boolean;
+  /** Cumulative correct matches in 단어 테스트 (WordQuiz) — see
+   * schema.sql's comment on this column. */
+  quiz_correct_count: number;
   updated_at: string;
 }

@@ -106,6 +106,36 @@ export async function setWordMemorized(
   if (error) throw error;
 }
 
+/** Records one correct 단어 테스트 (WordQuiz) match for this word, bumping
+ * its cumulative `quiz_correct_count` and setting `memorized` once that
+ * crosses `threshold` — never un-setting it otherwise (a miss doesn't
+ * take away an already-memorized word, and a word already memorized
+ * manually stays memorized regardless of what the count is doing).
+ * `currentCount`/`alreadyMemorized` come from the caller's own in-memory
+ * WordItem rather than a fresh read here — this is a single learner
+ * tapping through one quiz, not a spot worth an extra round trip (or a
+ * server-side atomic increment) just to guard against a race that can't
+ * really happen. */
+export async function recordQuizCorrect(
+  userId: string,
+  text: string,
+  reading: string,
+  kind: ReadingKind,
+  currentCount: number,
+  alreadyMemorized: boolean,
+  threshold: number
+): Promise<{ memorized: boolean }> {
+  const nextCount = currentCount + 1;
+  const memorized = alreadyMemorized || nextCount >= threshold;
+  const supabase = createClient();
+  const { error } = await supabase.from("word_progress").upsert(
+    { user_id: userId, text, reading, kind, quiz_correct_count: nextCount, memorized },
+    { onConflict: "user_id,text,reading" }
+  );
+  if (error) throw error;
+  return { memorized };
+}
+
 export async function fetchEntry(dateKey: string): Promise<DiaryEntry | null> {
   const { entry } = await callDiaryApi<{ entry: DiaryEntry | null }>(
     `entry?date=${encodeURIComponent(dateKey)}`

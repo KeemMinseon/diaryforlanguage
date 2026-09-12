@@ -175,6 +175,15 @@ create table if not exists public.word_progress (
   unique (user_id, text, reading)
 );
 
+-- Safe to re-run against an existing table (see the diary_entries columns
+-- above for the same pattern) — how many times this word has been
+-- correctly matched in 단어 테스트 (WordQuiz), cumulative across every
+-- round ever played, not a consecutive streak. Once it crosses the
+-- app's memorize threshold the client also sets `memorized` — this
+-- column just needs to keep counting from there, never reset by a miss
+-- or by `memorized` already being true.
+alter table public.word_progress add column if not exists quiz_correct_count integer not null default 0;
+
 create index if not exists word_progress_user_idx
   on public.word_progress (user_id);
 

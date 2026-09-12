@@ -48,9 +48,45 @@ describe("collectWords", () => {
   it("carries over a stored memorized flag by (text, reading)", () => {
     const words = collectWords(
       [entry({ readings: [{ text: "会", reading: "あ", kind: "kanji" }] })],
-      [{ id: "p1", user_id: "u1", text: "会", reading: "あ", kind: "kanji", memorized: true, updated_at: "" }]
+      [
+        {
+          id: "p1",
+          user_id: "u1",
+          text: "会",
+          reading: "あ",
+          kind: "kanji",
+          memorized: true,
+          quiz_correct_count: 0,
+          updated_at: "",
+        },
+      ]
     );
     expect(words[0].memorized).toBe(true);
+  });
+
+  it("carries the stored quiz-correct count through, defaulting to 0 when absent", () => {
+    const withCount = collectWords(
+      [entry({ readings: [{ text: "会", reading: "あ", kind: "kanji" }] })],
+      [
+        {
+          id: "p1",
+          user_id: "u1",
+          text: "会",
+          reading: "あ",
+          kind: "kanji",
+          memorized: false,
+          quiz_correct_count: 2,
+          updated_at: "",
+        },
+      ]
+    );
+    expect(withCount[0].quizCorrectCount).toBe(2);
+
+    const withoutCount = collectWords(
+      [entry({ readings: [{ text: "楽", reading: "たの", kind: "kanji" }] })],
+      []
+    );
+    expect(withoutCount[0].quizCorrectCount).toBe(0);
   });
 
   it("carries the meaning through, defaulting to an empty string when absent", () => {

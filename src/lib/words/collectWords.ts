@@ -20,6 +20,10 @@ export interface WordItem {
   /** How many separate entries this exact (text, reading) pair showed up in. */
   occurrences: number;
   memorized: boolean;
+  /** Cumulative correct matches in 단어 테스트 (WordQuiz) — see WordQuiz's
+   * memorize-threshold logic in WordListView. 0 for a word never quizzed,
+   * or saved before this column existed. */
+  quizCorrectCount: number;
 }
 
 /** Same (text, reading) pair can otherwise collide with an unrelated word
@@ -35,7 +39,7 @@ export function collectWords(
   entries: WordSourceEntry[],
   progress: WordProgress[]
 ): WordItem[] {
-  const memorizedByKey = new Map(progress.map((p) => [wordKey(p.text, p.reading), p.memorized]));
+  const progressByKey = new Map(progress.map((p) => [wordKey(p.text, p.reading), p]));
   const byKey = new Map<string, WordItem>();
 
   for (const entry of entries) {
@@ -47,6 +51,7 @@ export function collectWords(
         existing.occurrences += 1;
         continue;
       }
+      const existingProgress = progressByKey.get(key);
       byKey.set(key, {
         text: r.text,
         reading: r.reading,
@@ -54,7 +59,8 @@ export function collectWords(
         meaning: r.meaning ?? "",
         lastSeen: entry.entry_date,
         occurrences: 1,
-        memorized: memorizedByKey.get(key) ?? false,
+        memorized: existingProgress?.memorized ?? false,
+        quizCorrectCount: existingProgress?.quiz_correct_count ?? 0,
       });
     }
   }
