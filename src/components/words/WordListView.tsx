@@ -259,6 +259,12 @@ export default function WordListView({ userId }: { userId: string }) {
           <div className="flex flex-col gap-2">
             {visible.map((w) => {
               const key = wordKey(w.text, w.reading);
+              // A word marked memorized by hand (not via 3 quiz passes)
+              // still shows all 3 dots filled — they track "done", not
+              // literally quiz_correct_count once that's true.
+              const filled = w.memorized
+                ? QUIZ_MEMORIZE_THRESHOLD
+                : Math.min(w.quizCorrectCount, QUIZ_MEMORIZE_THRESHOLD);
               return (
                 <div
                   key={key}
@@ -282,42 +288,30 @@ export default function WordListView({ userId }: { userId: string }) {
                       {w.occurrences > 1 && ` · ${w.occurrences}번 등장`}
                     </span>
                   </div>
-                  {/* Still the same manual toggle as before (tap to mark
-                      memorized, tap again to un-mark) — only the "not yet"
-                      state's content changed, from a plain "아직이에요"
-                      label to QUIZ_MEMORIZE_THRESHOLD little stamp dots,
-                      one lighting up solid per correct 단어 테스트 match, so
-                      the card itself shows how close a word is to being
-                      auto-memorized instead of that only being visible
-                      inside the quiz. */}
+                  {/* Same manual toggle as before (tap to mark memorized,
+                      tap again to un-mark) — but no separate "외웠어요"
+                      badge anymore: memorized is just all 3 dots filled,
+                      the natural end state of the same progress dots
+                      rather than a different-looking element replacing
+                      them. */}
                   <button
                     type="button"
                     onClick={() => toggle(w)}
                     aria-label={
                       w.memorized
-                        ? "외웠어요 — 눌러서 취소"
-                        : `퀴즈 통과 ${Math.min(w.quizCorrectCount, QUIZ_MEMORIZE_THRESHOLD)}/${QUIZ_MEMORIZE_THRESHOLD} — 눌러서 외운 단어로 표시`
+                        ? "외운 단어 — 눌러서 취소"
+                        : `퀴즈 통과 ${filled}/${QUIZ_MEMORIZE_THRESHOLD} — 눌러서 외운 단어로 표시`
                     }
-                    className={`shrink-0 rounded-full transition ${
-                      w.memorized
-                        ? "bg-[var(--shu)] px-3 py-1.5 text-xs font-medium text-white"
-                        : "p-2"
-                    }`}
+                    className="flex shrink-0 items-center gap-1 p-2"
                   >
-                    {w.memorized ? (
-                      "외웠어요"
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        {Array.from({ length: QUIZ_MEMORIZE_THRESHOLD }).map((_, i) => (
-                          <span
-                            key={i}
-                            className={`h-2 w-2 rounded-full ${
-                              i < w.quizCorrectCount ? "bg-[var(--shu)]" : "border border-[var(--paper-line)]"
-                            }`}
-                          />
-                        ))}
-                      </span>
-                    )}
+                    {Array.from({ length: QUIZ_MEMORIZE_THRESHOLD }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-2 w-2 rounded-full ${
+                          i < filled ? "bg-[var(--shu)]" : "border border-[var(--paper-line)]"
+                        }`}
+                      />
+                    ))}
                   </button>
                 </div>
               );
