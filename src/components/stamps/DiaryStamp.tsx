@@ -12,10 +12,24 @@ interface DiaryStampProps {
   stampKey: StampId | null;
   photoUrl?: string | null;
   className?: string;
+  /** A small fixed rotation (degrees) — see lib/stamps/stampTilt.ts. Passed
+   * straight through to StampFrame's own root <svg> rather than wrapped in
+   * an extra element: a transform doesn't affect box sizing at all, so it
+   * can ride along on the exact element whose width/height resolution
+   * (the SVG replaced-element sizing algorithm, given only a definite
+   * height from its own ancestors) already works, instead of introducing
+   * a new plain <div> that same percentage-sizing chain doesn't apply to. */
+  tiltDeg?: number;
 }
 
 /** Renders the day's stamp: a cropped photo, or the auto-picked hand-drawn icon. */
-export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }: DiaryStampProps) {
+export default function DiaryStamp({
+  stampKind,
+  stampKey,
+  photoUrl,
+  className,
+  tiltDeg,
+}: DiaryStampProps) {
   const id = (stampKey ?? "default") as StampId;
   const style = STAMP_STYLE[id] ?? STAMP_STYLE.default;
 
@@ -56,12 +70,13 @@ export default function DiaryStamp({ stampKind, stampKey, photoUrl, className }:
         photoUrl={photoUrl}
         photoLoaded={loaded}
         onPhotoLoad={() => setLoaded(true)}
+        tiltDeg={tiltDeg}
       />
     );
   }
 
   return (
-    <StampFrame tint={style.tint} className={className}>
+    <StampFrame tint={style.tint} className={className} tiltDeg={tiltDeg}>
       <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, color: style.ink }}>
         <KeywordIcon id={id} className="h-full w-full" />
       </div>

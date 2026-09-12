@@ -30,6 +30,7 @@ export default function StampFrame({
   photoUrl,
   photoLoaded = true,
   onPhotoLoad,
+  tiltDeg,
 }: {
   /** Keyword-icon content, rendered via foreignObject. Ignored when `photoUrl` is set. */
   children?: React.ReactNode;
@@ -41,11 +42,22 @@ export default function StampFrame({
   /** Shows a pulse placeholder over the photo while false. */
   photoLoaded?: boolean;
   onPhotoLoad?: () => void;
+  /** A small fixed rotation (degrees) applied directly to this root <svg>
+   * via CSS `transform` — a transform doesn't participate in box sizing
+   * at all, so it can't disturb whatever's already resolving this
+   * element's width/height (see DiaryStamp's note on why this rides on
+   * the svg itself rather than a wrapping <div>). */
+  tiltDeg?: number;
 }) {
   const clipId = `stamp-mask-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (
-    <svg viewBox={`0 0 ${STAMP_MASK_WIDTH} ${STAMP_MASK_HEIGHT}`} className={className} role="img">
+    <svg
+      viewBox={`0 0 ${STAMP_MASK_WIDTH} ${STAMP_MASK_HEIGHT}`}
+      className={className}
+      role="img"
+      style={tiltDeg ? { transform: `rotate(${tiltDeg}deg)` } : undefined}
+    >
       <defs>
         <clipPath id={clipId}>
           <path d={STAMP_MASK_PATH} />

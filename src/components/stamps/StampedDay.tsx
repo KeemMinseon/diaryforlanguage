@@ -13,6 +13,7 @@ export default function StampedDay({
   photoUrl,
   stampCount = 1,
   justStamped = false,
+  tiltDeg = 0,
   className,
 }: {
   entry: Pick<DiaryEntry, "stamp_kind" | "stamp_key" | "status">;
@@ -23,6 +24,12 @@ export default function StampedDay({
    * of it just being there already, the way it normally renders once
    * `status === "reviewed"`. See lib/events/diaryStamped.ts. */
   justStamped?: boolean;
+  /** A small fixed rotation (degrees) for the main stamp artwork only —
+   * see lib/stamps/stampTilt.ts. Deliberately doesn't touch the "second
+   * session" peek-behind layer or the hanko seal below: both already
+   * carry their own fixed tilt, each meant to read as its own separate
+   * mark rather than moving in lockstep with the stamp itself. */
+  tiltDeg?: number;
   className?: string;
 }) {
   return (
@@ -41,6 +48,7 @@ export default function StampedDay({
         stampKind={entry.stamp_kind}
         stampKey={entry.stamp_key as never}
         photoUrl={photoUrl}
+        tiltDeg={tiltDeg}
         className="w-full h-full drop-shadow-md"
       />
       {entry.status === "reviewed" && (
