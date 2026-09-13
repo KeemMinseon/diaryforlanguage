@@ -52,6 +52,11 @@ export interface SessionStamp {
   session: number;
   stampKind: StampKind;
   stampKey: string | null;
+  /** Which numbered image variant of `stampKey` this session got (see
+   * lib/stamps/stampVariants.ts) — picked once at save time and kept
+   * forever after, never recomputed on render. Null for a photo stamp, a
+   * keyword with only one variant, or a stamp saved before this existed. */
+  stampVariant: number | null;
   photoPath: string | null;
   createdAt: string; // ISO timestamp
 }
@@ -63,6 +68,7 @@ export interface DiaryEntry {
   content: string;
   stamp_kind: StampKind;
   stamp_key: string | null; // keyword stamp id, when stamp_kind === "keyword"
+  stamp_variant: number | null; // mirrors stamps[0].stampVariant — see SessionStamp
   photo_path: string | null; // storage object path, when stamp_kind === "photo"
   status: EntryStatus;
   overall_comment: string | null;

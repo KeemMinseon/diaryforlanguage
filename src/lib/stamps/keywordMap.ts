@@ -1,8 +1,8 @@
 /**
  * Deterministic keyword → stamp matching.
  *
- * When a diary entry has no photo, we pick a hand-drawn stamp motif by
- * scanning the entry text for target-language keywords. This runs
+ * When a diary entry has no photo, we pick a stamp motif by scanning the
+ * entry text for target-language keywords. This runs
  * entirely client-side (no AI call) so the stamp appears the instant the
  * entry is saved.
  *
@@ -28,12 +28,11 @@ export const STAMP_IDS = [
   "work",
   "cat",
   "flower",
-  // Added on request — each now has its own built-in hand-drawn icon in
-  // StampIcon.tsx, same line-art style as the original set above. A custom
-  // image uploaded to the "stamp-icons" Storage bucket as "<id>.<ext>"
-  // (e.g. "celebration.svg") still overrides that immediately, the same
-  // way every other keyword stamp's icon can be replaced. See
-  // KeywordIcon.tsx / useStorageImageOverride for that mechanism.
+  // Added on request — each is rendered from an uploaded image in the
+  // "stamp-icons" Storage bucket as "<id>.<ext>" (e.g. "celebration.png"),
+  // same as every other keyword stamp. See KeywordIcon.tsx /
+  // useStorageImageOverride for that mechanism, and stampVariants.ts for
+  // keywords with several random variants instead of just one image.
   "celebration",
   "shopping",
   "movie",

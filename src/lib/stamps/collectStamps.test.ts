@@ -18,7 +18,7 @@ describe("collectStamps", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "coffee", photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
@@ -29,8 +29,8 @@ describe("collectStamps", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "coffee", photoPath: null, createdAt: "" },
-          { session: 1, stampKind: "keyword", stampKey: "movie", photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 1, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
@@ -46,19 +46,19 @@ describe("collectStamps", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "coffee", photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
       entry({
         entry_date: "2026-09-02",
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "movie", photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
       entry({
         entry_date: "2026-09-03",
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "movie", photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
@@ -78,13 +78,13 @@ describe("collectStamps", () => {
       entry({
         entry_date: "2026-09-08",
         stamps: [
-          { session: 0, stampKind: "photo", stampKey: null, photoPath: "u1/2026-09-08.jpg", createdAt: "" },
+          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-08.jpg", createdAt: "" },
         ],
       }),
       entry({
         entry_date: "2026-09-01",
         stamps: [
-          { session: 0, stampKind: "photo", stampKey: null, photoPath: "u1/2026-09-01.jpg", createdAt: "" },
+          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-01.jpg", createdAt: "" },
         ],
       }),
     ]);
@@ -99,7 +99,7 @@ describe("collectStamps", () => {
     const { photoStamps } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "photo", stampKey: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
@@ -110,7 +110,7 @@ describe("collectStamps", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: null, stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);

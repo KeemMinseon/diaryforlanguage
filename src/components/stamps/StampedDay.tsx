@@ -16,7 +16,7 @@ export default function StampedDay({
   tiltDeg = 0,
   className,
 }: {
-  entry: Pick<DiaryEntry, "stamp_kind" | "stamp_key" | "status">;
+  entry: Pick<DiaryEntry, "stamp_kind" | "stamp_key" | "stamp_variant" | "status">;
   photoUrl?: string | null;
   stampCount?: number;
   /** True for the few seconds right after this day's entry just got its
@@ -47,6 +47,7 @@ export default function StampedDay({
       <DiaryStamp
         stampKind={entry.stamp_kind}
         stampKey={entry.stamp_key as never}
+        stampVariant={entry.stamp_variant}
         photoUrl={photoUrl}
         tiltDeg={tiltDeg}
         className="w-full h-full drop-shadow-md"

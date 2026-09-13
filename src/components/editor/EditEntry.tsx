@@ -6,6 +6,7 @@ import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
+import { pickStampVariant } from "@/lib/stamps/stampVariants";
 import { photoPublicUrl, saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
 import type { DiaryEntry, DiaryParagraph, SessionStamp, StampKind } from "@/types/diary";
@@ -26,6 +27,7 @@ function resolveStamps(entry: DiaryEntry): SessionStamp[] {
       session: 0,
       stampKind: entry.stamp_kind,
       stampKey: entry.stamp_key,
+      stampVariant: entry.stamp_variant,
       photoPath: entry.photo_path,
       createdAt: entry.reviewed_at ?? entry.updated_at,
     },
@@ -204,6 +206,7 @@ export default function EditEntry({
           session: p.session,
           stampKind: "photo",
           stampKey: null,
+          stampVariant: null,
           photoPath: frontPhotoPath,
           createdAt: new Date().toISOString(),
         };
@@ -212,10 +215,15 @@ export default function EditEntry({
       if (i !== 0 && original?.stampKind === "photo") {
         return original;
       }
+      // Picked once, right here at save time — see pickStampVariant's own
+      // doc comment for why that's safe (this isn't render, and it's
+      // never called again for this same stamp afterward).
+      const keywordId = pickStamp(p.text);
       return {
         session: p.session,
         stampKind: "keyword",
-        stampKey: pickStamp(p.text),
+        stampKey: keywordId,
+        stampVariant: pickStampVariant(keywordId),
         photoPath: null,
         createdAt: new Date().toISOString(),
       };
@@ -245,6 +253,7 @@ export default function EditEntry({
         content: fullText,
         stampKind: stamps[0].stampKind,
         stampKey: stamps[0].stampKey,
+        stampVariant: stamps[0].stampVariant,
         photoPath: stamps[0].photoPath,
         status: "reviewed",
         overallComment: entry.overall_comment,
@@ -352,6 +361,7 @@ export default function EditEntry({
           content: fullText,
           stampKind: stamps[0].stampKind,
           stampKey: stamps[0].stampKey,
+          stampVariant: stamps[0].stampVariant,
           photoPath: stamps[0].photoPath,
           status: "reviewed",
           overallComment: finalizeData.overallComment,

@@ -42,6 +42,10 @@ function resolveStamps(entry: StampSourceEntry): SessionStamp[] {
       session: 0,
       stampKind: entry.stamp_kind,
       stampKey: entry.stamp_key,
+      // Not fetched by fetchAllEntriesForStamps (this collection view only
+      // ever shows one representative image per keyword, never a specific
+      // day's actual variant) — see StampSourceEntry.
+      stampVariant: null,
       photoPath: entry.photo_path,
       createdAt: entry.entry_date,
     },

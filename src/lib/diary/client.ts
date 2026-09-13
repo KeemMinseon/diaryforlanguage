@@ -170,6 +170,8 @@ interface SaveEntryInput {
   content: string;
   stampKind: "photo" | "keyword";
   stampKey: string | null;
+  /** Mirrors stamps[0].stampVariant — see SessionStamp. */
+  stampVariant?: number | null;
   photoPath: string | null;
   /**
    * The paragraph-by-paragraph writing flow reviews as it goes, so a saved
@@ -195,6 +197,7 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
       content: input.content,
       stampKind: input.stampKind,
       stampKey: input.stampKey,
+      stampVariant: input.stampVariant,
       photoPath: input.photoPath,
       status: input.status,
       overallComment: input.overallComment,

@@ -10,6 +10,7 @@ interface SaveEntryBody {
   content: string;
   stampKind: "photo" | "keyword";
   stampKey: string | null;
+  stampVariant?: number | null;
   photoPath: string | null;
   status?: "pending" | "reviewed" | "failed";
   overallComment?: string | null;
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
           content: encrypted.content,
           stamp_kind: body.stampKind,
           stamp_key: body.stampKey,
+          stamp_variant: body.stampVariant ?? null,
           photo_path: body.photoPath,
           status,
           overall_comment: encrypted.overall_comment,

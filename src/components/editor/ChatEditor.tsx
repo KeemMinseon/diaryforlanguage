@@ -9,6 +9,7 @@ import FuriganaText from "@/components/review/FuriganaText";
 import ReadingsHint from "@/components/review/ReadingsHint";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
+import { pickStampVariant } from "@/lib/stamps/stampVariants";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
 import { buildHighlightSegments } from "@/lib/review/highlight";
@@ -409,6 +410,10 @@ export default function ChatEditor({
     // shouldn't decide *this* one's.
     const stampKind: "photo" | "keyword" = hasPhoto ? "photo" : "keyword";
     const stampKey = stampKind === "keyword" ? pickStamp(newContent) : null;
+    // Picked once, right here at save time, and carried into `stamps`
+    // below untouched from then on — see pickStampVariant's own doc
+    // comment for why this is the one safe place to call it.
+    const stampVariant = stampKey ? pickStampVariant(stampKey) : null;
     const allSoFar = [...lockedRounds, ...rounds];
     const existingSuggestions = allSoFar.flatMap((r) => r.suggestions);
     const existingReadings = allSoFar.flatMap((r) => r.readings);
@@ -437,7 +442,14 @@ export default function ChatEditor({
       }
       stamps = [
         ...stamps,
-        { session: currentSession, stampKind, stampKey, photoPath, createdAt: new Date().toISOString() },
+        {
+          session: currentSession,
+          stampKind,
+          stampKey,
+          stampVariant,
+          photoPath,
+          createdAt: new Date().toISOString(),
+        },
       ];
 
       await saveEntry({
@@ -453,6 +465,7 @@ export default function ChatEditor({
         // whichever one was saved most recently.
         stampKind: stamps[0].stampKind,
         stampKey: stamps[0].stampKey,
+        stampVariant: stamps[0].stampVariant,
         photoPath: stamps[0].photoPath,
         status: "pending",
         overallComment: initialEntry?.overall_comment ?? "",
@@ -525,6 +538,7 @@ export default function ChatEditor({
           content: fullText,
           stampKind: stamps[0].stampKind,
           stampKey: stamps[0].stampKey,
+          stampVariant: stamps[0].stampVariant,
           photoPath: stamps[0].photoPath,
           status: "reviewed",
           overallComment: finalizeData.overallComment,
@@ -562,6 +576,7 @@ export default function ChatEditor({
             content: fullText,
             stampKind: stamps[0].stampKind,
             stampKey: stamps[0].stampKey,
+            stampVariant: stamps[0].stampVariant,
             photoPath: stamps[0].photoPath,
             status: "failed",
             overallComment: initialEntry?.overall_comment ?? "",

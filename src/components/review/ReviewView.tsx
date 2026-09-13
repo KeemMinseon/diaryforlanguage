@@ -66,6 +66,7 @@ export default function ReviewView({
             session: 0,
             stampKind: entry.stamp_kind,
             stampKey: entry.stamp_key,
+            stampVariant: entry.stamp_variant,
             photoPath: entry.photo_path,
             createdAt: entry.reviewed_at ?? entry.updated_at,
           },
@@ -260,6 +261,7 @@ export default function ReviewView({
                       <DiaryStamp
                         stampKind={s.stampKind}
                         stampKey={s.stampKey as never}
+                        stampVariant={s.stampVariant}
                         photoUrl={stampPhotoUrl(s)}
                         className="absolute inset-0 h-full w-full drop-shadow-md"
                       />

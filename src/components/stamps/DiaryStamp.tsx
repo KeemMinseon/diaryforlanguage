@@ -10,6 +10,8 @@ import type { StampId } from "@/lib/stamps/keywordMap";
 interface DiaryStampProps {
   stampKind: "photo" | "keyword";
   stampKey: StampId | null;
+  /** Which uploaded variant of `stampKey` to show — see KeywordIcon. */
+  stampVariant?: number | null;
   photoUrl?: string | null;
   className?: string;
   /** A small fixed rotation (degrees) — see lib/stamps/stampTilt.ts. Passed
@@ -22,10 +24,11 @@ interface DiaryStampProps {
   tiltDeg?: number;
 }
 
-/** Renders the day's stamp: a cropped photo, or the auto-picked hand-drawn icon. */
+/** Renders the day's stamp: a cropped photo, or the auto-picked keyword image. */
 export default function DiaryStamp({
   stampKind,
   stampKey,
+  stampVariant,
   photoUrl,
   className,
   tiltDeg,
@@ -78,7 +81,7 @@ export default function DiaryStamp({
   return (
     <StampFrame tint={style.tint} className={className} tiltDeg={tiltDeg}>
       <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, color: style.ink }}>
-        <KeywordIcon id={id} className="h-full w-full" />
+        <KeywordIcon id={id} variant={stampVariant} className="h-full w-full" />
       </div>
     </StampFrame>
   );

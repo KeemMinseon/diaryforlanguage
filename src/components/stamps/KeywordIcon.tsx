@@ -1,29 +1,37 @@
 "use client";
 
-import StampIcon from "@/components/stamps/StampIcon";
 import { useStorageImageOverride } from "@/lib/icons/useStorageImageOverride";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
 /**
- * Renders a custom-uploaded icon for this keyword if one exists in the
- * public `stamp-icons` Storage bucket (named "<id>.png" etc. — see
- * useStorageImageOverride), falling back to the built-in hand-drawn SVG
- * icon otherwise. A raster override doesn't get the SVG's engraved-
- * shadow depth treatment — it just fills the window as-is, the same way
- * an attached photo stamp does.
+ * Renders this keyword's stamp image from the public `stamp-icons` Storage
+ * bucket — there's no built-in hand-drawn fallback any more (every keyword
+ * stamp is an uploaded image now, see schema.sql's bucket comment). A
+ * keyword with several random variants (STAMP_VARIANT_COUNT in
+ * lib/stamps/stampVariants.ts) is looked up as "<id>-<variant>", e.g.
+ * "cat-3"; a keyword with just one look (the common case) is looked up as
+ * plain "<id>", exactly like before variants existed.
+ *
+ * While a keyword has no image uploaded yet, this renders nothing — the
+ * caller's own tinted stamp background (StampFrame) still shows, just
+ * without any artwork on top, rather than a broken image or a stand-in
+ * icon.
  */
 export default function KeywordIcon({
   id,
+  variant,
   className,
 }: {
   id: StampId;
+  /** Which uploaded variant to show, 1-indexed — omit or 1 for a keyword
+   * with only one image. */
+  variant?: number | null;
   className?: string;
 }) {
-  const resolvedUrl = useStorageImageOverride("stamp-icons", id);
+  const name = variant && variant > 1 ? `${id}-${variant}` : id;
+  const resolvedUrl = useStorageImageOverride("stamp-icons", name);
 
-  if (!resolvedUrl) {
-    return <StampIcon id={id} className={className} />;
-  }
+  if (!resolvedUrl) return null;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time

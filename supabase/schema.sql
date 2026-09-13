@@ -41,6 +41,13 @@ alter table public.diary_entries add column if not exists paragraphs jsonb not n
 -- both fall back to synthesizing a single stamp from
 -- stamp_kind/stamp_key/photo_path in that case.
 alter table public.diary_entries add column if not exists stamps jsonb not null default '[]'::jsonb;
+-- Which numbered image variant (see the stamp-icons bucket comment below)
+-- was randomly picked for this day's *front* stamp (mirrors stamps[0],
+-- same convention as stamp_kind/stamp_key) — chosen once at save time and
+-- kept forever after, not recomputed on render. Null for a photo stamp,
+-- for a keyword that only has one variant, or for an entry saved before
+-- this column existed (falls back to showing that one variant/image).
+alter table public.diary_entries add column if not exists stamp_variant integer;
 
 create index if not exists diary_entries_user_month_idx
   on public.diary_entries (user_id, entry_date);
@@ -107,10 +114,14 @@ create policy "diary photos own delete" on storage.objects
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
--- Storage bucket for custom keyword-stamp icon overrides (public read).
--- Upload a file named "<stamp id>.<png|jpg|jpeg|webp>" (e.g. "rain.png")
--- to swap that keyword's built-in line-art icon for your own image — no
--- code change needed, see src/components/stamps/KeywordIcon.tsx.
+-- Storage bucket for keyword-stamp icon images (public read). Every
+-- keyword stamp is an uploaded image now (there's no built-in line-art
+-- fallback any more) — upload a file named "<stamp id>.<png|jpg|jpeg|webp>"
+-- (e.g. "rain.png") for a keyword with just one look. For a keyword with
+-- several random variants (see src/lib/stamps/stampVariants.ts's
+-- STAMP_VARIANT_COUNT), upload "<stamp id>-<n>.<ext>" for n = 1..count
+-- instead (e.g. "cat-1.png".."cat-5.png") — no code change needed either
+-- way, see src/components/stamps/KeywordIcon.tsx.
 insert into storage.buckets (id, name, public)
 values ('stamp-icons', 'stamp-icons', true)
 on conflict (id) do nothing;
