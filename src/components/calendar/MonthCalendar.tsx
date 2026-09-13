@@ -88,11 +88,6 @@ export default function MonthCalendar() {
   // stamp-landing animation on that one cell instead of the hanko just
   // silently appearing next time this data happens to re-fetch.
   const [justStampedDate, setJustStampedDate] = useState<string | null>(null);
-  // Experimental toggle: tapping the "우표일기" title flips this — not
-  // persisted anywhere, just a quick way to preview the day cells with
-  // their box (background/border/rounded corners) stripped, leaving only
-  // the date number and the stamp itself. See DayCell's `frameless`.
-  const [frameless, setFrameless] = useState(false);
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -150,21 +145,19 @@ export default function MonthCalendar() {
   const weeks = buildMonthGrid(year, month);
   const today = todayKey();
   const monthWordGroups = monthWordsByDate(entries);
+  // "19/20" sheet-fraction flavor next to the month label — filled slots
+  // (일기 있는 날) over this month's own day count. `entries` is already
+  // scoped to [monthStartKey, monthEndKey], so its size alone is the
+  // filled count, no separate filtering needed.
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const filledCount = Object.keys(entries).length;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        {/* Doubles as the frameless-preview toggle below — see `frameless`
-            state. Plain text otherwise, so no visual change for anyone who
-            doesn't know to tap it. */}
-        <button
-          type="button"
-          onClick={() => setFrameless((f) => !f)}
-          aria-pressed={frameless}
-          className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]"
-        >
+        <h1 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
           우표일기
-        </button>
+        </h1>
         <div className="flex items-center gap-1">
           <Link
             href="/words"
@@ -239,8 +232,11 @@ export default function MonthCalendar() {
             ←
           </UiIcon>
         </button>
-        <p className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
+        <p className="flex items-baseline gap-1.5 font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
           {year}년 {month + 1}월
+          <span className="font-[family-name:var(--font-body)] text-xs font-normal text-[var(--ink-soft)]">
+            {filledCount}/{daysInMonth}
+          </span>
         </p>
         <button
           type="button"
@@ -283,7 +279,6 @@ export default function MonthCalendar() {
                 isFuture={key > today}
                 entry={entries[key]}
                 justStamped={key === justStampedDate}
-                frameless={frameless}
               />
             );
           })

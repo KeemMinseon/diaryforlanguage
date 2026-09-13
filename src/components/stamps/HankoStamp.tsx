@@ -1,9 +1,11 @@
 import UiIcon from "@/components/icons/UiIcon";
 
 /**
- * The 添削済 hanko: a red ink-seal stamped over the diary's postage stamp
- * once Claude's vocabulary feedback has come back. Absolutely positioned
- * by the parent (which should be `position: relative`).
+ * The 添削済 hanko: an ink-seal stamped over the diary's postage stamp once
+ * Claude's vocabulary feedback has come back. Absolutely positioned by the
+ * parent (which should be `position: relative`). Was a vermillion (朱色)
+ * seal before the app went fully monochrome — plain `--ink` now, same as
+ * everything else.
  *
  * The seal artwork is swappable via the same Storage-upload override
  * mechanism as other UI icons (slot: "stampimg"). The ink color and
@@ -16,9 +18,9 @@ import UiIcon from "@/components/icons/UiIcon";
  *
  * No blend mode here — this used to sit under `mixBlendMode: "multiply"`
  * for a paper-ink look, but multiply darkens toward whatever's underneath,
- * so on a dark photo stamp (a night shot, say) the red ink crushed toward
- * black and the seal all but disappeared. Plain opaque color reads clearly
- * over any photo, at the cost of that translucent-ink look on light ones.
+ * so on a dark photo stamp (a night shot, say) the ink crushed toward black
+ * and the seal all but disappeared. Plain opaque color reads clearly over
+ * any photo, at the cost of that translucent-ink look on light ones.
  */
 export default function HankoStamp({ className }: { className?: string }) {
   return (
@@ -26,7 +28,7 @@ export default function HankoStamp({ className }: { className?: string }) {
       className={`aspect-square ${className ?? ""}`}
       style={{
         position: "absolute",
-        color: "var(--shu, #eb5a36)",
+        color: "var(--ink, #000)",
         transform: "rotate(-11deg)",
         pointerEvents: "none",
       }}

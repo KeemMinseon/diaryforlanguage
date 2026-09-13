@@ -191,15 +191,15 @@ export default function WordListView({ userId }: { userId: string }) {
 
       {/* Below the min, a round would either be too short to bother with
           or not really be the "10" the feature is about — quietly hidden
-          rather than offered half-empty. Styled as its own card in the
-          app's postmark red rather than another outlined pill (which just
-          blended into the filter chips above it) — it's a distinct little
-          game, not one more list filter. */}
+          rather than offered half-empty. Styled as its own solid-ink card
+          rather than another outlined pill (which just blended into the
+          filter chips above it) — it's a distinct little game, not one
+          more list filter. */}
       {!quizzing && quizPool.length >= QUIZ_MIN_WORDS && (
         <button
           type="button"
           onClick={() => setQuizzing(true)}
-          className="flex items-center gap-3 rounded-2xl bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
+          className="flex items-center gap-3 rounded-2xl bg-[var(--cta)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
             <UiIcon name="cards-line" className="h-5 w-5" alt="">
@@ -308,7 +308,7 @@ export default function WordListView({ userId }: { userId: string }) {
                       <span
                         key={i}
                         className={`h-2 w-2 rounded-full ${
-                          i < filled ? "bg-[var(--shu)]" : "border border-[var(--paper-line)]"
+                          i < filled ? "bg-[var(--ink)]" : "border border-[var(--paper-line)]"
                         }`}
                       />
                     ))}
