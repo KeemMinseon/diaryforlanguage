@@ -65,7 +65,7 @@ export default function DiaryStamp({
   if (stampKind === "photo" && photoUrl) {
     return (
       <StampFrame
-        tint="#e7e2d8"
+        tint="#f7f7f7"
         className={className}
         photoUrl={photoUrl}
         photoLoaded={loaded}

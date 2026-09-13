@@ -168,7 +168,7 @@ export default function WordQuiz({
           {misses === 0 ? "한 번에 다 맞혔어요." : `틀린 횟수 ${misses}번`}
         </p>
         {newlyMemorized > 0 && (
-          <p className="text-sm font-medium text-[var(--ink)]">
+          <p className="text-sm font-medium text-[var(--shu)]">
             외운 단어로 새로 등록된 단어 {newlyMemorized}개 🎉
           </p>
         )}
