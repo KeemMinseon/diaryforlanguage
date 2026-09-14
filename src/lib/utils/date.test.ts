@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { formatSavedAt } from "@/lib/utils/date";
+import { daysInMonth, formatSavedAt, toDateKey } from "@/lib/utils/date";
+
+describe("daysInMonth", () => {
+  it("returns every day of a 30-day month, in order, with no padding", () => {
+    const days = daysInMonth(2026, 8); // September (0-indexed)
+    expect(days).toHaveLength(30);
+    expect(toDateKey(days[0])).toBe("2026-09-01");
+    expect(toDateKey(days[29])).toBe("2026-09-30");
+  });
+
+  it("handles a 31-day month and February correctly", () => {
+    expect(daysInMonth(2026, 0)).toHaveLength(31); // January
+    expect(daysInMonth(2026, 1)).toHaveLength(28); // February, non-leap
+    expect(daysInMonth(2024, 1)).toHaveLength(29); // February, leap year
+  });
+});
 
 describe("formatSavedAt", () => {
   it("shows just the time when saved the same local day", () => {

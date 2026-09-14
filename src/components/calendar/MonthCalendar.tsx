@@ -9,7 +9,7 @@ import FuriganaText from "@/components/review/FuriganaText";
 import { fetchMonthEntries } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { wordKey } from "@/lib/words/collectWords";
-import { buildMonthGrid, parseDateKey, toDateKey, todayKey, WEEKDAY_LABELS_KO } from "@/lib/utils/date";
+import { daysInMonth, parseDateKey, toDateKey, todayKey } from "@/lib/utils/date";
 import type { DiaryEntryMap, Reading } from "@/types/diary";
 
 interface MonthWordGroup {
@@ -88,11 +88,6 @@ export default function MonthCalendar() {
   // stamp-landing animation on that one cell instead of the hanko just
   // silently appearing next time this data happens to re-fetch.
   const [justStampedDate, setJustStampedDate] = useState<string | null>(null);
-  // Experimental toggle: tapping the "우표일기" title flips this — not
-  // persisted anywhere, just a quick way to preview the day cells with
-  // their box (background/border/rounded corners) stripped, leaving only
-  // the date number and the stamp itself. See DayCell's `frameless`.
-  const [frameless, setFrameless] = useState(false);
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -147,24 +142,20 @@ export default function MonthCalendar() {
     router.replace(`/?month=${y}-${String(m + 1).padStart(2, "0")}`, { scroll: false });
   }
 
-  const weeks = buildMonthGrid(year, month);
+  const days = daysInMonth(year, month);
   const today = todayKey();
+  const now = new Date();
+  const isCurrentMonthShown = year === now.getFullYear() && month === now.getMonth();
+  const todayEntry = isCurrentMonthShown ? entries[today] : undefined;
+  const filledCount = Object.keys(entries).length;
   const monthWordGroups = monthWordsByDate(entries);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        {/* Doubles as the frameless-preview toggle below — see `frameless`
-            state. Plain text otherwise, so no visual change for anyone who
-            doesn't know to tap it. */}
-        <button
-          type="button"
-          onClick={() => setFrameless((f) => !f)}
-          aria-pressed={frameless}
-          className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]"
-        >
+        <p className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
           우표일기
-        </button>
+        </p>
         <div className="flex items-center gap-1">
           <Link
             href="/words"
@@ -254,41 +245,57 @@ export default function MonthCalendar() {
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs text-[var(--ink-soft)] sm:gap-1.5">
-        {WEEKDAY_LABELS_KO.map((label) => (
-          <div key={label} className="py-1">
-            {label}
-          </div>
-        ))}
+      {/* Big "채운 날/총 일수" counter — how much of the month is written
+          so far, not which day-of-month today is (that's the TODAY card
+          below). */}
+      <p className="font-[family-name:var(--font-heading)] text-[var(--ink)]">
+        <span className="text-5xl font-bold">{filledCount}</span>
+        <span className="text-lg text-[var(--ink-soft)]">/{days.length}</span>
+      </p>
+
+      {/* No flex-1 here — the grid should be exactly as tall as its rows
+          need, no more. It used to grow to fill whatever space was left
+          in the page, which (combined with Grid's default align-content
+          behaving like stretch on auto-sized row tracks) inflated the
+          visual gap between rows far past the declared `gap` value. Now
+          any leftover page height is just left for whatever comes after
+          the grid, e.g. the TODAY card / month's word list below.
+
+          6 columns, plain sequential 1..daysInMonth — not a weekday-
+          aligned calendar (see daysInMonth's own doc comment) — so the
+          last row is simply however many days are left over, not padded
+          out to a full row. */}
+      <div className={`grid grid-cols-6 gap-1.5 sm:gap-2 ${loading ? "opacity-60" : ""}`}>
+        {days.map((date) => {
+          const key = toDateKey(date);
+          return (
+            <DayCell
+              key={key}
+              date={date}
+              dateKey={key}
+              isToday={key === today}
+              isFuture={key > today}
+              entry={entries[key]}
+              justStamped={key === justStampedDate}
+            />
+          );
+        })}
       </div>
 
-      {/* No flex-1 here — the grid should be exactly as tall as 6 rows of
-          cells need, no more. It used to grow to fill whatever space was
-          left in the page, which (combined with Grid's default
-          align-content behaving like stretch on auto-sized row tracks)
-          inflated the visual gap between rows far past the declared
-          `gap` value. Now any leftover page height is just left for
-          whatever comes after the grid, e.g. the month's word list below. */}
-      <div className={`grid grid-cols-7 gap-1 sm:gap-1.5 ${loading ? "opacity-60" : ""}`}>
-        {weeks.flatMap((week) =>
-          week.map((date) => {
-            const key = toDateKey(date);
-            return (
-              <DayCell
-                key={key}
-                date={date}
-                dateKey={key}
-                inCurrentMonth={date.getMonth() === month}
-                isToday={key === today}
-                isFuture={key > today}
-                entry={entries[key]}
-                justStamped={key === justStampedDate}
-                frameless={frameless}
-              />
-            );
-          })
-        )}
-      </div>
+      {todayEntry && (
+        <Link
+          href={`/entry/${today}`}
+          className="flex flex-col gap-2 rounded-2xl bg-[var(--paper-raised)] px-5 py-4"
+        >
+          <p className="text-xs text-[var(--ink-soft)]">
+            TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })} ·
+            NO.{parseDateKey(today).getDate()}
+          </p>
+          <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink)] line-clamp-2">
+            {todayEntry.content}
+          </p>
+        </Link>
+      )}
 
       {monthWordGroups.length > 0 && (
         <section className="flex flex-col gap-4">

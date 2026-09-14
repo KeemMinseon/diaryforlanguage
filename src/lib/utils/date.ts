@@ -15,26 +15,19 @@ export function parseDateKey(key: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/** Weeks (Sun-Sat) of a full calendar month grid, including lead/trail days. */
-export function buildMonthGrid(year: number, month: number): Date[][] {
-  const first = new Date(year, month, 1);
-  const start = new Date(first);
-  start.setDate(first.getDate() - first.getDay());
-
-  const weeks: Date[][] = [];
-  const cursor = new Date(start);
-  for (let w = 0; w < 6; w++) {
-    const week: Date[] = [];
-    for (let d = 0; d < 7; d++) {
-      week.push(new Date(cursor));
-      cursor.setDate(cursor.getDate() + 1);
-    }
-    weeks.push(week);
+/** Every day of `year`/`month` (0-indexed month, like `Date`), the 1st
+ * through the last — in order, no leading/trailing padding from the
+ * previous or next month. The calendar (MonthCalendar) renders these as a
+ * plain sequential grid (a "sheet" of the month, not a weekday-aligned
+ * calendar), so there's no week-chunking here either. */
+export function daysInMonth(year: number, month: number): Date[] {
+  const count = new Date(year, month + 1, 0).getDate();
+  const days: Date[] = [];
+  for (let d = 1; d <= count; d++) {
+    days.push(new Date(year, month, d));
   }
-  return weeks;
+  return days;
 }
-
-export const WEEKDAY_LABELS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
 /** "오전 9:12" style, entirely by hand — no `Intl`/`toLocaleTimeString`.
  * Those depend on the runtime's bundled ICU/CLDR data, and a "use
