@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { useStorageImageOverride } from "@/lib/icons/useStorageImageOverride";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
@@ -31,13 +30,11 @@ export default function KeywordIcon({
   id,
   variant,
   className,
-  style,
 }: {
   id: StampId;
   /** Which uploaded variant to show, 0-indexed — omit for variant 0. */
   variant?: number | null;
   className?: string;
-  style?: CSSProperties;
 }) {
   const name = `${id.toUpperCase()}-${variant ?? 0}`;
   const resolvedUrl = useStorageImageOverride("stamp-icons", name);
@@ -50,7 +47,7 @@ export default function KeywordIcon({
       src={resolvedUrl}
       alt=""
       className={className}
-      style={{ objectFit: "cover", display: "block", ...style }}
+      style={{ objectFit: "cover", display: "block" }}
     />
   );
 }

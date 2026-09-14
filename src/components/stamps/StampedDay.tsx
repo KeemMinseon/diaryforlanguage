@@ -1,55 +1,33 @@
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import HankoStamp from "@/components/stamps/HankoStamp";
-import StampFrame from "@/components/stamps/StampFrame";
 import type { DiaryEntry } from "@/types/diary";
 
-/** A diary entry's stamp, with the 添削-complete hanko overlaid once reviewed.
- * When the day has more than one writing session (see `SessionStamp`), a
- * second plain stamp-shaped layer peeks out from behind — just a hint
- * that there's more here, not one layer per session (see ReviewView for
- * the actual full stack). */
+/** A diary entry's stamp, with the 添削-complete hanko overlaid once
+ * reviewed. When the day has more than one writing session (see
+ * `SessionStamp`), this still only ever shows the front one — see
+ * ReviewView for the actual full stack. */
 export default function StampedDay({
   entry,
   photoUrl,
-  stampCount = 1,
   justStamped = false,
-  tiltDeg = 0,
   className,
 }: {
   entry: Pick<DiaryEntry, "stamp_kind" | "stamp_key" | "stamp_variant" | "status">;
   photoUrl?: string | null;
-  stampCount?: number;
   /** True for the few seconds right after this day's entry just got its
    * final reviewed stamp — plays the hanko's entrance animation instead
    * of it just being there already, the way it normally renders once
    * `status === "reviewed"`. See lib/events/diaryStamped.ts. */
   justStamped?: boolean;
-  /** A small fixed rotation (degrees) for the main stamp artwork only —
-   * see lib/stamps/stampTilt.ts. Deliberately doesn't touch the "second
-   * session" peek-behind layer or the hanko seal below: both already
-   * carry their own fixed tilt, each meant to read as its own separate
-   * mark rather than moving in lockstep with the stamp itself. */
-  tiltDeg?: number;
   className?: string;
 }) {
   return (
     <div className={`relative ${className ?? ""}`}>
-      {stampCount > 1 && (
-        <div
-          className="absolute inset-0 origin-center -rotate-6 translate-x-[6%] translate-y-[3%]"
-          aria-hidden="true"
-        >
-          <StampFrame tint="#e2e2e2" className="h-full w-full">
-            {null}
-          </StampFrame>
-        </div>
-      )}
       <DiaryStamp
         stampKind={entry.stamp_kind}
         stampKey={entry.stamp_key as never}
         stampVariant={entry.stamp_variant}
         photoUrl={photoUrl}
-        tiltDeg={tiltDeg}
         className="w-full h-full drop-shadow-md"
       />
       {entry.status === "reviewed" && (

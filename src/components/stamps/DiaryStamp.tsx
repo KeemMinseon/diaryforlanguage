@@ -12,13 +12,6 @@ interface DiaryStampProps {
   stampVariant?: number | null;
   photoUrl?: string | null;
   className?: string;
-  /** A small fixed rotation (degrees) — see lib/stamps/stampTilt.ts. For a
-   * photo stamp this rides on StampFrame's own root <svg>; for a keyword
-   * stamp (plain <img>, no StampFrame — see below) it's applied directly
-   * as a CSS transform on that <img> instead. Either way it's a transform,
-   * so it never disturbs whatever's already resolving that element's own
-   * width/height. */
-  tiltDeg?: number;
 }
 
 /** Renders the day's stamp: a cropped photo, or the auto-picked keyword
@@ -32,7 +25,6 @@ export default function DiaryStamp({
   stampVariant,
   photoUrl,
   className,
-  tiltDeg,
 }: DiaryStampProps) {
   const id = (stampKey ?? "default") as StampId;
 
@@ -74,17 +66,9 @@ export default function DiaryStamp({
         photoUrl={photoUrl}
         photoLoaded={loaded}
         onPhotoLoad={() => setLoaded(true)}
-        tiltDeg={tiltDeg}
       />
     );
   }
 
-  return (
-    <KeywordIcon
-      id={id}
-      variant={stampVariant}
-      className={className}
-      style={tiltDeg ? { transform: `rotate(${tiltDeg}deg)` } : undefined}
-    />
-  );
+  return <KeywordIcon id={id} variant={stampVariant} className={className} />;
 }

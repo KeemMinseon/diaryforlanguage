@@ -1,7 +1,6 @@
 import Link from "next/link";
 import StampedDay from "@/components/stamps/StampedDay";
 import { photoPublicUrl } from "@/lib/diary/client";
-import { stampTiltDeg } from "@/lib/stamps/stampTilt";
 import type { DiaryEntry } from "@/types/diary";
 
 export default function DayCell({
@@ -43,15 +42,6 @@ export default function DayCell({
 
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
-  // At least 1 once there's an entry at all — an entry saved before
-  // per-session stamps existed just has an empty `stamps` array, but
-  // still has exactly one (implicit) stamp via stamp_kind/stamp_key.
-  const stampCount = entry ? Math.max(entry.stamps?.length ?? 0, 1) : 0;
-  // A stamp glued on perfectly straight every time read as too neat/
-  // printed — seeded off the date itself so a given day's tilt stays the
-  // same on every render (see stampTiltDeg's own comment on why not
-  // Math.random()). Applies whether the cell is framed or not.
-  const tiltDeg = entry ? stampTiltDeg(dateKey) : 0;
 
   const content = (
     <div
@@ -99,9 +89,7 @@ export default function DayCell({
           <StampedDay
             entry={entry}
             photoUrl={photoUrl}
-            stampCount={stampCount}
             justStamped={justStamped}
-            tiltDeg={tiltDeg}
             className="h-full max-w-full"
           />
         </div>
