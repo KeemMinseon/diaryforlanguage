@@ -83,17 +83,6 @@ export default function MonthCalendar() {
   const [{ year, month }, setCursor] = useState(() => parseMonthParam(searchParams.get("month")));
   const [entries, setEntries] = useState<DiaryEntryMap>({});
   const [loading, setLoading] = useState(true);
-  // Which day's content the bottom card previews — defaults to today
-  // whenever the currently-shown month is the real current month, and to
-  // nothing otherwise (browsing a different month starts with no card,
-  // same as before this was selectable at all). Tapping any filled day
-  // cell (see DayCell's onSelect) moves this; it does *not* navigate away
-  // on its own — only the card itself links to /entry/[date].
-  const [selectedKey, setSelectedKey] = useState<string | null>(() => {
-    const initial = parseMonthParam(searchParams.get("month"));
-    const now = new Date();
-    return initial.year === now.getFullYear() && initial.month === now.getMonth() ? todayKey() : null;
-  });
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -141,18 +130,14 @@ export default function MonthCalendar() {
     }
     setCursor({ year: y, month: m });
     router.replace(`/?month=${y}-${String(m + 1).padStart(2, "0")}`, { scroll: false });
-    // Selection is tied to whatever grid is on screen — a bordered cell
-    // from the month just left behind wouldn't even be visible in the new
-    // one. Reset to "today, if this new month happens to be the current
-    // one" instead of carrying the old selection over.
-    setSelectedKey(y === now.getFullYear() && m === now.getMonth() ? today : null);
   }
 
   const days = daysInMonth(year, month);
   const today = todayKey();
   const now = new Date();
+  const isCurrentMonthShown = year === now.getFullYear() && month === now.getMonth();
+  const todayEntry = isCurrentMonthShown ? entries[today] : undefined;
   const filledCount = Object.keys(entries).length;
-  const selectedEntry = selectedKey ? entries[selectedKey] : undefined;
   const monthWordGroups = monthWordsByDate(entries);
 
   return (
@@ -305,28 +290,39 @@ export default function MonthCalendar() {
               date={date}
               dateKey={key}
               isToday={key === today}
-              isSelected={key === selectedKey}
               isFuture={key > today}
               entry={entries[key]}
-              onSelect={() => setSelectedKey(key)}
             />
           );
         })}
       </div>
 
-      {selectedEntry && selectedKey && (
+      {/* Always today, never a day the learner tapped — this is a fixed
+          "where do I stand today" focus, not a preview that follows the
+          grid. Only shown while today is actually in the month on screen
+          (browsing to a past/future month has no "오늘" cell to anchor
+          it to). Tapping it goes to the same /entry/[date] detail a grid
+          cell would — a day with nothing yet lands on the blank editor to
+          start writing, exactly like tapping today's own (writable) empty
+          cell above already does. */}
+      {isCurrentMonthShown && (
         <Link
-          href={`/entry/${selectedKey}`}
+          href={`/entry/${today}`}
           className="flex flex-col gap-2 rounded-2xl bg-[var(--paper-raised)] px-5 py-4"
         >
           <p className="text-xs text-[var(--ink-soft)]">
-            {selectedKey === today ? "TODAY · " : ""}
-            {parseDateKey(selectedKey).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })} ·
-            NO.{parseDateKey(selectedKey).getDate()}
+            TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })} ·
+            NO.{parseDateKey(today).getDate()}
           </p>
-          <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink)] line-clamp-2">
-            {selectedEntry.content}
-          </p>
+          {todayEntry ? (
+            <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink)] line-clamp-2">
+              {todayEntry.content}
+            </p>
+          ) : (
+            <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink-soft)]">
+              오늘의 일기를 써보세요.
+            </p>
+          )}
         </Link>
       )}
 
