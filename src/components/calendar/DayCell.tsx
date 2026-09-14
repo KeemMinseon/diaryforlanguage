@@ -28,11 +28,23 @@ export default function DayCell({
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
 
+  // Exactly one border-color utility per case, not two stacked ones —
+  // border-[var(--paper-line)] and border-[var(--ink)] both set the same
+  // CSS property, so applying both at once (e.g. the old "always
+  // paper-line, plus ink when today" pairing) left which one actually
+  // wins up to Tailwind's generated stylesheet order rather than
+  // anything in this file. An empty today cell explicitly gets the same
+  // --ink color as its own date-number text, not just whichever border
+  // class happened to be declared last.
+  const border = entry
+    ? isToday
+      ? "border-[1.5px] border-[var(--ink)]"
+      : ""
+    : `border bg-[var(--paper-raised)] ${isToday ? "border-[1.5px] border-[var(--ink)]" : "border-[var(--paper-line)]"}`;
+
   const content = (
     <div
-      className={`group relative aspect-[4/5] overflow-hidden rounded-xl transition ${
-        entry ? "" : "border border-[var(--paper-line)] bg-[var(--paper-raised)]"
-      } ${isToday ? "border-[1.5px] border-[var(--ink)]" : ""} ${
+      className={`group relative aspect-[4/5] overflow-hidden rounded-xl transition ${border} ${
         clickable ? "cursor-pointer" : "cursor-default opacity-50"
       }`}
     >
