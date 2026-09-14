@@ -3,9 +3,11 @@
 :root {
   /* Lighter than the old #e8e8e8 — against a reference with this same
    * light-gray-page / near-white-card structure, that read as noticeably
-   * darker than intended. Warmed from a flat #f2f2f3 gray to this cream
-   * afterward, to match the app icon's own off-white. */
-  --paper: #fefbf3;
+   * darker than intended. Warmed from a flat #f2f2f3 gray to a cream
+   * (#fefbf3) to match the app icon's own off-white, then pulled back
+   * closer to plain white (#fdfcfc) — barely warmed at all now, just
+   * enough to keep it from reading as stark white next to --paper-raised. */
+  --paper: #fdfcfc;
   --paper-raised: #ffffff;
   /* Same warm neutral palette as the ink tiers below (shade 200) — the
    * flat #e0e0e0 gray this used to be read as noticeably cool/gray next
