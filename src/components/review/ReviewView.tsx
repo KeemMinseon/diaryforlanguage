@@ -243,8 +243,8 @@ export default function ReviewView({
                   // stamp — 0/0 for it, so a single stamp still lands
                   // exactly where it always has. The front one is always
                   // i = 0 (the day's first session), matching the calendar
-                  // view (DayCell/StampedDay always show stamps[0]) rather
-                  // than whichever was written last. Fanned: spread evenly
+                  // view (DayCell always shows stamps[0]) rather than
+                  // whichever was written last. Fanned: spread evenly
                   // around the center, 부채꼴 (fan) style.
                   const mid = (stamps.length - 1) / 2;
                   const rotate = fanned ? (i - mid) * 16 : -i * 3;

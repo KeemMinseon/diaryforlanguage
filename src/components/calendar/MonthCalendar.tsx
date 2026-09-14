@@ -83,11 +83,6 @@ export default function MonthCalendar() {
   const [{ year, month }, setCursor] = useState(() => parseMonthParam(searchParams.get("month")));
   const [entries, setEntries] = useState<DiaryEntryMap>({});
   const [loading, setLoading] = useState(true);
-  // Set for a few seconds right after a "diary:stamped" event names a day
-  // in the currently-shown month — StampedDay uses this to play a real
-  // stamp-landing animation on that one cell instead of the hanko just
-  // silently appearing next time this data happens to re-fetch.
-  const [justStampedDate, setJustStampedDate] = useState<string | null>(null);
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -115,16 +110,11 @@ export default function MonthCalendar() {
     return onDiaryStamped((dateKey) => {
       // Plain string comparison works here the same way it does for
       // Supabase's own gte/lte queries on entry_date — "YYYY-MM-DD" sorts
-      // lexicographically exactly like it sorts chronologically.
+      // lexicographically exactly like it sorts chronologically. Just a
+      // refetch — no per-cell "just stamped" animation any more (see
+      // DayCell: no hanko, no pop-in to play here either).
       if (dateKey < monthStartKey || dateKey > monthEndKey) return;
-      load().then(() => {
-        setJustStampedDate(dateKey);
-        // Only actually matters for hygiene — a CSS animation triggers
-        // once when a class is first added to an element, not on every
-        // render it stays present for, so this isn't what stops the
-        // animation from replaying on its own.
-        setTimeout(() => setJustStampedDate(null), 3000);
-      });
+      load();
     });
   }, [load, monthStartKey, monthEndKey]);
 
@@ -276,7 +266,6 @@ export default function MonthCalendar() {
               isToday={key === today}
               isFuture={key > today}
               entry={entries[key]}
-              justStamped={key === justStampedDate}
             />
           );
         })}

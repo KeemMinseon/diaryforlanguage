@@ -1,31 +1,29 @@
 import Link from "next/link";
-import StampedDay from "@/components/stamps/StampedDay";
+import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { photoPublicUrl } from "@/lib/diary/client";
 import type { DiaryEntry } from "@/types/diary";
 
 /** One day of the month's "sheet" grid (see MonthCalendar) — not a
  * weekday-aligned calendar cell, just the Nth square in a plain
  * sequential 1..daysInMonth grid. A filled square (has an entry) shows
- * only the stamp, full-bleed, no date number at all; an empty square
- * shows a bordered box with the date number centered. Today gets an ink
- * outline either way, on top of whichever of those two looks it already
- * has. */
+ * only the stamp, full-bleed, no date number at all — no 添削-complete
+ * hanko overlay here either, that's ReviewView's job (this is meant to
+ * read as a clean grid of stamps, not a mini review screen). An empty
+ * square shows a bordered box with the date number centered. Today gets
+ * an ink outline either way, on top of whichever of those two looks it
+ * already has. */
 export default function DayCell({
   date,
   dateKey,
   isToday,
   isFuture,
   entry,
-  justStamped = false,
 }: {
   date: Date;
   dateKey: string;
   isToday: boolean;
   isFuture: boolean;
   entry?: DiaryEntry;
-  /** True for the few seconds right after this exact day's entry just
-   * got its final reviewed stamp — see lib/events/diaryStamped.ts. */
-  justStamped?: boolean;
 }) {
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
@@ -39,10 +37,11 @@ export default function DayCell({
       }`}
     >
       {entry ? (
-        <StampedDay
-          entry={entry}
+        <DiaryStamp
+          stampKind={entry.stamp_kind}
+          stampKey={entry.stamp_key as never}
+          stampVariant={entry.stamp_variant}
           photoUrl={photoUrl}
-          justStamped={justStamped}
           className="absolute inset-0 h-full w-full"
         />
       ) : (

@@ -457,7 +457,7 @@ export default function ChatEditor({
         dateKey,
         content: fullText,
         // The calendar reads the top-level stamp_kind/stamp_key/photo_path
-        // columns directly (see DayCell/StampedDay) rather than the first
+        // columns directly (see DayCell) rather than the first
         // entry of `stamps` — kept in sync with `stamps[0]` (the day's
         // very *first* sitting) here instead, so the calendar keeps
         // showing the same stamp it always has for this day even after a
