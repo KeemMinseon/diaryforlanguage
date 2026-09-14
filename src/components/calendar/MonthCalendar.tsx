@@ -209,57 +209,62 @@ export default function MonthCalendar() {
         </div>
       </header>
 
-      {/* Compact "‹ 08 09 10 ›" month strip — the two flanking numbers are
-          shortcuts to prev/next month (same destination as the arrows,
-          just also reachable by tapping the number itself), the bold
-          center one is just the current month restated, not a button. */}
-      <div className="flex items-center justify-center gap-1 font-[family-name:var(--font-heading)]">
-        <button
-          type="button"
-          onClick={() => goToMonth(year, month - 1)}
-          className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
-          aria-label="이전 달"
-        >
-          <UiIcon name="bracket-left-line" className="h-4 w-4" alt="">
-            ←
-          </UiIcon>
-        </button>
-        <button
-          type="button"
-          onClick={() => goToMonth(year, month - 1)}
-          className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
-        >
-          {String(((month - 1 + 12) % 12) + 1).padStart(2, "0")}
-        </button>
-        <p className="rounded-full px-2 py-1 text-lg font-bold text-[var(--ink)]">
-          {String(month + 1).padStart(2, "0")}
+      {/* Counter and month-nav share one row now, instead of stacking as
+          two separate lines with a big gap between them. */}
+      <div className="flex items-center justify-between">
+        {/* Big "채운 날/총 일수" counter — how much of the month is written
+            so far, not which day-of-month today is (that's the TODAY card
+            below). */}
+        <p className="font-[family-name:var(--font-heading)] text-[var(--ink)]">
+          <span className="text-4xl font-bold">{filledCount}</span>
+          <span className="text-base text-[var(--ink-soft)]">/{days.length}</span>
         </p>
-        <button
-          type="button"
-          onClick={() => goToMonth(year, month + 1)}
-          className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
-        >
-          {String(((month + 1) % 12) + 1).padStart(2, "0")}
-        </button>
-        <button
-          type="button"
-          onClick={() => goToMonth(year, month + 1)}
-          className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
-          aria-label="다음 달"
-        >
-          <UiIcon name="bracket-right-line" className="h-4 w-4" alt="">
-            →
-          </UiIcon>
-        </button>
-      </div>
 
-      {/* Big "채운 날/총 일수" counter — how much of the month is written
-          so far, not which day-of-month today is (that's the TODAY card
-          below). */}
-      <p className="font-[family-name:var(--font-heading)] text-[var(--ink)]">
-        <span className="text-5xl font-bold">{filledCount}</span>
-        <span className="text-lg text-[var(--ink-soft)]">/{days.length}</span>
-      </p>
+        {/* Compact "‹ 08 09 10 ›" month strip — the two flanking numbers
+            are shortcuts to prev/next month (same destination as the
+            arrows, just also reachable by tapping the number itself), the
+            bold center one is just the current month restated, not a
+            button. */}
+        <div className="flex items-center gap-1 font-[family-name:var(--font-heading)]">
+          <button
+            type="button"
+            onClick={() => goToMonth(year, month - 1)}
+            className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+            aria-label="이전 달"
+          >
+            <UiIcon name="bracket-left-line" className="h-4 w-4" alt="">
+              ←
+            </UiIcon>
+          </button>
+          <button
+            type="button"
+            onClick={() => goToMonth(year, month - 1)}
+            className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+          >
+            {String(((month - 1 + 12) % 12) + 1).padStart(2, "0")}
+          </button>
+          <p className="rounded-full px-2 py-1 text-lg font-bold text-[var(--ink)]">
+            {String(month + 1).padStart(2, "0")}
+          </p>
+          <button
+            type="button"
+            onClick={() => goToMonth(year, month + 1)}
+            className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+          >
+            {String(((month + 1) % 12) + 1).padStart(2, "0")}
+          </button>
+          <button
+            type="button"
+            onClick={() => goToMonth(year, month + 1)}
+            className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+            aria-label="다음 달"
+          >
+            <UiIcon name="bracket-right-line" className="h-4 w-4" alt="">
+              →
+            </UiIcon>
+          </button>
+        </div>
+      </div>
 
       {/* No flex-1 here — the grid should be exactly as tall as its rows
           need, no more. It used to grow to fill whatever space was left
