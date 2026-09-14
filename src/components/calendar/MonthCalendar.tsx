@@ -242,7 +242,7 @@ export default function MonthCalendar() {
           <button
             type="button"
             onClick={() => goToMonth(year, month - 1)}
-            className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+            className="rounded-full px-2 py-1 text-sm text-[var(--ink-tertiary)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
           >
             {String(((month - 1 + 12) % 12) + 1).padStart(2, "0")}
           </button>
@@ -252,7 +252,7 @@ export default function MonthCalendar() {
           <button
             type="button"
             onClick={() => goToMonth(year, month + 1)}
-            className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+            className="rounded-full px-2 py-1 text-sm text-[var(--ink-tertiary)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
           >
             {String(((month + 1) % 12) + 1).padStart(2, "0")}
           </button>

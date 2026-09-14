@@ -7,9 +7,20 @@
    * afterward, to match the app icon's own off-white. */
   --paper: #fefbf3;
   --paper-raised: #ffffff;
-  --paper-line: #e0e0e0;
-  --ink: #2c2c2c;
-  --ink-soft: #888888;
+  /* Same warm neutral palette as the ink tiers below (shade 200) — the
+   * flat #e0e0e0 gray this used to be read as noticeably cool/gray next
+   * to --paper's own cream, most visibly in the loading skeletons (every
+   * loading.tsx pulses blocks of this exact color). */
+  --paper-line: #e9e6e2;
+  /* Three-tier text color, picked off a warm neutral palette (shades
+   * 50-950) to match --paper's own warmth: 800 (primary), 600
+   * (secondary), 400 (tertiary — the deliberately-faintest tier, for
+   * things like the calendar's flanking prev/next month numbers or a
+   * saved-at timestamp, that used to just be --ink-soft at a one-off
+   * opacity instead of its own token). */
+  --ink: #29231f;
+  --ink-soft: #5c5749;
+  --ink-tertiary: #aea598;
   /* A handful of solid CTA buttons (마치기/수정 완료/로그인 등) pair
    * `bg-[var(--ink)]` with `text-white`, banking on --ink always being
    * dark — true before dark mode existed, but --ink flips to a near-white
@@ -45,6 +56,11 @@
     --paper-line: #3a3a3c;
     --ink: #f2f2f2;
     --ink-soft: #9a9a9e;
+    /* Not part of the light-mode palette above (that one only came with
+     * light values) — matches what --ink-soft at ~65% opacity over this
+     * mode's --paper already looked like before this token existed, so
+     * dark mode's tertiary text doesn't visibly shift alongside this change. */
+    --ink-tertiary: #6e6e71;
     --shu: #ff7a52;
     --shu-soft: #5a2c1e;
   }
@@ -55,6 +71,7 @@
   --paper-line: #3a3a3c;
   --ink: #f2f2f2;
   --ink-soft: #9a9a9e;
+  --ink-tertiary: #6e6e71;
   --shu: #ff7a52;
   --shu-soft: #5a2c1e;
 }

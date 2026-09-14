@@ -143,7 +143,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
       </p>
       {(r.comment || r.suggestions.length > 0 || r.readings.length > 0) && (
         <div className="flex flex-col gap-1.5 border-t border-[var(--paper-line)] pt-2.5">
-          <p className="text-[10px] text-[var(--ink-soft)]/70">{formatSavedAt(r.savedAt, dateKey)}</p>
+          <p className="text-[10px] text-[var(--ink-tertiary)]">{formatSavedAt(r.savedAt, dateKey)}</p>
           {r.comment && <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>}
           <ReadingsHint readings={r.readings} label="읽는 법" />
           {r.suggestions.map((s, j) => (
@@ -648,7 +648,7 @@ export default function ChatEditor({
           <div key={i} className="flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
             <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] text-[var(--ink-soft)]/70">{formatSavedAt(r.savedAt, dateKey)}</p>
+              <p className="text-[10px] text-[var(--ink-tertiary)]">{formatSavedAt(r.savedAt, dateKey)}</p>
               <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>
               <ReadingsHint readings={r.readings} label="읽는 법" />
               {r.suggestions.map((s, j) => (
