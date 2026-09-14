@@ -9,21 +9,31 @@ import type { DiaryEntry } from "@/types/diary";
  * only the stamp, full-bleed, no date number at all — no 添削-complete
  * hanko overlay here either, that's ReviewView's job (this is meant to
  * read as a clean grid of stamps, not a mini review screen). An empty
- * square shows a bordered box with the date number centered. Today gets
- * an ink outline either way, on top of whichever of those two looks it
- * already has. */
+ * square shows a bordered box with the date number centered. The
+ * *selected* day (see MonthCalendar's own `selectedKey` — defaults to
+ * today, but tapping any filled square moves it) gets an ink outline on
+ * top of whichever of those two looks it already has; the real today
+ * additionally gets a small dot when it isn't also the selected one, so
+ * browsing away from it doesn't erase which square today actually is. */
 export default function DayCell({
   date,
   dateKey,
   isToday,
+  isSelected,
   isFuture,
   entry,
+  onSelect,
 }: {
   date: Date;
   dateKey: string;
   isToday: boolean;
+  isSelected: boolean;
   isFuture: boolean;
   entry?: DiaryEntry;
+  /** Called when a filled (has-entry) cell is tapped. Ignored for empty
+   * cells, which link straight to /entry instead — see the click branch
+   * below. */
+  onSelect: () => void;
 }) {
   const clickable = Boolean(entry) || !isFuture;
   const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
@@ -31,16 +41,16 @@ export default function DayCell({
   // Exactly one border-color utility per case, not two stacked ones —
   // border-[var(--paper-line)] and border-[var(--ink)] both set the same
   // CSS property, so applying both at once (e.g. the old "always
-  // paper-line, plus ink when today" pairing) left which one actually
+  // paper-line, plus ink when selected" pairing) left which one actually
   // wins up to Tailwind's generated stylesheet order rather than
-  // anything in this file. An empty today cell explicitly gets the same
-  // --ink color as its own date-number text, not just whichever border
-  // class happened to be declared last.
+  // anything in this file. An empty selected cell explicitly gets the
+  // same --ink color as its own date-number text, not just whichever
+  // border class happened to be declared last.
   const border = entry
-    ? isToday
+    ? isSelected
       ? "border-[1.5px] border-[var(--ink)]"
       : ""
-    : `border bg-[var(--paper-raised)] ${isToday ? "border-[1.5px] border-[var(--ink)]" : "border-[var(--paper-line)]"}`;
+    : `border bg-[var(--paper-raised)] ${isSelected ? "border-[1.5px] border-[var(--ink)]" : "border-[var(--paper-line)]"}`;
 
   const content = (
     <div
@@ -67,16 +77,35 @@ export default function DayCell({
       ) : (
         <span
           className={`absolute inset-0 flex items-center justify-center text-sm ${
-            isToday ? "font-bold text-[var(--ink)]" : "text-[var(--ink-soft)]"
+            isSelected ? "font-bold text-[var(--ink)]" : "text-[var(--ink-soft)]"
           }`}
         >
           {date.getDate()}
         </span>
       )}
+      {isToday && !isSelected && (
+        <span
+          aria-hidden="true"
+          className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--ink)]"
+        />
+      )}
     </div>
   );
 
   if (!clickable) return content;
+
+  // A filled day selects (updates the preview card below) instead of
+  // jumping straight to the edit screen — that's the whole point of
+  // `selectedKey`. An empty-but-writable day has nothing to preview, so
+  // it still goes straight to /entry/[date] to start writing, same as
+  // before this change.
+  if (entry) {
+    return (
+      <button type="button" onClick={onSelect} className="block w-full text-left">
+        {content}
+      </button>
+    );
+  }
 
   return <Link href={`/entry/${dateKey}`}>{content}</Link>;
 }

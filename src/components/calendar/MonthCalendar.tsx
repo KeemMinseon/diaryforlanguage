@@ -83,6 +83,17 @@ export default function MonthCalendar() {
   const [{ year, month }, setCursor] = useState(() => parseMonthParam(searchParams.get("month")));
   const [entries, setEntries] = useState<DiaryEntryMap>({});
   const [loading, setLoading] = useState(true);
+  // Which day's content the bottom card previews — defaults to today
+  // whenever the currently-shown month is the real current month, and to
+  // nothing otherwise (browsing a different month starts with no card,
+  // same as before this was selectable at all). Tapping any filled day
+  // cell (see DayCell's onSelect) moves this; it does *not* navigate away
+  // on its own — only the card itself links to /entry/[date].
+  const [selectedKey, setSelectedKey] = useState<string | null>(() => {
+    const initial = parseMonthParam(searchParams.get("month"));
+    const now = new Date();
+    return initial.year === now.getFullYear() && initial.month === now.getMonth() ? todayKey() : null;
+  });
 
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
@@ -130,14 +141,18 @@ export default function MonthCalendar() {
     }
     setCursor({ year: y, month: m });
     router.replace(`/?month=${y}-${String(m + 1).padStart(2, "0")}`, { scroll: false });
+    // Selection is tied to whatever grid is on screen — a bordered cell
+    // from the month just left behind wouldn't even be visible in the new
+    // one. Reset to "today, if this new month happens to be the current
+    // one" instead of carrying the old selection over.
+    setSelectedKey(y === now.getFullYear() && m === now.getMonth() ? today : null);
   }
 
   const days = daysInMonth(year, month);
   const today = todayKey();
   const now = new Date();
-  const isCurrentMonthShown = year === now.getFullYear() && month === now.getMonth();
-  const todayEntry = isCurrentMonthShown ? entries[today] : undefined;
   const filledCount = Object.keys(entries).length;
+  const selectedEntry = selectedKey ? entries[selectedKey] : undefined;
   const monthWordGroups = monthWordsByDate(entries);
 
   return (
@@ -290,24 +305,27 @@ export default function MonthCalendar() {
               date={date}
               dateKey={key}
               isToday={key === today}
+              isSelected={key === selectedKey}
               isFuture={key > today}
               entry={entries[key]}
+              onSelect={() => setSelectedKey(key)}
             />
           );
         })}
       </div>
 
-      {todayEntry && (
+      {selectedEntry && selectedKey && (
         <Link
-          href={`/entry/${today}`}
+          href={`/entry/${selectedKey}`}
           className="flex flex-col gap-2 rounded-2xl bg-[var(--paper-raised)] px-5 py-4"
         >
           <p className="text-xs text-[var(--ink-soft)]">
-            TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })} ·
-            NO.{parseDateKey(today).getDate()}
+            {selectedKey === today ? "TODAY · " : ""}
+            {parseDateKey(selectedKey).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })} ·
+            NO.{parseDateKey(selectedKey).getDate()}
           </p>
           <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink)] line-clamp-2">
-            {todayEntry.content}
+            {selectedEntry.content}
           </p>
         </Link>
       )}
