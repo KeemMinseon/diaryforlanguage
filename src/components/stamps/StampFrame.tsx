@@ -61,7 +61,18 @@ export default function StampFrame({
               y={0}
               width={STAMP_MASK_WIDTH}
               height={STAMP_MASK_HEIGHT}
-              preserveAspectRatio="xMidYMid slice"
+              // "meet" (contain), not "slice" (cover) — a photo cropped in
+              // PhotoCropModal to *this exact* aspect ratio already fills
+              // the box either way, so this changes nothing for those. It
+              // only matters for a photo cropped under a since-changed
+              // mask aspect ratio (stampMask.ts has been swapped more than
+              // once) — "slice" force-fills the new box by cropping
+              // further into whatever's already a final, fully-cropped
+              // image, which can cut into the actual subject (see: a
+              // firework photo losing its own burst off the top/sides).
+              // "meet" letterboxes onto the tint instead, which never
+              // discards part of the photo.
+              preserveAspectRatio="xMidYMid meet"
               onLoad={onPhotoLoad}
               style={{ opacity: photoLoaded ? 1 : 0, transition: "opacity 0.2s ease-out" }}
             />

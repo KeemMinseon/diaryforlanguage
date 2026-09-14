@@ -27,6 +27,19 @@ interface FeedbackRound {
   session: number;
 }
 
+/** The day's "front" stamp — the one the calendar shows and the one
+ * mirrored into the top-level stamp_kind/stamp_key/stamp_variant/
+ * photo_path columns (see the save calls below). A photo always wins
+ * that spot over a keyword stamp, even if it came from a later "이어서
+ * 쓰기" sitting than the day's actual first one — a learner who adds a
+ * photo partway through the day almost always wants *that* to be what
+ * the calendar shows, not whatever keyword the morning's first sitting
+ * happened to pick. Falls back to the literal first sitting when
+ * nothing that day is a photo yet. */
+function frontStamp(stamps: SessionStamp[]): SessionStamp {
+  return stamps.find((s) => s.stampKind === "photo") ?? stamps[0];
+}
+
 /** How much of `text` matches `prefix` from the start. */
 function commonPrefixLength(prefix: string, text: string): number {
   const max = Math.min(prefix.length, text.length);
@@ -430,6 +443,12 @@ export default function ChatEditor({
     // pending/reviewed/failed alike, so a sitting's stamp is visible even
     // before its own review finishes.
     let stamps: SessionStamp[] = initialEntry?.stamps ?? [];
+    // Assigned once `stamps` is finalized below, then reused by every save
+    // call in this function (pending/reviewed/failed alike) — declared out
+    // here rather than inside the try block so the later background
+    // review/finalize pass (a separate async closure further down) can
+    // still reach it.
+    let front: SessionStamp;
 
     try {
       // Save the text itself first — it shouldn't sit in the browser
@@ -451,22 +470,23 @@ export default function ChatEditor({
           createdAt: new Date().toISOString(),
         },
       ];
+      front = frontStamp(stamps);
 
       await saveEntry({
         userId,
         dateKey,
         content: fullText,
         // The calendar reads the top-level stamp_kind/stamp_key/photo_path
-        // columns directly (see DayCell) rather than the first
-        // entry of `stamps` — kept in sync with `stamps[0]` (the day's
-        // very *first* sitting) here instead, so the calendar keeps
-        // showing the same stamp it always has for this day even after a
-        // later "이어서 쓰기" adds more sittings, rather than jumping to
-        // whichever one was saved most recently.
-        stampKind: stamps[0].stampKind,
-        stampKey: stamps[0].stampKey,
-        stampVariant: stamps[0].stampVariant,
-        photoPath: stamps[0].photoPath,
+        // columns directly (see DayCell) rather than the first entry of
+        // `stamps` — kept in sync with `front` (see frontStamp's own doc
+        // comment) here instead, so the calendar keeps showing the same
+        // stamp it always has for this day even after a later "이어서
+        // 쓰기" adds more sittings, rather than jumping to whichever one
+        // was saved most recently (unless that one's a photo).
+        stampKind: front.stampKind,
+        stampKey: front.stampKey,
+        stampVariant: front.stampVariant,
+        photoPath: front.photoPath,
         status: "pending",
         overallComment: initialEntry?.overall_comment ?? "",
         suggestions: existingSuggestions,
@@ -536,10 +556,10 @@ export default function ChatEditor({
           userId,
           dateKey,
           content: fullText,
-          stampKind: stamps[0].stampKind,
-          stampKey: stamps[0].stampKey,
-          stampVariant: stamps[0].stampVariant,
-          photoPath: stamps[0].photoPath,
+          stampKind: front.stampKind,
+          stampKey: front.stampKey,
+          stampVariant: front.stampVariant,
+          photoPath: front.photoPath,
           status: "reviewed",
           overallComment: finalizeData.overallComment,
           suggestions: allSuggestions,
@@ -574,10 +594,10 @@ export default function ChatEditor({
             userId,
             dateKey,
             content: fullText,
-            stampKind: stamps[0].stampKind,
-            stampKey: stamps[0].stampKey,
-            stampVariant: stamps[0].stampVariant,
-            photoPath: stamps[0].photoPath,
+            stampKind: front.stampKind,
+            stampKey: front.stampKey,
+            stampVariant: front.stampVariant,
+            photoPath: front.photoPath,
             status: "failed",
             overallComment: initialEntry?.overall_comment ?? "",
             suggestions: existingSuggestions,
