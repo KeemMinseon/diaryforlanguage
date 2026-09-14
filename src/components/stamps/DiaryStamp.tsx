@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import StampFrame from "@/components/stamps/StampFrame";
 import KeywordIcon from "@/components/stamps/KeywordIcon";
-import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMask";
-import { stampTint } from "@/lib/stamps/stampStyle";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
 interface DiaryStampProps {
@@ -14,17 +12,20 @@ interface DiaryStampProps {
   stampVariant?: number | null;
   photoUrl?: string | null;
   className?: string;
-  /** A small fixed rotation (degrees) — see lib/stamps/stampTilt.ts. Passed
-   * straight through to StampFrame's own root <svg> rather than wrapped in
-   * an extra element: a transform doesn't affect box sizing at all, so it
-   * can ride along on the exact element whose width/height resolution
-   * (the SVG replaced-element sizing algorithm, given only a definite
-   * height from its own ancestors) already works, instead of introducing
-   * a new plain <div> that same percentage-sizing chain doesn't apply to. */
+  /** A small fixed rotation (degrees) — see lib/stamps/stampTilt.ts. For a
+   * photo stamp this rides on StampFrame's own root <svg>; for a keyword
+   * stamp (plain <img>, no StampFrame — see below) it's applied directly
+   * as a CSS transform on that <img> instead. Either way it's a transform,
+   * so it never disturbs whatever's already resolving that element's own
+   * width/height. */
   tiltDeg?: number;
 }
 
-/** Renders the day's stamp: a cropped photo, or the auto-picked keyword image. */
+/** Renders the day's stamp: a cropped photo, or the auto-picked keyword
+ * image. Only the photo goes through StampFrame's postage-stamp mask/tint
+ * treatment — the prepared keyword artwork already reads as its own
+ * finished stamp graphic, so wrapping it in that same scalloped frame
+ * would double up on framing. */
 export default function DiaryStamp({
   stampKind,
   stampKey,
@@ -34,13 +35,13 @@ export default function DiaryStamp({
   tiltDeg,
 }: DiaryStampProps) {
   const id = (stampKey ?? "default") as StampId;
-  const tint = stampTint(id);
 
-  // A keyword stamp is just inline SVG — instant, nothing to wait on. A
-  // photo stamp is a real network image (Supabase Storage), so on a slow
-  // connection (or a calendar full of them) there's a real gap between
-  // the cell appearing and the photo actually painting in. Track it per
-  // stamp so that gap gets a pulse placeholder instead of sitting blank.
+  // A keyword stamp is a small Storage image, resolved once and cached —
+  // essentially instant. A photo stamp is a real network image on every
+  // fresh load, so on a slow connection (or a calendar full of them)
+  // there's a real gap between the cell appearing and the photo actually
+  // painting in. Track it per stamp so that gap gets a pulse placeholder
+  // instead of sitting blank.
   const [loaded, setLoaded] = useState(false);
   // Resetting `loaded` when `photoUrl` changes (a new photo picked over an
   // already-loaded preview, say) during render rather than in an effect —
@@ -79,10 +80,11 @@ export default function DiaryStamp({
   }
 
   return (
-    <StampFrame tint={tint} className={className} tiltDeg={tiltDeg}>
-      <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT }}>
-        <KeywordIcon id={id} variant={stampVariant} className="h-full w-full" />
-      </div>
-    </StampFrame>
+    <KeywordIcon
+      id={id}
+      variant={stampVariant}
+      className={className}
+      style={tiltDeg ? { transform: `rotate(${tiltDeg}deg)` } : undefined}
+    />
   );
 }

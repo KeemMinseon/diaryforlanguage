@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useStorageImageOverride } from "@/lib/icons/useStorageImageOverride";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
@@ -16,20 +17,27 @@ import type { StampId } from "@/lib/stamps/keywordMap";
  * "CAT-0.png" etc., not renamed to lowercase). `variant` defaults to 0
  * when omitted.
  *
- * While a keyword has no image uploaded yet, this renders nothing — the
- * caller's own tinted stamp background (StampFrame) still shows, just
- * without any artwork on top, rather than a broken image or a stand-in
- * icon.
+ * Rendered plain — no postage-stamp mask/tint wrapper any more (see
+ * DiaryStamp): the prepared image set already reads as its own finished
+ * stamp graphic, so the scalloped frame used to be doubled framing on top
+ * of framing. Only an actual user-taken photo still goes through
+ * StampFrame's mask/tint treatment.
+ *
+ * While a keyword has no image uploaded yet, this renders nothing — there
+ * is no fallback background here any more, so an unresolved keyword shows
+ * as a plain empty box until its image is uploaded.
  */
 export default function KeywordIcon({
   id,
   variant,
   className,
+  style,
 }: {
   id: StampId;
   /** Which uploaded variant to show, 0-indexed — omit for variant 0. */
   variant?: number | null;
   className?: string;
+  style?: CSSProperties;
 }) {
   const name = `${id.toUpperCase()}-${variant ?? 0}`;
   const resolvedUrl = useStorageImageOverride("stamp-icons", name);
@@ -42,7 +50,7 @@ export default function KeywordIcon({
       src={resolvedUrl}
       alt=""
       className={className}
-      style={{ objectFit: "cover", display: "block" }}
+      style={{ objectFit: "cover", display: "block", ...style }}
     />
   );
 }
