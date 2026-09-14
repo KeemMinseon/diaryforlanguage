@@ -5,15 +5,21 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Code-entry login rather than a bare "click the link" flow: a magic
- * link only completes if it's opened in the SAME browser the sign-in
- * started in (the PKCE code-exchange session lives there) — clicking it
- * from a mail app that opens a different browser (or a different
- * browser entirely) lands back on a plain login screen with nothing to
- * show for it. Typing the code back into this same tab has no such
- * requirement. Supabase sends both the link and the code in the same
- * email (as long as the "Magic Link"/"Confirm signup" templates include
- * `{{ .Token }}`) — this screen just leads with the code.
+ * Code-entry login only — not a "click the link" flow: a magic link only
+ * completes if it's opened in the SAME browser the sign-in started in
+ * (the PKCE code-exchange session lives there), so clicking it from a
+ * mail app that opens a different browser (or a different browser
+ * entirely) lands back on a plain login screen with nothing to show for
+ * it. Typing the code back into this same tab has no such requirement.
+ *
+ * No `emailRedirectTo` is passed to `signInWithOtp` — this app never
+ * deliberately hands out a working link to click, only the code. Whether
+ * the email Supabase sends still *shows* a clickable link at all is
+ * entirely down to the "Magic Link"/"Confirm signup" template configured
+ * in the Supabase dashboard (outside this repo) — if that template still
+ * renders `{{ .ConfirmationURL }}`, the email will still display a link,
+ * it just won't finish a sign-in when clicked (no redirect target left
+ * for it to land on) if the template rendered it now.
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -28,14 +34,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // Kept as a fallback for anyone who still taps the link instead
-        // of typing the code — harmless either way.
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    const { error } = await supabase.auth.signInWithOtp({ email });
     setLoading(false);
     if (error) {
       setError(error.message);
