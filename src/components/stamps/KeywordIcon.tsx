@@ -7,11 +7,14 @@ import type { StampId } from "@/lib/stamps/keywordMap";
  * Renders this keyword's stamp image from the public `stamp-icons` Storage
  * bucket — there's no built-in hand-drawn fallback any more (every keyword
  * stamp is an uploaded image now, see schema.sql's bucket comment). Every
- * keyword is looked up as "<id>-<variant>" (0-indexed, e.g. "cat-3") —
- * even a keyword with just one prepared image is still named "<id>-0",
- * matching how the real asset set is uploaded (see
- * lib/stamps/stampVariants.ts's STAMP_VARIANT_COUNT). `variant` defaults
- * to 0 when omitted.
+ * keyword is looked up as "<ID>-<variant>", UPPERCASE (0-indexed, e.g.
+ * "CAT-3") — even a keyword with just one prepared image is still named
+ * "<ID>-0. `StampId` itself stays lowercase everywhere else (it's a plain
+ * string key, stored as-is in stamp_key/DB) — only this Storage lookup
+ * uppercases it, to match the real uploaded asset set (Storage object
+ * names are case-sensitive, and the prepared images came in as
+ * "CAT-0.png" etc., not renamed to lowercase). `variant` defaults to 0
+ * when omitted.
  *
  * While a keyword has no image uploaded yet, this renders nothing — the
  * caller's own tinted stamp background (StampFrame) still shows, just
@@ -28,7 +31,7 @@ export default function KeywordIcon({
   variant?: number | null;
   className?: string;
 }) {
-  const name = `${id}-${variant ?? 0}`;
+  const name = `${id.toUpperCase()}-${variant ?? 0}`;
   const resolvedUrl = useStorageImageOverride("stamp-icons", name);
 
   if (!resolvedUrl) return null;

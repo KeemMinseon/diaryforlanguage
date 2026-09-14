@@ -117,12 +117,15 @@ create policy "diary photos own delete" on storage.objects
 -- Storage bucket for keyword-stamp icon images (public read). Every
 -- keyword stamp is an uploaded image now (there's no built-in line-art
 -- fallback any more), and every keyword is uploaded as one or more
--- 0-indexed, contiguous variants: "<stamp id>-<n>.<png|jpg|jpeg|webp>" for
--- n = 0..count-1 (e.g. "rain-0.png" for a keyword with just one look,
--- "cat-0.png".."cat-4.png" for one with several random variants — see
--- src/lib/stamps/stampVariants.ts's STAMP_VARIANT_COUNT for how many exist
--- per keyword). No code change needed to add more, see
--- src/components/stamps/KeywordIcon.tsx.
+-- 0-indexed, contiguous variants, UPPERCASE:
+-- "<STAMP ID>-<n>.<png|jpg|jpeg|webp>" for n = 0..count-1 (e.g. "RAIN-0.png"
+-- for a keyword with just one look, "CAT-0.png".."CAT-4.png" for one with
+-- several random variants — see src/lib/stamps/stampVariants.ts's
+-- STAMP_VARIANT_COUNT for how many exist per keyword). Uppercase matches
+-- the real prepared asset set — Storage object names are case-sensitive,
+-- and the app's own StampId strings stay lowercase everywhere else (see
+-- KeywordIcon.tsx, the only place that uppercases for this lookup). No
+-- code change needed to add more.
 insert into storage.buckets (id, name, public)
 values ('stamp-icons', 'stamp-icons', true)
 on conflict (id) do nothing;
