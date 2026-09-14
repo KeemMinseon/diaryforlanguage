@@ -143,9 +143,12 @@ export default function MonthCalendar() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
-          {month + 1}월 · {year}
-        </p>
+        {/* The month/year text here duplicated the "08 09 10" strip below
+            it (which already says which month, just not spelled out) —
+            swapped for the app's own icon instead of repeating that info
+            a third time. */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- app icon, not a next/image-worthy photo */}
+        <img src="/icon.png" alt="우표일기" className="h-8 w-8 rounded-lg" />
         <div className="flex items-center gap-1">
           <Link
             href="/words"

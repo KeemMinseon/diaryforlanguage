@@ -3,8 +3,9 @@
 :root {
   /* Lighter than the old #e8e8e8 — against a reference with this same
    * light-gray-page / near-white-card structure, that read as noticeably
-   * darker than intended. */
-  --paper: #f2f2f3;
+   * darker than intended. Warmed from a flat #f2f2f3 gray to this cream
+   * afterward, to match the app icon's own off-white. */
+  --paper: #faf9f6;
   --paper-raised: #ffffff;
   --paper-line: #e0e0e0;
   --ink: #2c2c2c;

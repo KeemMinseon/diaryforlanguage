@@ -44,7 +44,7 @@ export default function DayCell({
 
   const content = (
     <div
-      className={`group relative aspect-[4/5] overflow-hidden rounded-xl transition ${border} ${
+      className={`group relative aspect-[4/5] overflow-hidden transition ${border} ${
         clickable ? "cursor-pointer" : "cursor-default opacity-50"
       }`}
     >
@@ -54,7 +54,15 @@ export default function DayCell({
           stampKey={entry.stamp_key as never}
           stampVariant={entry.stamp_variant}
           photoUrl={photoUrl}
-          className="absolute inset-0 h-full w-full"
+          // A photo stamp still wears the scalloped StampFrame mask (see
+          // DiaryStamp) — full-bleed made it read as coextensive with the
+          // cell itself rather than a stamp glued onto it, so it gets a
+          // small margin instead. A keyword stamp is just its own flat
+          // image with no mask/border of its own, so it still fills the
+          // cell edge to edge.
+          className={
+            entry.stamp_kind === "photo" ? "absolute inset-[8%]" : "absolute inset-0 h-full w-full"
+          }
         />
       ) : (
         <span

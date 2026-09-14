@@ -6,7 +6,7 @@ type ThemePreference = "system" | "light" | "dark";
 
 const STORAGE_KEY = "theme-preference";
 
-const LIGHT_STATUS_COLOR = "#f2f2f3";
+const LIGHT_STATUS_COLOR = "#faf9f6";
 const DARK_STATUS_COLOR = "#1c1c1e";
 
 /** Mirrors what the inline anti-flash script in layout.tsx already did to
