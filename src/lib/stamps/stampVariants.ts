@@ -2,19 +2,176 @@ import type { StampId } from "@/lib/stamps/keywordMap";
 
 /**
  * How many hand-picked image variants actually exist for a keyword — a
- * keyword missing here has just the one built-in image (exactly today's
- * behavior). Bump this number as more variant images are uploaded to the
- * "stamp-icons" Storage bucket (see KeywordIcon.tsx for the "<id>-<n>.ext"
- * naming this pairs with) — no other code needs to change.
+ * keyword missing here has just one (its "-0" image). Bump this number as
+ * more variant images are uploaded to the "stamp-icons" Storage bucket
+ * (see KeywordIcon.tsx for the "<id>-<n>.ext" naming this pairs with) — no
+ * other code needs to change.
+ *
+ * These counts come from the real, currently-prepared image set (152
+ * keywords, 0-indexed, contiguous per keyword — e.g. "cat-0".."cat-4").
  */
-export const STAMP_VARIANT_COUNT: Partial<Record<StampId, number>> = {};
+export const STAMP_VARIANT_COUNT: Partial<Record<StampId, number>> = {
+  rain: 5,
+  snow: 2,
+  sunny: 2,
+  cloudy: 1,
+  wind: 3,
+  breeze: 1,
+  rainbow: 4,
+  sky: 2,
+  star: 2,
+  moon: 2,
+  dawn: 2,
+  sunset: 2,
+  midnight: 2,
+  spring: 2,
+  summer: 2,
+  autumn: 2,
+  winter: 6,
+  season: 3,
+  sun: 2,
+  birthday: 4,
+  xmas: 3,
+  appointment: 2,
+  goodbye: 3,
+  hello: 1,
+  breakup: 1,
+  serendipity: 2,
+  longing: 2,
+  loneliness: 3,
+  gratitude: 2,
+  hope: 2,
+  wish: 3,
+  peace: 2,
+  comfort: 2,
+  fear: 1,
+  anxiety: 1,
+  sick: 2,
+  cry: 1,
+  romance: 1,
+  queer: 2,
+  airport: 2,
+  flight: 4,
+  passport: 2,
+  ticket: 2,
+  suitcase: 2,
+  hotel: 2,
+  map: 2,
+  journey: 2,
+  vacation: 2,
+  travel: 2,
+  japan: 3,
+  korea: 2,
+  china: 2,
+  vietnam: 2,
+  seoul: 4,
+  busan: 2,
+  daejeon: 1,
+  gwangju: 1,
+  jeonju: 2,
+  gyeongju: 2,
+  jeju: 2,
+  tokyo: 2,
+  osaka: 1,
+  kyoto: 2,
+  train: 2,
+  mountain: 4,
+  ocean: 6,
+  river: 2,
+  lake: 2,
+  forest: 2,
+  tree: 2,
+  flower: 1,
+  rose: 3,
+  garden: 4,
+  park: 2,
+  beach: 2,
+  city: 2,
+  home: 2,
+  school: 2,
+  cat: 5,
+  dog: 3,
+  bird: 3,
+  rabbit: 2,
+  butterfly: 2,
+  breakfast: 2,
+  lunch: 2,
+  dinner: 2,
+  kfood: 2,
+  hamburger: 2,
+  pizza: 2,
+  sushi: 2,
+  salad: 2,
+  friedchicken: 2,
+  icecream: 2,
+  bread: 2,
+  cake: 3,
+  dessert: 3,
+  snack: 1,
+  tea: 3,
+  wine: 2,
+  beer: 2,
+  hiking: 2,
+  running: 3,
+  workout: 3,
+  yoga: 2,
+  soccer: 2,
+  football: 2,
+  basketball: 2,
+  dance: 2,
+  game: 2,
+  music: 2,
+  sing: 2,
+  read: 2,
+  book: 2,
+  study: 4,
+  writing: 2,
+  poetry: 2,
+  knitting: 2,
+  drive: 2,
+  walk: 2,
+  picnic: 2,
+  cleaning: 4,
+  cook: 6,
+  recipe: 2,
+  shopping: 4,
+  family: 2,
+  lover: 8,
+  friendship: 2,
+  together: 1,
+  date: 2,
+  chat: 1,
+  joy: 3,
+  happiness: 2,
+  sad: 6,
+  memories: 3,
+  dream: 4,
+  morning: 2,
+  afternoon: 2,
+  evening: 2,
+  nap: 2,
+  sleep: 2,
+  rest: 2,
+  phone: 3,
+  calendar: 1,
+  routine: 2,
+  youth: 1,
+  work: 2,
+  weekend: 2,
+  movie: 6,
+  engraving: 1,
+  food: 1,
+  coffee: 4,
+  cafe: 4,
+};
 
 export function stampVariantCount(id: StampId): number {
   return STAMP_VARIANT_COUNT[id] ?? 1;
 }
 
 /**
- * Picks one of `id`'s variants at random, 1-indexed. Unlike `pickStamp` (or
+ * Picks one of `id`'s variants at random, 0-indexed (matching the
+ * "<id>-0.ext", "<id>-1.ext", … Storage naming). Unlike `pickStamp` (or
  * stampTiltDeg's seeded pseudo-random), this is meant to be called exactly
  * once — right when a stamp is being finalized for saving — and its result
  * persisted (SessionStamp.stampVariant / diary_entries.stamp_variant) so
@@ -25,5 +182,5 @@ export function stampVariantCount(id: StampId): number {
  * for why those two things matter elsewhere and don't here.
  */
 export function pickStampVariant(id: StampId): number {
-  return 1 + Math.floor(Math.random() * stampVariantCount(id));
+  return Math.floor(Math.random() * stampVariantCount(id));
 }

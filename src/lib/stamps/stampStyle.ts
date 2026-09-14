@@ -1,45 +1,38 @@
 import type { StampId } from "@/lib/stamps/keywordMap";
 
-/** Pale paper tints and ink colors per keyword stamp, hand-picked to sit
- * quietly on washi paper without fighting the vermilion 添削 hanko. */
-export const STAMP_STYLE: Record<StampId, { tint: string; ink: string }> = {
-  rain: { tint: "#e7eef2", ink: "#4a6b7a" },
-  snow: { tint: "#eef3f6", ink: "#5b7c8c" },
-  sun: { tint: "#faf1dc", ink: "#c1791f" },
-  coffee: { tint: "#f1e6d8", ink: "#6b4a30" },
-  food: { tint: "#f7ece0", ink: "#a35b2a" },
-  travel: { tint: "#e9f0f0", ink: "#2f6f6b" },
-  study: { tint: "#eef0e4", ink: "#546b3a" },
-  sleep: { tint: "#e9e6f1", ink: "#544a80" },
-  exercise: { tint: "#f3e9e6", ink: "#a34a3a" },
-  music: { tint: "#f0e9f2", ink: "#7a4a80" },
-  book: { tint: "#efe8db", ink: "#6b5530" },
-  joy: { tint: "#fbe9ea", ink: "#b8465a" },
-  sad: { tint: "#e9edf1", ink: "#5a6a80" },
-  work: { tint: "#eae6de", ink: "#5a4f3a" },
-  cat: { tint: "#f0ebe1", ink: "#7a5a3a" },
-  flower: { tint: "#f8ecef", ink: "#a85570" },
-  celebration: { tint: "#fbeef4", ink: "#b8527a" },
-  shopping: { tint: "#f0edf7", ink: "#6a5a9a" },
-  movie: { tint: "#e8e9f0", ink: "#40486b" },
-  phone: { tint: "#e7f0ee", ink: "#3a7a70" },
-  rest: { tint: "#f1ede4", ink: "#8a7a5a" },
-  cook: { tint: "#f4ece1", ink: "#8a5a2a" },
-  dog: { tint: "#f2ece0", ink: "#8a6535" },
-  cloud: { tint: "#eef0f2", ink: "#6a7580" },
-  bread: { tint: "#f7ecdd", ink: "#a3742a" },
-  calendar: { tint: "#f1ecdf", ink: "#8a6a2a" },
-  chat: { tint: "#e9eef4", ink: "#3f6a9a" },
-  heart: { tint: "#fbe6ea", ink: "#c2405a" },
-  mountain: { tint: "#eaeee9", ink: "#4f6b5a" },
-  ocean: { tint: "#e5eef2", ink: "#2f6a8a" },
-  rainbow: { tint: "#f1ecf7", ink: "#7a559a" },
-  tomato: { tint: "#faece7", ink: "#b8452f" },
-  gimbap: { tint: "#eaefe4", ink: "#4a6b3a" },
-  sushi: { tint: "#f0ede3", ink: "#6a5a3a" },
-  bibimbap: { tint: "#f6ece0", ink: "#b3602a" },
-  burger: { tint: "#f6e9dd", ink: "#a3652a" },
-  pizza: { tint: "#f9e6dd", ink: "#c14a2a" },
-  salad: { tint: "#edf1e2", ink: "#5a7a3a" },
-  default: { tint: "#f4ede0", ink: "#5c4a32" },
-};
+/**
+ * Pale paper tint per keyword stamp — the flat color behind the stamp's
+ * artwork (see StampFrame), quiet enough to sit on washi paper without
+ * fighting the vermilion 添削 hanko. It's also what shows through on its
+ * own (no icon on top) for a keyword whose image hasn't been uploaded yet
+ * — see KeywordIcon.
+ *
+ * With 152 keywords (see keywordMap.ts), hand-picking a tint per id the
+ * way the original smaller set did stopped being practical — this instead
+ * derives a stable pastel deterministically from the id string itself,
+ * the same hash+fmix32 approach stampTiltDeg uses for its per-day tilt
+ * (see that file's own doc comment for why a plain string hash alone
+ * doesn't spread similar inputs well). Two different ids reliably land on
+ * two different hues; the same id always lands on the same tint.
+ */
+export function stampTint(id: StampId): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  hash = fmix32(hash);
+  const hue = Math.abs(hash) % 360;
+  // Low saturation, high lightness — pale enough to read as "paper", not
+  // as a colored sticker.
+  return `hsl(${hue}, 42%, 92%)`;
+}
+
+function fmix32(h: number): number {
+  let x = h;
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  x ^= x >>> 16;
+  return x;
+}

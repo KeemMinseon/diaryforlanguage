@@ -28,23 +28,30 @@ describe("pickStamp", () => {
     expect(pickStamp("雪の日にカフェでコーヒーを飲んだ。")).toBe("snow");
   });
 
-  // The friend -> calendar/chat split: an actual get-together reads as
-  // "calendar", a bare mention of a friend in passing reads as "chat".
-  it("splits friend mentions by whether it's an actual plan", () => {
-    expect(pickStamp("友達と会った。")).toBe("calendar");
-    expect(pickStamp("友達に相談した。")).toBe("chat");
-  });
-
-  // The heart/joy re-split: romantic love only, general happiness stays
-  // under joy.
-  it("splits romantic love from general happiness", () => {
-    expect(pickStamp("彼に恋をしている。")).toBe("heart");
-    expect(pickStamp("今日はとても嬉しい一日でした。")).toBe("joy");
-  });
-
   it("returns the first matching rule in priority order regardless of word position", () => {
     // "ご飯" appears before "雨" in the text, but rain still wins — order
     // is about rule priority, not which word shows up first in the string.
     expect(pickStamp("ご飯を食べてから、雨の中を歩いた。")).toBe("rain");
+  });
+
+  it("picks joy for general happiness", () => {
+    expect(pickStamp("今日はとても嬉しい一日でした。")).toBe("joy");
+  });
+
+  // "lover" (relationships tier) sits ahead of "date" (activities tier) in
+  // KEYWORD_RULES, so a sentence naming both a partner and a date still
+  // resolves to the relationship, not the activity.
+  it("prefers a relationship category over an activity mentioned alongside it", () => {
+    expect(pickStamp("彼女とデートした。")).toBe("lover");
+  });
+
+  // The 152-keyword set (replacing the old 38) merged the old fine-grained
+  // "friend get-together" (calendar) vs. "friend mentioned in passing"
+  // (chat) split into one broader "friendship" category — both read as
+  // friendship now, which is a real, deliberate simplification from the
+  // old rules, not a bug.
+  it("reads any friend mention as friendship in the new keyword set", () => {
+    expect(pickStamp("友達と会った。")).toBe("friendship");
+    expect(pickStamp("友達に相談した。")).toBe("friendship");
   });
 });

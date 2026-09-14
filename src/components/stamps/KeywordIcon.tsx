@@ -6,11 +6,12 @@ import type { StampId } from "@/lib/stamps/keywordMap";
 /**
  * Renders this keyword's stamp image from the public `stamp-icons` Storage
  * bucket — there's no built-in hand-drawn fallback any more (every keyword
- * stamp is an uploaded image now, see schema.sql's bucket comment). A
- * keyword with several random variants (STAMP_VARIANT_COUNT in
- * lib/stamps/stampVariants.ts) is looked up as "<id>-<variant>", e.g.
- * "cat-3"; a keyword with just one look (the common case) is looked up as
- * plain "<id>", exactly like before variants existed.
+ * stamp is an uploaded image now, see schema.sql's bucket comment). Every
+ * keyword is looked up as "<id>-<variant>" (0-indexed, e.g. "cat-3") —
+ * even a keyword with just one prepared image is still named "<id>-0",
+ * matching how the real asset set is uploaded (see
+ * lib/stamps/stampVariants.ts's STAMP_VARIANT_COUNT). `variant` defaults
+ * to 0 when omitted.
  *
  * While a keyword has no image uploaded yet, this renders nothing — the
  * caller's own tinted stamp background (StampFrame) still shows, just
@@ -23,12 +24,11 @@ export default function KeywordIcon({
   className,
 }: {
   id: StampId;
-  /** Which uploaded variant to show, 1-indexed — omit or 1 for a keyword
-   * with only one image. */
+  /** Which uploaded variant to show, 0-indexed — omit for variant 0. */
   variant?: number | null;
   className?: string;
 }) {
-  const name = variant && variant > 1 ? `${id}-${variant}` : id;
+  const name = `${id}-${variant ?? 0}`;
   const resolvedUrl = useStorageImageOverride("stamp-icons", name);
 
   if (!resolvedUrl) return null;

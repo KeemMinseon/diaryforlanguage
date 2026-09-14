@@ -116,12 +116,13 @@ create policy "diary photos own delete" on storage.objects
 
 -- Storage bucket for keyword-stamp icon images (public read). Every
 -- keyword stamp is an uploaded image now (there's no built-in line-art
--- fallback any more) — upload a file named "<stamp id>.<png|jpg|jpeg|webp>"
--- (e.g. "rain.png") for a keyword with just one look. For a keyword with
--- several random variants (see src/lib/stamps/stampVariants.ts's
--- STAMP_VARIANT_COUNT), upload "<stamp id>-<n>.<ext>" for n = 1..count
--- instead (e.g. "cat-1.png".."cat-5.png") — no code change needed either
--- way, see src/components/stamps/KeywordIcon.tsx.
+-- fallback any more), and every keyword is uploaded as one or more
+-- 0-indexed, contiguous variants: "<stamp id>-<n>.<png|jpg|jpeg|webp>" for
+-- n = 0..count-1 (e.g. "rain-0.png" for a keyword with just one look,
+-- "cat-0.png".."cat-4.png" for one with several random variants — see
+-- src/lib/stamps/stampVariants.ts's STAMP_VARIANT_COUNT for how many exist
+-- per keyword). No code change needed to add more, see
+-- src/components/stamps/KeywordIcon.tsx.
 insert into storage.buckets (id, name, public)
 values ('stamp-icons', 'stamp-icons', true)
 on conflict (id) do nothing;

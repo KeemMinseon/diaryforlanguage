@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import StampFrame from "@/components/stamps/StampFrame";
 import KeywordIcon from "@/components/stamps/KeywordIcon";
 import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMask";
-import { STAMP_STYLE } from "@/lib/stamps/stampStyle";
+import { stampTint } from "@/lib/stamps/stampStyle";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
 interface DiaryStampProps {
@@ -34,7 +34,7 @@ export default function DiaryStamp({
   tiltDeg,
 }: DiaryStampProps) {
   const id = (stampKey ?? "default") as StampId;
-  const style = STAMP_STYLE[id] ?? STAMP_STYLE.default;
+  const tint = stampTint(id);
 
   // A keyword stamp is just inline SVG — instant, nothing to wait on. A
   // photo stamp is a real network image (Supabase Storage), so on a slow
@@ -79,8 +79,8 @@ export default function DiaryStamp({
   }
 
   return (
-    <StampFrame tint={style.tint} className={className} tiltDeg={tiltDeg}>
-      <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT, color: style.ink }}>
+    <StampFrame tint={tint} className={className} tiltDeg={tiltDeg}>
+      <div style={{ width: STAMP_MASK_WIDTH, height: STAMP_MASK_HEIGHT }}>
         <KeywordIcon id={id} variant={stampVariant} className="h-full w-full" />
       </div>
     </StampFrame>
