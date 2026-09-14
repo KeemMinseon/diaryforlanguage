@@ -143,8 +143,8 @@ export default function MonthCalendar() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
       <header className="flex items-center justify-between">
-        <p className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
-          우표일기
+        <p className="font-[family-name:var(--font-heading)] text-sm text-[var(--ink-soft)]">
+          {month + 1}월 · {year}
         </p>
         <div className="flex items-center gap-1">
           <Link
@@ -209,24 +209,42 @@ export default function MonthCalendar() {
         </div>
       </header>
 
-      <div className="flex items-center justify-between">
+      {/* Compact "‹ 08 09 10 ›" month strip — the two flanking numbers are
+          shortcuts to prev/next month (same destination as the arrows,
+          just also reachable by tapping the number itself), the bold
+          center one is just the current month restated, not a button. */}
+      <div className="flex items-center justify-center gap-1 font-[family-name:var(--font-heading)]">
         <button
           type="button"
           onClick={() => goToMonth(year, month - 1)}
-          className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+          className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="이전 달"
         >
           <UiIcon name="bracket-left-line" className="h-4 w-4" alt="">
             ←
           </UiIcon>
         </button>
-        <p className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
-          {year}년 {month + 1}월
+        <button
+          type="button"
+          onClick={() => goToMonth(year, month - 1)}
+          className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+        >
+          {String(((month - 1 + 12) % 12) + 1).padStart(2, "0")}
+        </button>
+        <p className="rounded-full px-2 py-1 text-lg font-bold text-[var(--ink)]">
+          {String(month + 1).padStart(2, "0")}
         </p>
         <button
           type="button"
           onClick={() => goToMonth(year, month + 1)}
-          className="flex items-center justify-center rounded-full px-3 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+          className="rounded-full px-2 py-1 text-sm text-[var(--ink-soft)]/60 hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+        >
+          {String(((month + 1) % 12) + 1).padStart(2, "0")}
+        </button>
+        <button
+          type="button"
+          onClick={() => goToMonth(year, month + 1)}
+          className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
           aria-label="다음 달"
         >
           <UiIcon name="bracket-right-line" className="h-4 w-4" alt="">
