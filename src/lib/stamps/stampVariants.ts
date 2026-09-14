@@ -7,8 +7,10 @@ import type { StampId } from "@/lib/stamps/keywordMap";
  * (see KeywordIcon.tsx for the "<id>-<n>.ext" naming this pairs with) — no
  * other code needs to change.
  *
- * These counts come from the real, currently-prepared image set (152
+ * These counts come from the real, currently-prepared image set (151
  * keywords, 0-indexed, contiguous per keyword — e.g. "cat-0".."cat-4").
+ * "cry" isn't its own keyword any more (merged into "sad" — see
+ * keywordMap.ts), so it has no entry here at all.
  */
 export const STAMP_VARIANT_COUNT: Partial<Record<StampId, number>> = {
   rain: 5,

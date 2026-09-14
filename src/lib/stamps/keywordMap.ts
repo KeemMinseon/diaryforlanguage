@@ -9,12 +9,14 @@
  * `KEYWORD_RULES` (e.g. "ko", "en") with the same category ids used by
  * `STAMP_IDS` — the rest of the stamp UI is language-agnostic.
  *
- * This 152-keyword set replaced the previous smaller 38-keyword one in one
+ * This 151-keyword set replaced the previous smaller 38-keyword one in one
  * pass, matched against a real set of prepared stamp images (see
  * stampVariants.ts) — the Japanese trigger words below are a first draft
  * translated directly from each keyword's own meaning, not vocabulary
  * tested against real diary entries yet, so treat them as a starting point
- * to refine rather than a finished set.
+ * to refine rather than a finished set. "cry" was folded into "sad" rather
+ * than kept as its own category (no dedicated cry-* images) — its two
+ * trigger words ("泣", "涙") moved into sad's own word list.
  */
 
 export const STAMP_IDS = [
@@ -54,7 +56,6 @@ export const STAMP_IDS = [
   "fear",
   "anxiety",
   "sick",
-  "cry",
   "romance",
   "queer",
   "airport",
@@ -223,7 +224,6 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "fear", words: ["怖い", "不安"] },
     { id: "anxiety", words: ["不安", "心配"] },
     { id: "sick", words: ["体調不良", "風邪", "病院"] },
-    { id: "cry", words: ["泣", "涙"] },
     { id: "romance", words: ["恋愛", "ロマンス"] },
     { id: "queer", words: ["クィア", "性的少数者"] },
     { id: "airport", words: ["空港"] },
@@ -319,7 +319,7 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "chat", words: ["おしゃべり", "雑談"] },
     { id: "joy", words: ["嬉しい", "楽しい", "幸せ"] },
     { id: "happiness", words: ["幸福"] },
-    { id: "sad", words: ["悲しい", "辛い", "落ち込"] },
+    { id: "sad", words: ["悲しい", "辛い", "落ち込", "泣", "涙"] },
     { id: "memories", words: ["思い出"] },
     { id: "dream", words: ["夢"] },
     { id: "morning", words: ["朝"] },

@@ -41,7 +41,6 @@ export const STAMP_LABELS: Record<StampId, string> = {
   fear: "두려움",
   anxiety: "불안",
   sick: "아픔",
-  cry: "눈물",
   romance: "로맨스",
   queer: "퀴어",
   airport: "공항",
