@@ -27,7 +27,7 @@ export const viewport: Viewport = {
   // same color, overriding whichever one the OS would've picked, whenever
   // an explicit in-app choice (ThemeToggle.tsx) disagrees with the OS.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
+    { media: "(prefers-color-scheme: light)", color: "#fefbf3" },
     { media: "(prefers-color-scheme: dark)", color: "#1c1c1e" },
   ],
   // Without this, iOS Safari's default on focusing a text input is to pan
@@ -85,7 +85,7 @@ export const viewport: Viewport = {
 // made after this initial load.
 const THEME_INIT_SCRIPT = `
 try {
-  var LIGHT = "#faf9f6", DARK = "#1c1c1e";
+  var LIGHT = "#fefbf3", DARK = "#1c1c1e";
   var media = window.matchMedia("(prefers-color-scheme: dark)");
   function syncStatusBar() {
     var t = localStorage.getItem("theme-preference");
