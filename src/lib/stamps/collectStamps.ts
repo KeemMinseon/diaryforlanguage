@@ -20,6 +20,11 @@ export interface PhotoStampItem {
    * want it. */
   entryDate: string;
   session: number;
+  /** Passed straight through to photoPublicUrl's cache-buster — every
+   * day's photo is uploaded to the same fixed storage path (see
+   * uploadStampPhoto), so without this a re-crop can keep showing the
+   * old cached image at that same URL forever. */
+  createdAt: string;
 }
 
 export interface StampCollection {
@@ -63,7 +68,12 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
     for (const s of resolveStamps(entry)) {
       if (s.stampKind === "photo") {
         if (s.photoPath) {
-          photoStamps.push({ photoPath: s.photoPath, entryDate: entry.entry_date, session: s.session });
+          photoStamps.push({
+            photoPath: s.photoPath,
+            entryDate: entry.entry_date,
+            session: s.session,
+            createdAt: s.createdAt,
+          });
         }
         continue;
       }

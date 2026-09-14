@@ -28,7 +28,8 @@ export default function DayCell({
   entry?: DiaryEntry;
 }) {
   const clickable = Boolean(entry) || !isFuture;
-  const photoUrl = entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path) : null;
+  const photoUrl =
+    entry?.stamp_kind === "photo" ? photoPublicUrl(entry.photo_path, entry.updated_at) : null;
 
   // Exactly one border-color utility per case, not two stacked ones —
   // border-[var(--paper-line)] and border-[var(--ink)] both set the same

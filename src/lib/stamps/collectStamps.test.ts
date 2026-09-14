@@ -90,8 +90,8 @@ describe("collectStamps", () => {
     ]);
     expect(keywordCounts).toEqual([]);
     expect(photoStamps).toEqual([
-      { photoPath: "u1/2026-09-08.jpg", entryDate: "2026-09-08", session: 0 },
-      { photoPath: "u1/2026-09-01.jpg", entryDate: "2026-09-01", session: 0 },
+      { photoPath: "u1/2026-09-08.jpg", entryDate: "2026-09-08", session: 0, createdAt: "" },
+      { photoPath: "u1/2026-09-01.jpg", entryDate: "2026-09-01", session: 0, createdAt: "" },
     ]);
   });
 

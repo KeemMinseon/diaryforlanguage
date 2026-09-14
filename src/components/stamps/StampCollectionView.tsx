@@ -111,7 +111,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     <DiaryStamp
                       stampKind="photo"
                       stampKey={null}
-                      photoUrl={photoPublicUrl(p.photoPath)}
+                      photoUrl={photoPublicUrl(p.photoPath, p.createdAt)}
                       className="w-full drop-shadow-sm"
                     />
                   </button>
@@ -144,7 +144,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
             <DiaryStamp
               stampKind="photo"
               stampKey={null}
-              photoUrl={photoPublicUrl(openPhoto.photoPath)}
+              photoUrl={photoPublicUrl(openPhoto.photoPath, openPhoto.createdAt)}
               className="w-full drop-shadow-xl"
             />
           </div>

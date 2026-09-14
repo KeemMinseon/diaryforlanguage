@@ -55,8 +55,13 @@ export default async function EntryPage({
   };
   let photoUrl: string | null = null;
   if (typedEntry.stamp_kind === "photo" && typedEntry.photo_path) {
-    photoUrl = supabase.storage.from("diary-photos").getPublicUrl(typedEntry.photo_path).data
+    const publicUrl = supabase.storage.from("diary-photos").getPublicUrl(typedEntry.photo_path).data
       .publicUrl;
+    // `?v=` cache-buster — this path is reused (upserted) on every
+    // re-crop, so without a version tied to the entry's own last-updated
+    // time, a re-crop can keep serving the old cached bytes at this same
+    // URL forever. See photoPublicUrl's own doc comment (lib/diary/client.ts).
+    photoUrl = `${publicUrl}?v=${encodeURIComponent(typedEntry.updated_at)}`;
   }
 
   // "이어서 쓰기" from the review screen: reopen the chat editor pre-filled

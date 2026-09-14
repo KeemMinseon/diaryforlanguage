@@ -143,10 +143,28 @@ export async function fetchEntry(dateKey: string): Promise<DiaryEntry | null> {
   return entry;
 }
 
-export function photoPublicUrl(path: string | null | undefined): string | null {
+/**
+ * `version`, when given, is appended as a `?v=` cache-buster — pass
+ * whatever timestamp changes whenever this exact path's *contents* do
+ * (a session's own `createdAt`, or the entry's `updated_at`). This isn't
+ * optional decoration: `uploadStampPhoto` always writes to the same
+ * `userId/dateKey.jpg` path for a given day (`upsert: true`), so
+ * re-cropping a photo overwrites the file but keeps the exact same
+ * public URL — and both the browser and Supabase's own CDN in front of
+ * that public bucket cache images by URL. Without a version bump baked
+ * into the URL itself, a re-crop can silently keep showing the old
+ * cached bytes indefinitely, which is exactly what made an earlier crop
+ * fix look like it hadn't taken effect at all.
+ */
+export function photoPublicUrl(
+  path: string | null | undefined,
+  version?: string | number | null
+): string | null {
   if (!path) return null;
   const supabase = createClient();
-  return supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+  const url = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+  if (version == null) return url;
+  return `${url}?v=${encodeURIComponent(version)}`;
 }
 
 export async function uploadStampPhoto(

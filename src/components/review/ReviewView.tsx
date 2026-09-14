@@ -78,7 +78,7 @@ export default function ReviewView({
   function stampPhotoUrl(s: SessionStamp): string | null {
     if (s.stampKind !== "photo" || !s.photoPath) return null;
     if (s.photoPath === entry.photo_path) return photoUrl;
-    return photoPublicUrl(s.photoPath);
+    return photoPublicUrl(s.photoPath, s.createdAt);
   }
 
   const dateLabel = parseDateKey(entry.entry_date).toLocaleDateString("ko-KR", {

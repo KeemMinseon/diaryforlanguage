@@ -161,7 +161,11 @@ export default function EditEntry({
     }
     const original = originalStamps.find((s) => s.session === p.session);
     if (original?.stampKind === "photo" && original.photoPath) {
-      return { stampKind: "photo" as StampKind, stampKey: null, photoUrl: photoPublicUrl(original.photoPath) };
+      return {
+        stampKind: "photo" as StampKind,
+        stampKey: null,
+        photoUrl: photoPublicUrl(original.photoPath, original.createdAt),
+      };
     }
     return { stampKind: "keyword" as StampKind, stampKey: pickStamp(p.text), photoUrl: null };
   }
