@@ -302,7 +302,16 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       <button
                         data-stamp-key={key}
                         type="button"
-                        onClick={(e) => openLightbox(key, { kind: "photo", item }, e.currentTarget)}
+                        onClick={(e) =>
+                          // The hero shows the photo at full size (no 85%
+                          // inset), so the FLIP source rect has to be the
+                          // *inner* div actually holding the visible
+                          // image, not this button's own full box —
+                          // otherwise the hero starts ~15% too big/
+                          // off-center relative to what was really on
+                          // screen, popping visibly at the very first frame.
+                          openLightbox(key, { kind: "photo", item }, e.currentTarget.firstElementChild as HTMLElement)
+                        }
                         style={stampButtonStyle(key)}
                         aria-label="사진 우표 크게 보기"
                         className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
