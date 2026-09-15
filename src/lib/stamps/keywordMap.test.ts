@@ -6,8 +6,11 @@ describe("pickStamp", () => {
     expect(pickStamp("特に何もなかった一日でした。")).toBe("default");
   });
 
-  it("picks weather even when a meal is also mentioned", () => {
-    expect(pickStamp("雨が降っていたので、家でご飯を食べた。")).toBe("rain");
+  // Weather now sits near the *bottom* of the priority order (above only
+  // food/animals — see KEYWORD_RULES' own doc comment) rather than the
+  // top, so this only checks it still beats those two, not everything.
+  it("picks weather over an incidental meal mention", () => {
+    expect(pickStamp("雨が降っていたので、ご飯を食べた。")).toBe("rain");
   });
 
   // The bug this whole ordering exists to prevent: an entry that's really

@@ -179,46 +179,26 @@ export type StampId = (typeof STAMP_IDS)[number];
 type Locale = "ja";
 
 // Ordered: earlier categories win when multiple keywords match in the same
-// entry. Roughly tiered from most to least specific — weather/sky/season,
-// then explicit occasions and strong emotion words, then travel logistics
-// and place names (proper nouns), general nature/places, animals, specific
-// meals and foods, activities/hobbies, relationships, general emotions,
-// daily-life odds and ends — with generic food/coffee/cafe last: almost
-// every entry mentions eating or drinking *something* incidentally, so a
-// bare food match shouldn't outrank whatever the entry was actually about.
+// entry. Tiered by how much an entry mentioning that tier is actually
+// *about* it, most to least: emotions/occasions (what the entry is really
+// about, if anything is) — activities/hobbies, relationships, travel,
+// nature/places (what the day actually consisted of) — daily-life odds and
+// ends, weather/season (background/scene-setting, rarely the entry's own
+// point) — food, animals (almost every entry mentions eating *something*,
+// or a pet in passing, incidentally, so either matching shouldn't outrank
+// whatever the entry was actually about).
 const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
   ja: [
-    // ── 날씨/계절 (weather/season) ──────────────────────────────────────
-    { id: "rain", words: ["雨", "梅雨", "傘", "台風"] },
-    { id: "snow", words: ["雪", "雪だるま"] },
-    { id: "sunny", words: ["晴れ", "快晴"] },
-    { id: "cloudy", words: ["曇り", "くもり"] },
-    { id: "wind", words: ["風"] },
-    { id: "breeze", words: ["そよ風"] },
-    { id: "rainbow", words: ["虹"] },
-    { id: "sky", words: ["空", "青空"] },
-    { id: "star", words: ["星"] },
-    { id: "moon", words: ["月"] },
-    { id: "dawn", words: ["夜明け", "明け方"] },
-    { id: "sunset", words: ["夕焼け", "夕日"] },
-    { id: "midnight", words: ["真夜中", "深夜"] },
-    { id: "spring", words: ["春"] },
-    { id: "summer", words: ["夏"] },
-    { id: "autumn", words: ["秋", "紅葉"] },
-    { id: "winter", words: ["冬"] },
-    { id: "season", words: ["季節"] },
-    { id: "sun", words: ["太陽", "日差し", "暑い", "猛暑"] },
-
-    // ── 감정/기념일 (emotion/occasions) ─────────────────────────────────
+    // ── 감정/기념일 (emotion/occasions) — 최우선 tier ────────────────────
     // "joy"/"happiness"/"sad"/"memories"/"dream" used to sit much further
     // down (after travel, nature, animals, specific foods, activities, and
     // relationships) — a second, stray emotion tier separate from this
     // one, left over from however these categories were added over time.
     // Moved in here with the rest, so any emotion word — not just the ones
     // that happened to land in this first tier — outranks an activity or a
-    // meal mentioned alongside it, matching this file's own header comment
-    // ("weather/sky/season, then explicit occasions and strong emotion
-    // words...").
+    // meal mentioned alongside it. See KEYWORD_RULES' own doc comment above
+    // for the full tier order this and every other "── ... ──" header below
+    // is part of.
     { id: "birthday", words: ["誕生日", "バースデー"] },
     { id: "xmas", words: ["クリスマス"] },
     { id: "appointment", words: ["約束", "予定"] },
@@ -345,14 +325,44 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "home", words: ["家", "自宅"] },
     { id: "school", words: ["学校", "授業"] },
 
-    // ── 동물 (animals) ──────────────────────────────────────────────────
-    { id: "cat", words: ["猫", "ペット"] },
-    { id: "dog", words: ["犬"] },
-    { id: "bird", words: ["鳥"] },
-    { id: "rabbit", words: ["うさぎ"] },
-    { id: "butterfly", words: ["蝶"] },
+    // ── 일상/시간 (daily life/time) ─────────────────────────────────────
+    { id: "morning", words: ["朝"] },
+    { id: "afternoon", words: ["午後"] },
+    { id: "evening", words: ["夕方", "夜"] },
+    { id: "nap", words: ["昼寝"] },
+    { id: "sleep", words: ["眠い", "寝る", "寝坊", "疲れ", "寝不足"] },
+    { id: "rest", words: ["休み", "のんびり", "ゆっくり"] },
+    { id: "phone", words: ["電話", "メッセージ"] },
+    { id: "calendar", words: ["予定表", "スケジュール"] },
+    { id: "routine", words: ["日課", "ルーティン"] },
+    { id: "youth", words: ["青春"] },
+    { id: "work", words: ["仕事", "会社", "残業", "会議", "上司", "同僚"] },
+    { id: "weekend", words: ["週末"] },
+    { id: "movie", words: ["映画", "ドラマ", "映画館"] },
+    { id: "engraving", words: ["刻む", "彫刻"] },
 
-    // ── 음식 (food) — 감정/활동보다 뒤로, 이 파일 안에서 가장 나중 ──────
+    // ── 날씨/계절 (weather/season) ──────────────────────────────────────
+    { id: "rain", words: ["雨", "梅雨", "傘", "台風"] },
+    { id: "snow", words: ["雪", "雪だるま"] },
+    { id: "sunny", words: ["晴れ", "快晴"] },
+    { id: "cloudy", words: ["曇り", "くもり"] },
+    { id: "wind", words: ["風"] },
+    { id: "breeze", words: ["そよ風"] },
+    { id: "rainbow", words: ["虹"] },
+    { id: "sky", words: ["空", "青空"] },
+    { id: "star", words: ["星"] },
+    { id: "moon", words: ["月"] },
+    { id: "dawn", words: ["夜明け", "明け方"] },
+    { id: "sunset", words: ["夕焼け", "夕日"] },
+    { id: "midnight", words: ["真夜中", "深夜"] },
+    { id: "spring", words: ["春"] },
+    { id: "summer", words: ["夏"] },
+    { id: "autumn", words: ["秋", "紅葉"] },
+    { id: "winter", words: ["冬"] },
+    { id: "season", words: ["季節"] },
+    { id: "sun", words: ["太陽", "日差し", "暑い", "猛暑"] },
+
+    // ── 음식 (food) — 가장 뒤쪽 두 tier 중 앞 ────────────────────────────
     // 거의 모든 일기가 뭔가를 먹었다는 얘기를 지나가듯 언급하니, 음식이
     // 먼저 걸리면 정작 그 날의 진짜 내용(감정, 활동)을 가려버린다.
     { id: "breakfast", words: ["朝食", "朝ごはん"] },
@@ -376,21 +386,12 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "coffee", words: ["コーヒー"] },
     { id: "cafe", words: ["カフェ"] },
 
-    // ── 일상/시간 (daily life/time) ─────────────────────────────────────
-    { id: "morning", words: ["朝"] },
-    { id: "afternoon", words: ["午後"] },
-    { id: "evening", words: ["夕方", "夜"] },
-    { id: "nap", words: ["昼寝"] },
-    { id: "sleep", words: ["眠い", "寝る", "寝坊", "疲れ", "寝不足"] },
-    { id: "rest", words: ["休み", "のんびり", "ゆっくり"] },
-    { id: "phone", words: ["電話", "メッセージ"] },
-    { id: "calendar", words: ["予定表", "スケジュール"] },
-    { id: "routine", words: ["日課", "ルーティン"] },
-    { id: "youth", words: ["青春"] },
-    { id: "work", words: ["仕事", "会社", "残業", "会議", "上司", "同僚"] },
-    { id: "weekend", words: ["週末"] },
-    { id: "movie", words: ["映画", "ドラマ", "映画館"] },
-    { id: "engraving", words: ["刻む", "彫刻"] },
+    // ── 동물 (animals) — 가장 마지막 ─────────────────────────────────────
+    { id: "cat", words: ["猫", "ペット"] },
+    { id: "dog", words: ["犬"] },
+    { id: "bird", words: ["鳥"] },
+    { id: "rabbit", words: ["うさぎ"] },
+    { id: "butterfly", words: ["蝶"] },
   ],
 };
 
