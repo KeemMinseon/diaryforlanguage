@@ -52,21 +52,44 @@ export default function DayCell({
       }`}
     >
       {entry ? (
-        <DiaryStamp
-          stampKind={entry.stamp_kind}
-          stampKey={entry.stamp_key as never}
-          stampVariant={entry.stamp_variant}
-          photoUrl={photoUrl}
+        entry.stamp_kind === "photo" ? (
           // A photo stamp still wears the scalloped StampFrame mask (see
           // DiaryStamp) — full-bleed made it read as coextensive with the
           // cell itself rather than a stamp glued onto it, so it gets a
-          // small margin instead. A keyword stamp is just its own flat
-          // image with no mask/border of its own, so it still fills the
-          // cell edge to edge.
-          className={
-            entry.stamp_kind === "photo" ? "absolute inset-[8%]" : "absolute inset-0 h-full w-full"
-          }
-        />
+          // small margin instead. That margin needs its own centering
+          // wrapper rather than putting `inset-[8%]` directly on the
+          // StampFrame <svg> — an absolutely positioned element with all
+          // four inset sides set but no explicit width/height falls back
+          // to its own intrinsic aspect ratio (the mask's, ~0.69) instead
+          // of stretching to fill the inset box (the cell's own ~0.8),
+          // anchoring to one corner rather than centering, which is what
+          // made the stamp look shifted down with its far edge cut off.
+          // `h-full` + `w-auto` inside a centered flex box sidesteps that
+          // entirely — the browser sizes the svg from its own aspect
+          // ratio, and the flex box centers whatever that comes out to.
+          <div className="absolute inset-[8%] flex items-center justify-center">
+            <DiaryStamp
+              stampKind={entry.stamp_kind}
+              stampKey={entry.stamp_key as never}
+              stampVariant={entry.stamp_variant}
+              photoUrl={photoUrl}
+              className="h-full w-auto"
+            />
+          </div>
+        ) : (
+          // A keyword stamp is just its own flat image with no mask/
+          // border of its own, so it still fills the cell edge to edge —
+          // explicit inset-0 + h-full + w-full leaves nothing "auto" to
+          // fall back on, so the over-constrained case above doesn't
+          // apply here.
+          <DiaryStamp
+            stampKind={entry.stamp_kind}
+            stampKey={entry.stamp_key as never}
+            stampVariant={entry.stamp_variant}
+            photoUrl={photoUrl}
+            className="absolute inset-0 h-full w-full"
+          />
+        )
       ) : (
         <span
           className={`absolute inset-0 flex items-center justify-center text-sm ${
