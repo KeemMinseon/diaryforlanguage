@@ -276,8 +276,7 @@ export default function MonthCalendar() {
           className="flex flex-col gap-2 rounded-2xl bg-[var(--paper-raised)] px-5 py-4"
         >
           <p className="text-xs text-[var(--ink-soft)]">
-            TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })} ·
-            NO.{parseDateKey(today).getDate()}
+            TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}
           </p>
           {todayEntry ? (
             // Matches the entry detail screen (ReviewView): a "이어서
