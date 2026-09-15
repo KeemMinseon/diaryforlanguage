@@ -14,21 +14,10 @@ export default function ReviewView({
   userId,
   entry,
   photoUrl,
-  streak,
-  monthFilled,
-  monthTotal,
 }: {
   userId: string;
   entry: DiaryEntry;
   photoUrl: string | null;
-  /** Consecutive calendar days (through this entry's own date) with an
-   * entry — see `computeStreak`. */
-  streak: number;
-  /** "이번 달 N / 총 일수" — how many days this month already have an
-   * entry, out of the month's own length. Both computed server-side (see
-   * EntryPage) from the same cheap date-only query. */
-  monthFilled: number;
-  monthTotal: number;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -147,31 +136,20 @@ export default function ReviewView({
         />
       ) : (
         <>
-          {/* Text block on top, every session's own stamp laid out in a
-              plain row below it — replaces the old side-by-side thumbnail
-              + fanned pile. A single stamp is just a row of one; there's
-              no tap-to-expand any more since nothing is ever stacked/
-              hidden to begin with. Assumes a small handful of sessions
-              per day (equal `flex-1` division, no wrap) — this app has
-              never seen a day with enough "이어서 쓰기" sittings for that
-              to look cramped. */}
+          {/* Every session's own stamp, in a plain wrapping row, then the
+              date and title below — replaces the old side-by-side
+              thumbnail + fanned pile. A single stamp is just a row of
+              one; there's no tap-to-expand any more since nothing is
+              ever stacked/hidden to begin with. Each stamp gets a fixed
+              width (not an equal `flex-1` share of the row) so a lone
+              stamp stays the same modest size as one in a five-stamp
+              day, instead of stretching to fill the whole row on its
+              own; a day with more stamps than fit on one line just
+              wraps. */}
           <div className="flex flex-col gap-3">
-            <div>
-              <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
-                {formatDateStamp(entry.entry_date)}
-              </p>
-              {entry.title && (
-                <h1 className="mt-1 font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--ink)]">
-                  {entry.title}
-                </h1>
-              )}
-              <p className="mt-1 text-sm text-[var(--ink-soft)]">
-                우표 {stamps.length}장 · 연속 {streak}일 · 이번 달 {monthFilled} / {monthTotal}
-              </p>
-            </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {stamps.map((s) => (
-                <div key={s.session} className="aspect-[499.78/671.48] flex-1">
+                <div key={s.session} className="aspect-[499.78/671.48] w-24 shrink-0">
                   <DiaryStamp
                     stampKind={s.stampKind}
                     stampKey={s.stampKey as never}
@@ -181,6 +159,16 @@ export default function ReviewView({
                   />
                 </div>
               ))}
+            </div>
+            <div>
+              <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
+                {formatDateStamp(entry.entry_date)}
+              </p>
+              {entry.title && (
+                <h1 className="mt-1 font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--ink)]">
+                  {entry.title}
+                </h1>
+              )}
             </div>
           </div>
 

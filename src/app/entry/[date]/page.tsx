@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import ChatEditor from "@/components/editor/ChatEditor";
 import ReviewView from "@/components/review/ReviewView";
 import { decryptEntryFields } from "@/lib/crypto/entryFields";
-import { computeStreak, daysInMonth } from "@/lib/utils/date";
 import type { DiaryEntry } from "@/types/diary";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -76,29 +75,5 @@ export default async function EntryPage({
     return <ChatEditor userId={userId} dateKey={date} initialEntry={typedEntry} />;
   }
 
-  // Every one of this learner's own entry dates, cheaply (dates only, no
-  // content) — enough to derive both the header's "연속 N일" streak
-  // (through this exact day) and its "이번 달 채운 날/총 일수" counter,
-  // without a second content-heavy query for either.
-  const { data: dateRows } = await supabase
-    .from("diary_entries")
-    .select("entry_date")
-    .eq("user_id", userId);
-  const allDateKeys = (dateRows ?? []).map((r) => r.entry_date as string);
-  const streak = computeStreak(allDateKeys, date);
-  const [entryYear, entryMonth] = date.split("-").map(Number);
-  const monthTotal = daysInMonth(entryYear, entryMonth - 1).length;
-  const monthPrefix = date.slice(0, 7);
-  const monthFilled = allDateKeys.filter((d) => d.startsWith(monthPrefix)).length;
-
-  return (
-    <ReviewView
-      userId={userId}
-      entry={typedEntry}
-      photoUrl={photoUrl}
-      streak={streak}
-      monthFilled={monthFilled}
-      monthTotal={monthTotal}
-    />
-  );
+  return <ReviewView userId={userId} entry={typedEntry} photoUrl={photoUrl} />;
 }
