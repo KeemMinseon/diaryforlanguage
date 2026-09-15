@@ -236,9 +236,17 @@ export default function StampCollectionView({ userId }: { userId: string }) {
    * once it's the focused one (the hero is showing an enlarged copy in its
    * place), pushed outward if something else is focused, or untouched. */
   function stampButtonStyle(key: string): React.CSSProperties {
-    const active = focus !== null && phase !== "closing";
     const duration = prefersReducedMotion() ? 0 : FLIP_DURATION_MS;
-    if (active && focus!.key === key) return { opacity: 0, transition: `opacity ${duration}ms ease` };
+    if (focus?.key === key) {
+      // No transition here on purpose: the hero exactly overlaps this
+      // button the instant it mounts, so this one has to disappear in
+      // that same instant too (and only reappear the instant `focus`
+      // clears, once the hero's own shrink-back has actually finished) —
+      // a fade either way would show both at once, reading as two
+      // separate objects instead of one continuous stamp.
+      return { opacity: 0 };
+    }
+    const active = focus !== null && phase !== "closing";
     const offset = active ? pushOffsets.get(key) : undefined;
     return {
       transform: offset ? `translate(${offset[0]}px, ${offset[1]}px) scale(${PUSH_SCALE})` : undefined,
@@ -262,7 +270,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <span className="text-sm text-[var(--ink-soft)]">{group.items.length}장</span>
             </div>
             <hr className="border-t border-[var(--ink)]" />
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-3 overflow-hidden">
               {group.items.map((item) => {
                 const key = photoKey(item);
                 const stampEl = (
@@ -406,7 +414,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       a single copy doesn't already show. One of each kind
                       instead, most-recently-collected-first. */}
                   {collection.distinctKeywordStamps.length > 0 && (
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-4 gap-3 overflow-hidden">
                       {collection.distinctKeywordStamps.map((stampKey) => {
                         const key = keywordKey(stampKey);
                         return (
@@ -446,7 +454,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                   <section key={group.label} className="flex flex-col gap-3">
                     <h2 className="text-sm font-medium text-[var(--ink)]">{group.label}</h2>
                     <hr className="border-t border-[var(--paper-line)]" />
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-4 gap-3 overflow-hidden">
                       {group.items.map(({ stampKey }) => {
                         const key = keywordKey(stampKey);
                         return (
