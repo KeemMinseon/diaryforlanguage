@@ -222,6 +222,7 @@ export default function EditEntry({
         comment: previous?.comment ?? "",
         suggestions: previous?.suggestions ?? [],
         readings: previous?.readings ?? [],
+        translation: previous?.translation ?? "",
         savedAt: previous?.savedAt ?? new Date().toISOString(),
         session: p.session,
       };
@@ -236,6 +237,7 @@ export default function EditEntry({
         stampVariant: stamps[0].stampVariant,
         photoPath: stamps[0].photoPath,
         status: "reviewed",
+        title: entry.title,
         overallComment: entry.overall_comment,
         suggestions: entry.suggestions,
         readings: entry.readings,
@@ -331,6 +333,8 @@ export default function EditEntry({
             typeof reviewDataList[i]?.comment === "string" ? reviewDataList[i].comment : "",
           suggestions: reviewDataList[i]?.suggestions ?? [],
           readings: reviewDataList[i]?.readings ?? [],
+          translation:
+            typeof reviewDataList[i]?.translation === "string" ? reviewDataList[i].translation : "",
           savedAt,
           session: p.session,
         }));
@@ -344,6 +348,7 @@ export default function EditEntry({
           stampVariant: stamps[0].stampVariant,
           photoPath: stamps[0].photoPath,
           status: "reviewed",
+          title: finalizeData.title ?? entry.title,
           overallComment: finalizeData.overallComment,
           suggestions,
           readings,

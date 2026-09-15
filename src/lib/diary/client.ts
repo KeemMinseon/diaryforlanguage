@@ -198,6 +198,7 @@ interface SaveEntryInput {
    * the way.
    */
   status?: "pending" | "reviewed" | "failed";
+  title?: string | null;
   overallComment?: string | null;
   suggestions?: Suggestion[];
   readings?: Reading[];
@@ -218,6 +219,7 @@ export async function saveEntry(input: SaveEntryInput): Promise<DiaryEntry> {
       stampVariant: input.stampVariant,
       photoPath: input.photoPath,
       status: input.status,
+      title: input.title,
       overallComment: input.overallComment,
       suggestions: input.suggestions,
       readings: input.readings,

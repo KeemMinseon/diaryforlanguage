@@ -24,8 +24,13 @@ const TOOL: Anthropic.Tool = {
         type: "string",
         description: "일기 전체에 대한 총평. 한국어 2~4문장, 격려하는 톤.",
       },
+      title: {
+        type: "string",
+        description:
+          "오늘 일기 전체 내용을 바탕으로 한 짧은 한국어 제목. 5~12자 내외, 감성적이고 시적으로 (내용 요약이 아님). 예: '비에 진 날'.",
+      },
     },
-    required: ["overallComment"],
+    required: ["overallComment", "title"],
   },
 };
 
@@ -86,13 +91,14 @@ export async function POST(request: Request) {
       throw new Error("모델이 도구 호출 응답을 반환하지 않았습니다.");
     }
 
-    const parsed = toolUse.input as { overallComment?: string };
+    const parsed = toolUse.input as { overallComment?: string; title?: string };
     const overallComment =
       typeof parsed.overallComment === "string" && parsed.overallComment.trim()
         ? parsed.overallComment.trim()
         : "오늘도 일기를 써주셔서 고마워요!";
+    const title = typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : null;
 
-    return NextResponse.json({ overallComment });
+    return NextResponse.json({ overallComment, title });
   } catch (err) {
     console.error("Finalize failed", err);
     return NextResponse.json({ error: "총평을 정리하는 데 실패했어요. 다시 시도해 주세요." }, { status: 500 });

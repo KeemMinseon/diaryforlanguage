@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHighlightSegments } from "@/lib/review/highlight";
+import { applyCorrections, buildHighlightSegments } from "@/lib/review/highlight";
 import type { Suggestion } from "@/types/diary";
 
 function suggestion(original: string, over: Partial<Suggestion> = {}): Suggestion {
@@ -58,5 +58,31 @@ describe("buildHighlightSegments", () => {
     expect(matched).toHaveLength(1);
     // The second "好き" (after "本当に") stays part of a plain segment.
     expect(segments.some((s) => s.suggestionIndex === null && s.text.includes("好き"))).toBe(true);
+  });
+});
+
+describe("applyCorrections", () => {
+  it("swaps a matched original for its suggestion", () => {
+    const result = applyCorrections("駅まで走ったけど、濡れた。", [
+      suggestion("走ったけど", { suggestion: "走ったのに" }),
+    ]);
+    expect(result).toBe("駅まで走ったのに、濡れた。");
+  });
+
+  it("applies several non-overlapping suggestions in one pass", () => {
+    const result = applyCorrections("走ったけど、ずぶ濡れた。", [
+      suggestion("走ったけど", { suggestion: "走ったのに" }),
+      suggestion("ずぶ濡れた", { suggestion: "ずぶ濡れになった" }),
+    ]);
+    expect(result).toBe("走ったのに、ずぶ濡れになった。");
+  });
+
+  it("leaves the text unchanged when there are no suggestions", () => {
+    expect(applyCorrections("今日は楽しかった。", [])).toBe("今日は楽しかった。");
+  });
+
+  it("leaves the text unchanged when a suggestion's original isn't found", () => {
+    const content = "今日は楽しかった。";
+    expect(applyCorrections(content, [suggestion("見つからない", { suggestion: "x" })])).toBe(content);
   });
 });

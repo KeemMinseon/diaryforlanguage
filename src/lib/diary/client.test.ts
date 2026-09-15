@@ -125,6 +125,7 @@ describe("encrypt/decryptEntryFields (sanity)", () => {
   it("round-trips", () => {
     const plain = {
       content: "テスト",
+      title: null,
       overall_comment: null,
       suggestions: [],
       paragraphs: [],

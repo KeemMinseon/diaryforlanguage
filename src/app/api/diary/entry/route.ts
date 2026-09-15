@@ -47,6 +47,7 @@ export async function GET(request: Request) {
     const row = data as DiaryEntry;
     const decrypted = decryptEntryFields({
       content: row.content,
+      title: row.title,
       overall_comment: row.overall_comment,
       suggestions: row.suggestions,
       paragraphs: row.paragraphs,

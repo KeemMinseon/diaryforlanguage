@@ -33,6 +33,12 @@ export interface DiaryParagraph {
   comment: string;
   suggestions: Suggestion[];
   readings: Reading[];
+  /** A natural, whole-paragraph Korean translation of `text` (not a
+   * literal gloss) — shown under the corrected Japanese in the entry
+   * detail screen's "FINAL" section. Missing (treat as "") on a
+   * paragraph saved before this existed, same convention as `session`
+   * below. */
+  translation?: string;
   savedAt: string; // ISO timestamp
   /** Which sitting this paragraph was written in — 0 for the entry's first
    * visit, incremented by one each time "이어서 쓰기" reopens it. Missing
@@ -71,6 +77,12 @@ export interface DiaryEntry {
   stamp_variant: number | null; // mirrors stamps[0].stampVariant — see SessionStamp
   photo_path: string | null; // storage object path, when stamp_kind === "photo"
   status: EntryStatus;
+  /** Short, AI-generated title for the day (e.g. "비에 진 날") — produced
+   * alongside `overall_comment` once the day is finalized (see
+   * /api/review-finalize). Null for an entry saved before this existed,
+   * or one whose finalize call hasn't landed yet; the entry detail
+   * screen just omits the title line in that case. */
+  title: string | null;
   overall_comment: string | null;
   suggestions: Suggestion[];
   /** Furigana (kanji) / romaji (katakana) readings collected while writing. */

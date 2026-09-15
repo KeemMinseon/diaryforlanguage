@@ -13,6 +13,7 @@ interface SaveEntryBody {
   stampVariant?: number | null;
   photoPath: string | null;
   status?: "pending" | "reviewed" | "failed";
+  title?: string | null;
   overallComment?: string | null;
   suggestions?: Suggestion[];
   readings?: Reading[];
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
   // README's "암호화" section).
   const plaintextFields: EncryptableEntryFields = {
     content: body.content,
+    title: body.title ?? null,
     overall_comment: body.overallComment ?? null,
     suggestions: body.suggestions ?? [],
     paragraphs: body.paragraphs ?? [],
@@ -83,6 +85,7 @@ export async function POST(request: Request) {
           stamp_variant: body.stampVariant ?? null,
           photo_path: body.photoPath,
           status,
+          title: encrypted.title,
           overall_comment: encrypted.overall_comment,
           suggestions: encrypted.suggestions,
           readings: body.readings ?? [],

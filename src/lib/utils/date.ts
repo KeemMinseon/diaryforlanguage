@@ -29,6 +29,42 @@ export function daysInMonth(year: number, month: number): Date[] {
   return days;
 }
 
+/** How many calendar days in a row — counting both backward and forward
+ * from `anchorKey`, since the entry detail screen wants "the streak this
+ * day was part of," not just "days before it" — have an entry, based on
+ * whichever `entryDateKeys` ("YYYY-MM-DD" strings) are passed in. Callers
+ * only need to supply a window wide enough around `anchorKey` for an
+ * accurate count; an entry outside that window simply isn't counted, same
+ * as if it didn't exist. Returns 0 if `anchorKey` itself isn't in the set
+ * (shouldn't happen for a real saved entry, but avoids claiming a streak
+ * for a day with nothing on it). */
+export function computeStreak(entryDateKeys: string[], anchorKey: string): number {
+  const set = new Set(entryDateKeys);
+  if (!set.has(anchorKey)) return 0;
+  let streak = 1;
+  for (const step of [-1, 1]) {
+    let cursor = parseDateKey(anchorKey);
+    for (;;) {
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + step);
+      if (!set.has(toDateKey(cursor))) break;
+      streak++;
+    }
+  }
+  return streak;
+}
+
+const WEEKDAY_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+/** "2026.09.13 SUN" — the entry detail screen's own compact date stamp,
+ * shown next to that day's stamp art. */
+export function formatDateStamp(dateKey: string): string {
+  const d = parseDateKey(dateKey);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}.${m}.${day} ${WEEKDAY_EN[d.getDay()]}`;
+}
+
 /** "오전 9:12" style, entirely by hand — no `Intl`/`toLocaleTimeString`.
  * Those depend on the runtime's bundled ICU/CLDR data, and a "use
  * client" component using one during render gets server-rendered once

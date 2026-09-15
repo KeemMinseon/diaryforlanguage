@@ -50,6 +50,7 @@ describe("GET /api/diary/entry", () => {
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const encrypted = encryptEntryFields({
       content: "今日は映画を見た。",
+      title: "영화 본 날",
       overall_comment: "재밌었겠다!",
       suggestions: [],
       paragraphs: [],
@@ -69,6 +70,7 @@ describe("GET /api/diary/entry", () => {
     const res = await GET(new Request("http://x/api/diary/entry?date=2026-09-08"));
     const body = await res.json();
     expect(body.entry.content).toBe("今日は映画を見た。");
+    expect(body.entry.title).toBe("영화 본 날");
     expect(body.entry.overall_comment).toBe("재밌었겠다!");
   });
 });

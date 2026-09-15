@@ -43,12 +43,14 @@ describe("GET /api/diary/entries", () => {
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     const encryptedA = encryptEntryFields({
       content: "一日目",
+      title: null,
       overall_comment: null,
       suggestions: [],
       paragraphs: [],
     });
     const encryptedB = encryptEntryFields({
       content: "二日目",
+      title: null,
       overall_comment: null,
       suggestions: [],
       paragraphs: [],

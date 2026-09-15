@@ -20,6 +20,7 @@ interface FeedbackRound {
   comment: string;
   suggestions: Suggestion[];
   readings: Reading[];
+  translation: string;
   savedAt: string;
   /** Which "이어서 쓰기" sitting this round belongs to — see
    * `DiaryParagraph.session`/`SessionStamp`. */
@@ -60,6 +61,7 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
       comment: p.comment,
       suggestions: p.suggestions,
       readings: p.readings,
+      translation: p.translation ?? "",
       savedAt: p.savedAt,
       // Missing on a paragraph saved before sessions existed — treat the
       // whole thing as one single prior sitting (session 0).
@@ -73,6 +75,8 @@ function initialRoundsFrom(entry?: DiaryEntry): FeedbackRound[] {
       comment: entry.overall_comment ?? "",
       suggestions: entry.suggestions,
       readings: entry.readings,
+      // No per-paragraph translation ever existed for a flat pre-`paragraphs` entry.
+      translation: "",
       savedAt: entry.reviewed_at ?? entry.updated_at,
       session: 0,
     },
@@ -365,6 +369,7 @@ export default function ChatEditor({
       comment: data.comment,
       suggestions: data.suggestions ?? [],
       readings: data.readings ?? [],
+      translation: data.translation ?? "",
       savedAt: new Date().toISOString(),
       session: currentSession,
     };
@@ -432,6 +437,7 @@ export default function ChatEditor({
       comment: r.comment,
       suggestions: r.suggestions,
       readings: r.readings,
+      translation: r.translation,
       savedAt: r.savedAt,
       session: r.session,
     }));
@@ -485,6 +491,7 @@ export default function ChatEditor({
         stampVariant: front.stampVariant,
         photoPath: front.photoPath,
         status: "pending",
+        title: initialEntry?.title ?? null,
         overallComment: initialEntry?.overall_comment ?? "",
         suggestions: existingSuggestions,
         readings: existingReadings,
@@ -545,6 +552,7 @@ export default function ChatEditor({
           comment: r.comment,
           suggestions: r.suggestions,
           readings: r.readings,
+          translation: r.translation,
           savedAt: r.savedAt,
           session: r.session,
         }));
@@ -558,6 +566,7 @@ export default function ChatEditor({
           stampVariant: front.stampVariant,
           photoPath: front.photoPath,
           status: "reviewed",
+          title: finalizeData.title ?? initialEntry?.title ?? null,
           overallComment: finalizeData.overallComment,
           suggestions: allSuggestions,
           readings: allReadings,
@@ -596,6 +605,7 @@ export default function ChatEditor({
             stampVariant: front.stampVariant,
             photoPath: front.photoPath,
             status: "failed",
+            title: initialEntry?.title ?? null,
             overallComment: initialEntry?.overall_comment ?? "",
             suggestions: existingSuggestions,
             readings: existingReadings,

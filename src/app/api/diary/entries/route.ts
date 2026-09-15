@@ -49,6 +49,7 @@ export async function GET(request: Request) {
       ...row,
       ...decryptEntryFields({
         content: row.content,
+        title: row.title,
         overall_comment: row.overall_comment,
         suggestions: row.suggestions,
         paragraphs: row.paragraphs,

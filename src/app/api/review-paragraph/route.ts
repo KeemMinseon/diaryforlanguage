@@ -70,8 +70,13 @@ const TOOL: Anthropic.Tool = {
           required: ["text", "reading", "kind", "meaning"],
         },
       },
+      translation: {
+        type: "string",
+        description:
+          "이번 문단(고치기 전 원문)의 자연스러운 한국어 번역, 1~2문장. 단어 하나하나 직역하지 말고 자연스럽게 읽히는 문장으로.",
+      },
     },
-    required: ["comment", "suggestions", "readings"],
+    required: ["comment", "suggestions", "readings", "translation"],
   },
 };
 
@@ -351,11 +356,17 @@ export async function POST(request: Request) {
       throw new Error("모델이 도구 호출 응답을 반환하지 않았습니다.");
     }
 
-    const parsed = toolUse.input as { comment?: string; suggestions?: unknown; readings?: unknown };
+    const parsed = toolUse.input as {
+      comment?: string;
+      suggestions?: unknown;
+      readings?: unknown;
+      translation?: string;
+    };
     const comment =
       typeof parsed.comment === "string" && parsed.comment.trim()
         ? parsed.comment.trim()
         : "좋아요, 계속 이어서 써보세요!";
+    const translation = typeof parsed.translation === "string" ? parsed.translation.trim() : "";
     const suggestions = sanitizeSuggestions(parsed.suggestions, paragraph);
     // Readings must cover suggestion text too (e.g. a Korean phrase the
     // learner mixed in gets translated into new Japanese in `suggestion` —
@@ -385,7 +396,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ comment, suggestions, readings });
+    return NextResponse.json({ comment, suggestions, readings, translation });
   } catch (err) {
     console.error("Paragraph review failed", err);
     return NextResponse.json({ error: "이 문단을 첨삭하는 데 실패했어요. 다시 시도해 주세요." }, { status: 500 });

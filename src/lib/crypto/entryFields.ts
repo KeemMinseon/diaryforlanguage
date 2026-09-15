@@ -21,6 +21,7 @@ import type { DiaryParagraph, Suggestion } from "@/types/diary";
  */
 export interface EncryptableEntryFields {
   content: string;
+  title: string | null;
   overall_comment: string | null;
   suggestions: Suggestion[];
   paragraphs: DiaryParagraph[];
@@ -40,6 +41,10 @@ function mapParagraphs(paragraphs: DiaryParagraph[], fn: (s: string) => string):
     text: fn(p.text),
     comment: fn(p.comment),
     suggestions: mapSuggestions(p.suggestions, fn),
+    // Missing entirely (not just empty) on a paragraph saved before
+    // `translation` existed — `?? ""` instead of assuming the key is
+    // there the way `text`/`comment` (always present) can.
+    translation: fn(p.translation ?? ""),
     // `readings` (the word/reading/meaning itself) stays plaintext, same
     // as the entry's own top-level `readings` — not part of this type.
   }));
@@ -48,6 +53,7 @@ function mapParagraphs(paragraphs: DiaryParagraph[], fn: (s: string) => string):
 export function encryptEntryFields(fields: EncryptableEntryFields): EncryptableEntryFields {
   return {
     content: encryptString(fields.content),
+    title: encryptNullable(fields.title),
     overall_comment: encryptNullable(fields.overall_comment),
     suggestions: mapSuggestions(fields.suggestions, encryptString),
     paragraphs: mapParagraphs(fields.paragraphs, encryptString),
@@ -57,6 +63,7 @@ export function encryptEntryFields(fields: EncryptableEntryFields): EncryptableE
 export function decryptEntryFields(fields: EncryptableEntryFields): EncryptableEntryFields {
   return {
     content: decryptString(fields.content),
+    title: decryptNullable(fields.title),
     overall_comment: decryptNullable(fields.overall_comment),
     suggestions: mapSuggestions(fields.suggestions, decryptString),
     paragraphs: mapParagraphs(fields.paragraphs, decryptString),

@@ -48,6 +48,11 @@ alter table public.diary_entries add column if not exists stamps jsonb not null 
 -- for a keyword that only has one variant, or for an entry saved before
 -- this column existed (falls back to showing that one variant/image).
 alter table public.diary_entries add column if not exists stamp_variant integer;
+-- Short AI-generated title for the day (e.g. "비에 진 날"), produced by
+-- /api/review-finalize alongside overall_comment. Encrypted the same way
+-- as overall_comment (see entryFields.ts) — an entry saved before this
+-- column existed just has title = null.
+alter table public.diary_entries add column if not exists title text;
 
 create index if not exists diary_entries_user_month_idx
   on public.diary_entries (user_id, entry_date);

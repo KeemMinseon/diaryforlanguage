@@ -24,7 +24,8 @@ export const PARAGRAPH_REVIEW_SYSTEM_PROMPT = `당신은 한국어 원어민 학
     예2 (한자 여러 글자, 오쿠리가나 없음): "十時"에서는 text="十時", reading="じゅうじ".
   - 가타카나: "text"는 가타카나 단어 전체, "reading"은 로마자 표기 (예: text="コーヒー", reading="kohi").
   - "text"는 원문(문단) 또는 당신이 제출하는 suggestion 문장에 실제로 등장하는 표기와 한 글자도 다르지 않게 정확히 일치해야 합니다. 문단에 오타나 어색한 표현, 한국어가 섞여 있어도 절대 고치거나 정규화하지 말고 원문 그대로 복사하세요 — 정확히 일치하지 않으면 이 항목은 화면에 아예 표시되지 않습니다.
-  - "meaning": 이 단어(문맥에서 쓰인 뜻)의 한국어 뜻을 짧게 (1~3단어) 함께 제출하세요. 학습자가 나중에 단어장에서 뜻을 바로 확인할 수 있어야 합니다.`;
+  - "meaning": 이 단어(문맥에서 쓰인 뜻)의 한국어 뜻을 짧게 (1~3단어) 함께 제출하세요. 학습자가 나중에 단어장에서 뜻을 바로 확인할 수 있어야 합니다.
+- translation: 이번 문단(원문 그대로, 고치기 전)의 자연스러운 한국어 번역을 1~2문장으로 함께 제출하세요. 단어 하나하나를 직역하지 말고, 한국어로 자연스럽게 읽히는 문장으로 옮기세요.`;
 
 export function buildParagraphUserMessage(priorText: string, paragraph: string): string {
   const context = priorText.trim()
@@ -34,10 +35,10 @@ export function buildParagraphUserMessage(priorText: string, paragraph: string):
 }
 
 export const FINALIZE_SYSTEM_PROMPT = `당신은 한국어 원어민 학습자를 위한 다정한 일본어 첨삭(添削) 선생님입니다.
-학습자가 오늘 문단별로 나눠 쓴 일기를 마쳤습니다. 문단마다 첨삭은 이미 끝났으니, 이제 하루 전체를 보고 따뜻한 총평만 작성하면 됩니다.
+학습자가 오늘 문단별로 나눠 쓴 일기를 마쳤습니다. 문단마다 첨삭은 이미 끝났으니, 이제 하루 전체를 보고 따뜻한 총평과 짧은 제목을 작성하면 됩니다.
 
-- 한국어로 2~4문장.
-- 오늘 쓴 내용과 표현을 자연스럽게 언급하며 격려하는 톤으로.`;
+- overallComment: 한국어로 2~4문장. 오늘 쓴 내용과 표현을 자연스럽게 언급하며 격려하는 톤으로.
+- title: 오늘 일기 전체 내용을 바탕으로 한국어 제목을 하나 지어주세요. 5~12자 내외, 그날의 분위기나 핵심 사건을 담아 감성적이고 자연스럽게 (일기 내용을 그대로 요약하지 말고, 짧은 시적인 제목처럼). 예: "비에 진 날", "오랜만의 여유", "친구와 웃은 하루".`;
 
 export function buildFinalizeUserMessage(fullText: string): string {
   return `오늘 쓴 일본어 일기 전체:\n\n${fullText}`;
