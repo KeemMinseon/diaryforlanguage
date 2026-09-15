@@ -16,7 +16,19 @@
  * Reuses the `#theme-color-override` tag layout.tsx's own init script
  * writes (and keeps updated for light/dark preference) — this only ever
  * flips *that* tag's color, never fights it, so restoring just re-derives
- * the same light/dark color that script would currently want. */
+ * the same light/dark color that script would currently want.
+ *
+ * iOS Safari confirmed this rAF fade actively hurts there: darkening
+ * roughly matched, but brightening back visibly lagged — the toolbar was
+ * still catching up *after* the page had already finished closing.
+ * WebKit already runs its own cross-fade whenever a theme-color changes;
+ * every one of our own step writes below restarts that fade mid-flight,
+ * and restarting it ~10 times over 160ms compounds into exactly that kind
+ * of lag. Chrome/Android has no such built-in animation at all — an
+ * instant single write there is a hard flicker, which is what the rAF
+ * fade exists for. So iOS Safari gets a single clean write instead (let
+ * WebKit's own transition run once, uninterrupted); every other browser
+ * keeps the manual fade. */
 
 const NORMAL = { light: "#fdfcfc", dark: "#1c1c1e" } as const;
 // Each color above blended with 70% black (matching the lightbox
@@ -28,6 +40,15 @@ const DIMMED = { light: "#4c4b4a", dark: "#080809" } as const;
 // globals.css, so the status bar and the backdrop finish fading together.
 const FADE_IN_MS = 180;
 const FADE_OUT_MS = 160;
+
+function isIOSSafari(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  // Excludes other iOS browsers (Chrome/Firefox/Edge on iOS), which are
+  // still WebKit under the hood but don't necessarily share Safari's own
+  // toolbar-tint behavior.
+  return /iP(hone|od|ad)/.test(ua) && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+}
 
 function isDarkPreferred(): boolean {
   try {
@@ -90,6 +111,14 @@ export function setStatusBarDimmed(dimmed: boolean) {
     const isDark = isDarkPreferred();
     const palette = dimmed ? DIMMED : NORMAL;
     const target = isDark ? palette.dark : palette.light;
+    if (isIOSSafari()) {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      tag.setAttribute("content", target);
+      return;
+    }
     fadeTo(tag, target, dimmed ? FADE_IN_MS : FADE_OUT_MS);
   } catch {
     // Best-effort cosmetic touch — never worth surfacing an error for.
