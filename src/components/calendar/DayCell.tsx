@@ -53,31 +53,29 @@ export default function DayCell({
     >
       {entry ? (
         entry.stamp_kind === "photo" && photoUrl ? (
-          // A photo stamp keeps the scalloped StampFrame mask everywhere
-          // *else* (ReviewView, 우표 모아보기, EditEntry) — but not here.
-          // Five straight attempts at this cell's small photo margin (four
-          // ways of sizing StampFrame's SVG inside a wrapper div, then a
-          // plain `<img>` inside that same wrapper div) all looked correct
-          // on Chrome/Android but kept clipping the same way on iOS
-          // Safari's small mobile viewport specifically (confirmed fine on
-          // desktop Safari) — with the *img* version, the clipped edge
-          // wasn't even rounded any more, meaning the clip was happening on
-          // the wrapper `<div>`'s own square edge, one level further out
-          // than the rounded corner. That points at the one thing common
-          // to every attempt so far and different from the working
-          // keyword-stamp branch below: a wrapper div nesting its own
-          // `overflow-hidden` inside this cell's `overflow-hidden` already.
-          //
-          // This drops that wrapper entirely — top/left position it,
-          // explicit height/width size it (no `inset`, no `bottom`/`right`,
-          // nothing for any browser to solve for), directly on the `<img>`
-          // itself, exactly one level deep, exactly like the keyword
-          // branch already does successfully on the same device.
-          // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time
-          <img
-            src={photoUrl}
-            alt=""
-            className="absolute top-[8%] left-[8%] h-[84%] w-[84%] rounded-lg object-cover"
+          // Back to the scalloped StampFrame mask (a plain rounded `<img>`
+          // stood in for a while — see git history on this branch for that
+          // whole detour). What actually broke this on iOS Safari's small
+          // mobile viewport (confirmed fine on desktop Safari, and on
+          // Chrome/Android throughout) turned out to be a wrapper `<div>`
+          // giving this margin its own `overflow-hidden`, nested inside
+          // the cell's own — every earlier attempt at sizing the SVG
+          // itself was tried *inside* that doubled-up wrapper, so none of
+          // them ruled out the SVG's own sizing as a *second*, independent
+          // problem. This drops the wrapper the same way the `<img>` fix
+          // did — top/left position it, explicit height/width size it, no
+          // `inset`/`bottom`/`right` for any browser to solve for — placed
+          // directly on the SVG itself, one level deep, same as the
+          // keyword branch below and the working `<img>` version before
+          // it. If the mask still doesn't render right on that same
+          // device, that confirms the SVG sizing was its own separate
+          // issue after all.
+          <DiaryStamp
+            stampKind={entry.stamp_kind}
+            stampKey={entry.stamp_key as never}
+            stampVariant={entry.stamp_variant}
+            photoUrl={photoUrl}
+            className="absolute top-[8%] left-[8%] h-[84%] w-[84%]"
           />
         ) : (
           // A keyword stamp is just its own flat image with no mask/
