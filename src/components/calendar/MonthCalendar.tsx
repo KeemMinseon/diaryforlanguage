@@ -30,17 +30,26 @@ export default function MonthCalendar() {
   const monthStartKey = toDateKey(new Date(year, month, 1));
   const monthEndKey = toDateKey(new Date(year, month + 1, 0));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const rows = await fetchMonthEntries(monthStartKey, monthEndKey);
-      const map: DiaryEntryMap = {};
-      for (const row of rows) map[row.entry_date] = row;
-      setEntries(map);
-    } finally {
-      setLoading(false);
-    }
-  }, [monthStartKey, monthEndKey]);
+  // `silent` skips the loading/dimming toggle below — for a background
+  // refresh (a stamp event landing, or the pending-entry poll further
+  // down) the grid dimming just reads as the whole screen flickering
+  // every few seconds for no visible reason, since there's usually
+  // nothing new to show yet. Reserved for the genuine "waiting on data"
+  // cases: first mount and an explicit month change.
+  const load = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!opts.silent) setLoading(true);
+      try {
+        const rows = await fetchMonthEntries(monthStartKey, monthEndKey);
+        const map: DiaryEntryMap = {};
+        for (const row of rows) map[row.entry_date] = row;
+        setEntries(map);
+      } finally {
+        if (!opts.silent) setLoading(false);
+      }
+    },
+    [monthStartKey, monthEndKey]
+  );
 
   useEffect(() => {
     // `load` sets loading state before awaiting Supabase — that's the point
@@ -57,7 +66,7 @@ export default function MonthCalendar() {
       // refetch — no per-cell "just stamped" animation any more (see
       // DayCell: no hanko, no pop-in to play here either).
       if (dateKey < monthStartKey || dateKey > monthEndKey) return;
-      load();
+      load({ silent: true });
     });
   }, [load, monthStartKey, monthEndKey]);
 
@@ -71,7 +80,7 @@ export default function MonthCalendar() {
   const hasPendingEntry = Object.values(entries).some((e) => e.status === "pending");
   useEffect(() => {
     if (!hasPendingEntry) return;
-    const interval = setInterval(load, 4000);
+    const interval = setInterval(() => load({ silent: true }), 4000);
     return () => clearInterval(interval);
   }, [hasPendingEntry, load]);
 
