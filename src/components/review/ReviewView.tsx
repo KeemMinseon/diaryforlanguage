@@ -7,7 +7,7 @@ import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { deleteEntry, photoPublicUrl } from "@/lib/diary/client";
 import { applyCorrections } from "@/lib/review/highlight";
-import { formatDateStamp, parseDateKey } from "@/lib/utils/date";
+import { formatDateStamp } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 export default function ReviewView({
@@ -31,13 +31,6 @@ export default function ReviewView({
   monthTotal: number;
 }) {
   const router = useRouter();
-  // Fanned out by default whenever there's more than one — a pile that
-  // needs a tap before you even notice there's more than one stamp under
-  // it turned out to hide the very thing this feature was for. Starting
-  // open still leaves the tap (below) to collapse it back into a pile,
-  // for whenever that reads better (many stamps, say). See the header
-  // comment on `stamps` below for what each one is.
-  const [fanned, setFanned] = useState(entry.stamps.length > 1);
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -104,11 +97,6 @@ export default function ReviewView({
         ]
       : [];
 
-  const monthDayLabel = (() => {
-    const d = parseDateKey(entry.entry_date);
-    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
-  })();
-
   const wordChips: Reading[] = entry.readings.filter((r) => (r.meaning ?? "").trim());
 
   async function handleConfirmDelete() {
@@ -126,7 +114,7 @@ export default function ReviewView({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex items-center">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -137,54 +125,7 @@ export default function ReviewView({
           </UiIcon>
           캘린더
         </button>
-        <div className="flex items-center justify-end gap-3">
-          {!editing && !confirmingDelete && (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
-              >
-                수정
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(true)}
-                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
-              >
-                삭제
-              </button>
-            </>
-          )}
-        </div>
       </header>
-
-      {confirmingDelete && (
-        <div className="flex items-center justify-between rounded-xl bg-[var(--paper-raised)] px-4 py-3">
-          <p className="text-sm text-[var(--ink)]">
-            이 날짜의 일기를 정말 삭제할까요? 되돌릴 수 없어요.
-            {deleteError && <span className="ml-2 font-medium">{deleteError}</span>}
-          </p>
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              onClick={() => setConfirmingDelete(false)}
-              disabled={deleting}
-              className="rounded-full border border-[var(--paper-line)] px-4 py-1.5 text-xs text-[var(--ink-soft)] disabled:opacity-60"
-            >
-              취소
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-              className="rounded-full bg-[var(--cta)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
-            >
-              {deleting ? "삭제 중…" : "삭제"}
-            </button>
-          </div>
-        </div>
-      )}
 
       {editing ? (
         <EditEntry
@@ -206,62 +147,16 @@ export default function ReviewView({
         />
       ) : (
         <>
-          {/* Stamp thumbnail + date/title/streak/month-progress, all in
-              one header row — replaces the old centered date line + big
-              stamp stack sitting on its own. The stack/fan interaction
-              (tap to spread multiple sessions' stamps) is unchanged, just
-              smaller and living in this row instead of centered alone. */}
-          <div className="flex items-start gap-4">
-            {(() => {
-              const stampLayers = stamps.map((s, i) => {
-                // Collapsed: a slight cascading pile behind the front
-                // stamp — 0/0 for it, so a single stamp still lands
-                // exactly where it always has. The front one is always
-                // i = 0 (the day's first session), matching the calendar
-                // view (DayCell always shows stamps[0]) rather than
-                // whichever was written last. Fanned: spread evenly
-                // around the center, 부채꼴 (fan) style.
-                const mid = (stamps.length - 1) / 2;
-                const rotate = fanned ? (i - mid) * 16 : -i * 3;
-                const translateX = fanned ? (i - mid) * 58 : -i * 2;
-                return (
-                  <div
-                    key={s.session}
-                    className="absolute inset-0 transition-transform duration-300 ease-out"
-                    style={{
-                      transform: `translateX(${translateX}%) rotate(${rotate}deg)`,
-                      zIndex: stamps.length - 1 - i,
-                    }}
-                  >
-                    <DiaryStamp
-                      stampKind={s.stampKind}
-                      stampKey={s.stampKey as never}
-                      stampVariant={s.stampVariant}
-                      photoUrl={stampPhotoUrl(s)}
-                      className="absolute inset-0 h-full w-full drop-shadow-md"
-                    />
-                  </div>
-                );
-              });
-              const stackClassName = "relative w-20 shrink-0 aspect-[499.78/671.48]";
-              // A real <button> only when there's actually a stack to
-              // toggle — a lone stamp (the common case) stays a plain,
-              // non-interactive div, same as before this feature existed.
-              return stamps.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setFanned((f) => !f)}
-                  aria-label={fanned ? "우표 접기" : "우표 펼치기"}
-                  className={`${stackClassName} cursor-pointer appearance-none border-0 bg-transparent p-0`}
-                >
-                  {stampLayers}
-                </button>
-              ) : (
-                <div className={stackClassName}>{stampLayers}</div>
-              );
-            })()}
-
-            <div className="min-w-0 flex-1 pt-1">
+          {/* Text block on top, every session's own stamp laid out in a
+              plain row below it — replaces the old side-by-side thumbnail
+              + fanned pile. A single stamp is just a row of one; there's
+              no tap-to-expand any more since nothing is ever stacked/
+              hidden to begin with. Assumes a small handful of sessions
+              per day (equal `flex-1` division, no wrap) — this app has
+              never seen a day with enough "이어서 쓰기" sittings for that
+              to look cramped. */}
+          <div className="flex flex-col gap-3">
+            <div>
               <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
                 {formatDateStamp(entry.entry_date)}
               </p>
@@ -271,11 +166,21 @@ export default function ReviewView({
                 </h1>
               )}
               <p className="mt-1 text-sm text-[var(--ink-soft)]">
-                {monthDayLabel} 우표 · 연속 {streak}일
+                우표 {stamps.length}장 · 연속 {streak}일 · 이번 달 {monthFilled} / {monthTotal}
               </p>
-              <p className="mt-0.5 font-mono text-xs text-[var(--ink-tertiary)]">
-                이번 달 {monthFilled} / {monthTotal}
-              </p>
+            </div>
+            <div className="flex gap-2">
+              {stamps.map((s) => (
+                <div key={s.session} className="aspect-[499.78/671.48] flex-1">
+                  <DiaryStamp
+                    stampKind={s.stampKind}
+                    stampKey={s.stampKey as never}
+                    stampVariant={s.stampVariant}
+                    photoUrl={stampPhotoUrl(s)}
+                    className="h-full w-full drop-shadow-sm"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -356,6 +261,50 @@ export default function ReviewView({
               <hr className="border-t border-[var(--paper-line)]" />
               <p className="text-sm leading-relaxed text-[var(--ink)]">{entry.overall_comment}</p>
             </section>
+          )}
+
+          {confirmingDelete ? (
+            <div className="flex items-center justify-between rounded-xl bg-[var(--paper-raised)] px-4 py-3">
+              <p className="text-sm text-[var(--ink)]">
+                이 날짜의 일기를 정말 삭제할까요? 되돌릴 수 없어요.
+                {deleteError && <span className="ml-2 font-medium">{deleteError}</span>}
+              </p>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                  className="rounded-full border border-[var(--paper-line)] px-4 py-1.5 text-xs text-[var(--ink-soft)] disabled:opacity-60"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="rounded-full bg-[var(--cta)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                >
+                  {deleting ? "삭제 중…" : "삭제"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+              >
+                수정
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingDelete(true)}
+                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+              >
+                삭제
+              </button>
+            </div>
           )}
 
           {(isReviewed || isPending || isFailed) && (
