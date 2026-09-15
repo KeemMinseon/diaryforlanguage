@@ -254,7 +254,7 @@ export default function ReviewView({
                 ))}
               </div>
               {paragraphs.some((p) => p.translation) && (
-                <div className="flex flex-col gap-4">
+                <div className="mt-3 flex flex-col gap-4">
                   {paragraphs.map(
                     (p, pi) =>
                       p.translation && (
