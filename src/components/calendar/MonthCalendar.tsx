@@ -5,67 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import DayCell from "@/components/calendar/DayCell";
 import UiIcon from "@/components/icons/UiIcon";
-import FuriganaText from "@/components/review/FuriganaText";
 import { fetchMonthEntries } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
-import { wordKey } from "@/lib/words/collectWords";
 import { daysInMonth, parseDateKey, toDateKey, todayKey } from "@/lib/utils/date";
-import type { DiaryEntryMap, Reading } from "@/types/diary";
-
-interface MonthWordGroup {
-  entryDate: string;
-  /** The day's own vocabulary (읽는 법 + 뜻) — same source 단어장 itself
-   * reads from, just scoped to this one day instead of collapsed across
-   * the whole account. The same word turning up again on some other day
-   * this month isn't deduped away here — only within a single day — this
-   * list is "what came up that day", not a running once-per-month tally. */
-  vocab: Reading[];
-}
-
-/** A reading whose exact text never actually appears in what the learner
- * themselves wrote (`entry.content`) only ever got there through a
- * suggestion's corrected phrasing — a word the correction introduced,
- * not one the learner already used (and, in a very concrete sense,
- * therefore already knows) on their own. Readings the learner's own
- * writing already contains are filtered out of the month list below —
- * they're not what "새로 배운 단어" is about, and 단어장 (which shows
- * every word regardless, since that's meant to be the full running
- * list) is still the place for those. */
-function isFromSuggestionOnly(reading: Reading, content: string): boolean {
-  return !content.includes(reading.text);
-}
-
-/** This month's vocabulary, grouped by the day it was written, most
- * recent day first. This used to also show the entry's raw suggestion
- * phrases, but with a full month of entries the list got long fast (and
- * a corrected sentence isn't really a "word" to review) — narrowed down
- * to just 단어장's own source data, `readings`, grouped per-day instead
- * of collapsed across every entry ever written, and further narrowed to
- * words the learner didn't already know how to write themselves (see
- * `isFromSuggestionOnly`). */
-function monthWordsByDate(entries: DiaryEntryMap): MonthWordGroup[] {
-  const sortedEntries = Object.values(entries).sort((a, b) =>
-    a.entry_date < b.entry_date ? 1 : -1
-  );
-  const groups: MonthWordGroup[] = [];
-  for (const entry of sortedEntries) {
-    const seenVocab = new Set<string>();
-    const vocab: Reading[] = [];
-    for (const r of entry.readings) {
-      if (!r.text || !r.reading) continue;
-      if (!isFromSuggestionOnly(r, entry.content)) continue;
-      const key = wordKey(r.text, r.reading);
-      if (seenVocab.has(key)) continue;
-      seenVocab.add(key);
-      vocab.push(r);
-    }
-
-    if (vocab.length > 0) {
-      groups.push({ entryDate: entry.entry_date, vocab });
-    }
-  }
-  return groups;
-}
+import type { DiaryEntryMap } from "@/types/diary";
 
 function parseMonthParam(value: string | null): { year: number; month: number } {
   if (value && /^\d{4}-\d{2}$/.test(value)) {
@@ -138,7 +81,6 @@ export default function MonthCalendar() {
   const isCurrentMonthShown = year === now.getFullYear() && month === now.getMonth();
   const todayEntry = isCurrentMonthShown ? entries[today] : undefined;
   const filledCount = Object.keys(entries).length;
-  const monthWordGroups = monthWordsByDate(entries);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 py-6">
@@ -275,7 +217,7 @@ export default function MonthCalendar() {
           behaving like stretch on auto-sized row tracks) inflated the
           visual gap between rows far past the declared `gap` value. Now
           any leftover page height is just left for whatever comes after
-          the grid, e.g. the TODAY card / month's word list below.
+          the grid, e.g. the TODAY card below.
 
           6 columns, plain sequential 1..daysInMonth — not a weekday-
           aligned calendar (see daysInMonth's own doc comment) — so the
@@ -324,45 +266,6 @@ export default function MonthCalendar() {
             </p>
           )}
         </Link>
-      )}
-
-      {monthWordGroups.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <h2 className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink)]">
-            이번 달
-          </h2>
-          {monthWordGroups.map((group) => (
-            <div key={group.entryDate} className="flex flex-col gap-2">
-              <p className="text-xs text-[var(--ink-soft)]">
-                {parseDateKey(group.entryDate).toLocaleDateString("ko-KR", {
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-              {/* Horizontal scroll rather than a vertical stack — early on
-                  there are enough new words in one day's entry that
-                  stacking them made the month list's total height grow
-                  fast as the month fills in. */}
-              <div className="flex flex-row gap-2 overflow-x-auto pb-1">
-                {group.vocab.map((r) => (
-                  <span
-                    key={wordKey(r.text, r.reading)}
-                    className="flex shrink-0 flex-col gap-1 rounded-[10px] bg-[var(--paper-raised)] px-4 py-2"
-                  >
-                    <span className="font-[family-name:var(--font-diary)] text-[15px] font-medium whitespace-nowrap text-[var(--ink)]">
-                      <FuriganaText text={r.text} readings={[r]} />
-                    </span>
-                    {r.meaning && (
-                      <span className="text-[12px] whitespace-nowrap text-[var(--ink-soft)]">
-                        {r.meaning}
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
       )}
     </div>
   );

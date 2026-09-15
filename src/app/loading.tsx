@@ -1,10 +1,9 @@
 // Shaped like MonthCalendar itself — icon + 3-icon row header, counter +
 // month-nav row, the plain 6-column sequential day grid (no weekday row;
 // see daysInMonth's own doc comment for why this isn't a 7-column
-// calendar), the TODAY card, and the "이번 달" word list — rather than a
-// generic spinner, so arriving back at "/" doesn't flash an unrelated
-// placeholder, or a differently-shaped one, before the real calendar
-// takes over.
+// calendar), and the TODAY card — rather than a generic spinner, so
+// arriving back at "/" doesn't flash an unrelated placeholder, or a
+// differently-shaped one, before the real calendar takes over.
 export default function HomeLoading() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 animate-pulse flex-col gap-6 px-4 py-6">
@@ -43,22 +42,6 @@ export default function HomeLoading() {
       <div className="flex flex-col gap-2 rounded-2xl bg-[var(--paper-raised)] px-5 py-4">
         <div className="h-3 w-24 rounded-full bg-[var(--paper-line)]" />
         <div className="h-4 w-full rounded-full bg-[var(--paper-line)]" />
-      </div>
-
-      {/* "이번 달" vocab list below the grid — each day is a label plus a
-          horizontally-scrolling row of word chips (see MonthCalendar). */}
-      <div className="flex flex-col gap-4">
-        <div className="h-4 w-16 rounded-full bg-[var(--paper-line)]" />
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="flex flex-col gap-2">
-            <div className="h-3 w-16 rounded-full bg-[var(--paper-line)]" />
-            <div className="flex flex-row gap-2">
-              {Array.from({ length: 4 }).map((_, j) => (
-                <div key={j} className="h-14 w-20 shrink-0 rounded-[10px] bg-[var(--paper-raised)]" />
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
