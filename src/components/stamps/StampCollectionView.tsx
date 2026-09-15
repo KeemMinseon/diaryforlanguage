@@ -153,10 +153,18 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     // further to actually clear it, or it's left peeking out from behind
     // one edge. For each stamp, also compute how far it has to go along
     // its own outward direction before its box stops overlapping the
-    // hero's, and push by whichever is larger.
+    // hero's, and push by whichever is larger — but never further than
+    // its own section (data-stamp-section, one of the small per-month/
+    // per-category grids) can actually fit, or it'd spill past that
+    // section's own edge into a neighboring header or the next section
+    // down. Clearing the hero always loses to staying in bounds: a stamp
+    // that can't fully clear it just ends up partly behind it instead,
+    // which reads fine (it's faded and shrunk already) — visibly getting
+    // cut off at a section edge did not.
     const heroHalfW = heroWidth / 2;
     const heroHalfH = heroHeight / 2;
     const CLEAR_MARGIN = 16;
+    const SECTION_MARGIN = 4;
     const MAX_PUSH = 600;
 
     const offsets = new Map<string, [number, number]>();
@@ -164,8 +172,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       const otherKey = otherEl.dataset.stampKey!;
       if (otherKey === key) return;
       const r = otherEl.getBoundingClientRect();
-      const cx = r.left + r.width / 2 - vw / 2;
-      const cy = r.top + r.height / 2 - vh / 2;
+      const centerX = r.left + r.width / 2;
+      const centerY = r.top + r.height / 2;
+      const cx = centerX - vw / 2;
+      const cy = centerY - vh / 2;
       const len = Math.hypot(cx, cy) || 1;
       const ux = cx / len;
       const uy = cy / len;
@@ -175,7 +185,31 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       const tyNeeded =
         uy !== 0 ? Math.max(0, (heroHalfH + r.height / 2 + CLEAR_MARGIN - Math.abs(cy)) / Math.abs(uy)) : Infinity;
       const clearDistance = Math.min(txNeeded, tyNeeded, MAX_PUSH);
-      const distance = Math.max(PUSH_DISTANCE, clearDistance);
+      let distance = Math.max(PUSH_DISTANCE, clearDistance);
+
+      const section = otherEl.closest<HTMLElement>("[data-stamp-section]");
+      if (section) {
+        const s = section.getBoundingClientRect();
+        const halfW = (r.width * PUSH_SCALE) / 2;
+        const halfH = (r.height * PUSH_SCALE) / 2;
+        const maxTx =
+          ux !== 0
+            ? Math.max(
+                0,
+                (ux > 0 ? s.right - SECTION_MARGIN - halfW - centerX : centerX - (s.left + SECTION_MARGIN + halfW)) /
+                  Math.abs(ux)
+              )
+            : Infinity;
+        const maxTy =
+          uy !== 0
+            ? Math.max(
+                0,
+                (uy > 0 ? s.bottom - SECTION_MARGIN - halfH - centerY : centerY - (s.top + SECTION_MARGIN + halfH)) /
+                  Math.abs(uy)
+              )
+            : Infinity;
+        distance = Math.min(distance, maxTx, maxTy);
+      }
 
       offsets.set(otherKey, [ux * distance, uy * distance]);
     });
@@ -310,7 +344,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <span className="text-sm text-[var(--ink-soft)]">{group.items.length}장</span>
             </div>
             <hr className="border-t border-[var(--ink)]" />
-            <div className="grid grid-cols-4 gap-3 overflow-hidden">
+            <div data-stamp-section className="grid grid-cols-4 gap-3">
               {group.items.map((item) => {
                 const key = photoKey(item);
                 const stampEl = (
@@ -467,7 +501,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       a single copy doesn't already show. One of each kind
                       instead, most-recently-collected-first. */}
                   {collection.distinctKeywordStamps.length > 0 && (
-                    <div className="grid grid-cols-4 gap-3 overflow-hidden">
+                    <div data-stamp-section className="grid grid-cols-4 gap-3">
                       {collection.distinctKeywordStamps.map((stampKey) => {
                         const key = keywordKey(stampKey);
                         return (
@@ -510,7 +544,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                   <section key={group.label} className="flex flex-col gap-3">
                     <h2 className="text-sm font-medium text-[var(--ink)]">{group.label}</h2>
                     <hr className="border-t border-[var(--paper-line)]" />
-                    <div className="grid grid-cols-4 gap-3 overflow-hidden">
+                    <div data-stamp-section className="grid grid-cols-4 gap-3">
                       {group.items.map(({ stampKey }) => {
                         const key = keywordKey(stampKey);
                         return (
