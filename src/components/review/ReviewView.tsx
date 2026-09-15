@@ -186,7 +186,7 @@ export default function ReviewView({
 
           {paragraphs.length > 0 && (
             <div className="flex flex-col gap-3">
-              <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">FINAL</p>
+              <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">일기 내용</p>
               <hr className="border-t border-[var(--paper-line)]" />
               <div className="flex flex-col gap-4">
                 {paragraphs.map((p, pi) => (
