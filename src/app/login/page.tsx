@@ -123,7 +123,7 @@ export default function LoginPage() {
             <input
               type="email"
               required
-              placeholder="you@example.com"
+              placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]"

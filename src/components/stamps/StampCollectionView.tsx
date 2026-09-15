@@ -7,9 +7,21 @@ import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { fetchAllEntriesForStamps, photoPublicUrl } from "@/lib/diary/client";
 import { collectStamps, type StampCollection, type TimelineStampItem } from "@/lib/stamps/collectStamps";
+import type { StampId } from "@/lib/stamps/keywordMap";
 import { STAMP_LABELS } from "@/lib/stamps/stampLabels";
 
 type Tab = "all" | "photo" | "keyword";
+
+/** What the lightbox is currently showing — a specific session's own
+ * photo, or just a keyword's representative art (no particular day, so
+ * no date to show alongside it). */
+type OpenStamp = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword"; stampKey: StampId };
+
+/** Must match lightbox-*-out's own animation-duration in globals.css —
+ * closing waits this long before actually unmounting, so the exit
+ * animation gets to finish playing instead of the content just vanishing
+ * mid-transition. */
+const LIGHTBOX_CLOSE_MS = 160;
 
 const TAB_LABELS: Record<Tab, string> = { all: "전체", photo: "사진우표", keyword: "수집우표" };
 
@@ -58,7 +70,17 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   const push = useToast();
   const [collection, setCollection] = useState<StampCollection | null>(null);
   const [tab, setTab] = useState<Tab>("all");
-  const [openPhoto, setOpenPhoto] = useState<TimelineStampItem | null>(null);
+  const [openStamp, setOpenStamp] = useState<OpenStamp | null>(null);
+  const [closing, setClosing] = useState(false);
+
+  function closeLightbox() {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(() => {
+      setOpenStamp(null);
+      setClosing(false);
+    }, LIGHTBOX_CLOSE_MS);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -77,13 +99,14 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   }, [load]);
 
   useEffect(() => {
-    if (!openPhoto) return;
+    if (!openStamp) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpenPhoto(null);
+      if (e.key === "Escape") closeLightbox();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openPhoto]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- closeLightbox reads `closing` fresh via its own closure each call; re-subscribing on every `closing` toggle would just churn the listener for no behavioral difference.
+  }, [openStamp]);
 
   function renderTimeline(items: TimelineStampItem[], emptyText: string) {
     if (items.length === 0) {
@@ -130,14 +153,23 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       // of shrinking the box.
                       <button
                         type="button"
-                        onClick={() => setOpenPhoto(item)}
+                        onClick={() => setOpenStamp({ kind: "photo", item })}
                         aria-label="사진 우표 크게 보기"
                         className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
                       >
                         <div className="h-[85%] w-[85%]">{stampEl}</div>
                       </button>
                     ) : (
-                      <div className="aspect-[499.78/671.48]">{stampEl}</div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          item.stampKey && setOpenStamp({ kind: "keyword", stampKey: item.stampKey })
+                        }
+                        aria-label="우표 크게 보기"
+                        className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
+                      >
+                        {stampEl}
+                      </button>
                     )}
                     <span className="font-mono text-xs text-[var(--ink-soft)]">
                       {shortDate(item.entryDate)}
@@ -220,13 +252,19 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                   {collection.distinctKeywordStamps.length > 0 && (
                     <div className="grid grid-cols-4 gap-3">
                       {collection.distinctKeywordStamps.map((stampKey) => (
-                        <div key={stampKey} className="aspect-[499.78/671.48]">
+                        <button
+                          key={stampKey}
+                          type="button"
+                          onClick={() => setOpenStamp({ kind: "keyword", stampKey })}
+                          aria-label="우표 크게 보기"
+                          className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
+                        >
                           <DiaryStamp
                             stampKind="keyword"
                             stampKey={stampKey}
                             className="h-full w-full drop-shadow-sm"
                           />
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -250,13 +288,18 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     <div className="grid grid-cols-4 gap-3">
                       {group.items.map(({ stampKey }) => (
                         <div key={stampKey} className="flex flex-col items-center gap-1.5">
-                          <div className="aspect-[499.78/671.48] w-full">
+                          <button
+                            type="button"
+                            onClick={() => setOpenStamp({ kind: "keyword", stampKey })}
+                            aria-label="우표 크게 보기"
+                            className="aspect-[499.78/671.48] w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
+                          >
                             <DiaryStamp
                               stampKind="keyword"
                               stampKey={stampKey}
                               className="h-full w-full drop-shadow-sm"
                             />
-                          </div>
+                          </button>
                           <span className="text-xs font-medium text-[var(--ink)]">
                             {STAMP_LABELS[stampKey]}
                           </span>
@@ -272,15 +315,22 @@ export default function StampCollectionView({ userId }: { userId: string }) {
 
       {/* Lightbox: just a bigger version of the same stamp in place, no
           navigation to that day's entry — this screen is about the
-          stamps themselves, not a shortcut back into any one entry. */}
-      {openPhoto && openPhoto.photoPath && (
+          stamps themselves, not a shortcut back into any one entry. Both
+          the backdrop and the stamp itself get a real enter *and* exit
+          animation (see globals.css) — `closing` switches to the "-out"
+          class immediately, and closeLightbox delays the actual unmount
+          (LIGHTBOX_CLOSE_MS) until that animation's had time to play,
+          instead of the whole thing just vanishing mid-transition. */}
+      {openStamp && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-10"
-          onClick={() => setOpenPhoto(null)}
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-10 ${
+            closing ? "lightbox-backdrop-out" : "lightbox-backdrop-in"
+          }`}
+          onClick={closeLightbox}
         >
           <button
             type="button"
-            onClick={() => setOpenPhoto(null)}
+            onClick={closeLightbox}
             aria-label="닫기"
             className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white"
           >
@@ -288,13 +338,24 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               ✕
             </UiIcon>
           </button>
-          <div className="w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
-            <DiaryStamp
-              stampKind="photo"
-              stampKey={null}
-              photoUrl={photoPublicUrl(openPhoto.photoPath, openPhoto.createdAt)}
-              className="w-full drop-shadow-xl"
-            />
+          <div
+            className={`w-full max-w-xs aspect-[499.78/671.48] ${closing ? "lightbox-stamp-out" : "lightbox-stamp-in"}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {openStamp.kind === "photo" ? (
+              <DiaryStamp
+                stampKind="photo"
+                stampKey={null}
+                photoUrl={photoPublicUrl(openStamp.item.photoPath!, openStamp.item.createdAt)}
+                className="w-full drop-shadow-xl"
+              />
+            ) : (
+              <DiaryStamp
+                stampKind="keyword"
+                stampKey={openStamp.stampKey}
+                className="w-full drop-shadow-xl"
+              />
+            )}
           </div>
         </div>
       )}
