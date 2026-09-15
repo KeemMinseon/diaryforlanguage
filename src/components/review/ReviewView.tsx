@@ -350,6 +350,14 @@ export default function ReviewView({
             </section>
           )}
 
+          {isReviewed && entry.overall_comment && (
+            <section className="flex flex-col gap-3">
+              <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">오늘의 한마디</p>
+              <hr className="border-t border-[var(--paper-line)]" />
+              <p className="text-sm leading-relaxed text-[var(--ink)]">{entry.overall_comment}</p>
+            </section>
+          )}
+
           {(isReviewed || isPending || isFailed) && (
             <button
               type="button"
