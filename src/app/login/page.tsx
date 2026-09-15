@@ -89,13 +89,16 @@ export default function LoginPage() {
           )}
         </div>
         <h1 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold leading-tight text-[var(--ink)]">
-          빈 칸이 채워지는
+          매일 쓰는 일기,
           <br />
-          일본어 일기
+          하나씩 채워지는 우표.
         </h1>
         <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-          하루 세 문장을 쓰면 바로 고쳐 드립니다. 고친 일기를 저장한 날만 시트에 우표가 한 칸
-          채워집니다.
+          하루의 일기를 배우고 있는 언어로 써보세요.
+          <br />
+          자연스럽게 다듬고 저장하면
+          <br />
+          오늘의 이야기에 어울리는 우표가 채워져요.
         </p>
       </div>
 
