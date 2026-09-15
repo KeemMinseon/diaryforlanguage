@@ -41,14 +41,21 @@ export interface StampCollection {
   totalCount: number;
   photoCount: number;
   keywordCount: number;
-  /** Every stamp, keyword and photo alike — same order `entries` was given
-   * in (most-recent-entry-first, see fetchAllEntriesForStamps), multiple
-   * stamps on the same day keeping their session order within that day. */
-  allStamps: TimelineStampItem[];
-  /** Same order as `allStamps`, filtered to just the photo ones. */
+  /** Every photo stamp, most-recent-entry-first (see
+   * fetchAllEntriesForStamps), multiple photos on the same day keeping
+   * their session order within that day. Used by both the "전체" tab
+   * (its own dated timeline section) and the "사진우표" tab. */
   photoStamps: TimelineStampItem[];
+  /** Every distinct keyword ever collected, most-recently-collected-first,
+   * each appearing exactly once regardless of how many times it was
+   * actually picked — unlike a photo (always a different picture), the
+   * same keyword's stamp art is identical every time, so the "전체" tab
+   * shows this flat, dateless gallery instead of one entry per
+   * occurrence (which just repeated the same image over and over). */
+  distinctKeywordStamps: StampId[];
   /** Every keyword-stamp category (see KEYWORD_CATEGORIES) that has at
-   * least one collected keyword in it, in that same category order. */
+   * least one collected keyword in it, in that same category order —
+   * for the "수집우표" tab, which groups by category instead. */
   keywordCategories: KeywordCategoryGroup[];
 }
 
@@ -78,36 +85,38 @@ function sortMostPickedFirst(counts: KeywordStampCount[]): KeywordStampCount[] {
 }
 
 /** `entries` should already be sorted most-recent-first (see
- * fetchAllEntriesForStamps) so `allStamps`/`photoStamps` come out in that
- * same order without a separate sort here. */
+ * fetchAllEntriesForStamps) so `photoStamps`/`distinctKeywordStamps` come
+ * out in that same recency order without a separate sort here. */
 export function collectStamps(entries: StampSourceEntry[]): StampCollection {
-  const allStamps: TimelineStampItem[] = [];
+  const photoStamps: TimelineStampItem[] = [];
   const countByKey = new Map<string, number>();
+  const distinctKeywordStamps: StampId[] = [];
 
   for (const entry of entries) {
     for (const s of resolveStamps(entry)) {
-      // A photo session with no actual photo path is nothing to show —
-      // dropped here rather than counted or displayed as a blank stamp.
-      if (s.stampKind === "photo" && !s.photoPath) continue;
-
-      allStamps.push({
-        stampKind: s.stampKind,
-        stampKey: s.stampKey as StampId | null,
-        stampVariant: s.stampVariant,
-        photoPath: s.photoPath,
-        entryDate: entry.entry_date,
-        session: s.session,
-        createdAt: s.createdAt,
-      });
-
-      if (s.stampKind === "keyword") {
-        const key = s.stampKey ?? "default";
-        countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
+      if (s.stampKind === "photo") {
+        // A photo session with no actual photo path is nothing to show —
+        // dropped here rather than counted or displayed as a blank stamp.
+        if (!s.photoPath) continue;
+        photoStamps.push({
+          stampKind: "photo",
+          stampKey: null,
+          stampVariant: s.stampVariant,
+          photoPath: s.photoPath,
+          entryDate: entry.entry_date,
+          session: s.session,
+          createdAt: s.createdAt,
+        });
+        continue;
       }
+
+      const key = (s.stampKey ?? "default") as StampId;
+      if (!countByKey.has(key)) distinctKeywordStamps.push(key);
+      countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
     }
   }
 
-  const photoStamps = allStamps.filter((s) => s.stampKind === "photo");
+  const keywordCount = [...countByKey.values()].reduce((sum, n) => sum + n, 0);
 
   const keywordCategories: KeywordCategoryGroup[] = KEYWORD_CATEGORIES.map((category) => ({
     label: category.label,
@@ -119,11 +128,11 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
   })).filter((group) => group.items.length > 0);
 
   return {
-    totalCount: allStamps.length,
+    totalCount: photoStamps.length + keywordCount,
     photoCount: photoStamps.length,
-    keywordCount: allStamps.length - photoStamps.length,
-    allStamps,
+    keywordCount,
     photoStamps,
+    distinctKeywordStamps,
     keywordCategories,
   };
 }

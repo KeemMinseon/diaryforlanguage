@@ -46,11 +46,14 @@ function shortDate(entryDate: string): string {
  * every entry — read straight from `stamps` (falling back to the legacy
  * top-level columns for an older entry — see collectStamps), so a day
  * with several "이어서 쓰기" sittings contributes one of each to the
- * count, not just its front one. Three tabs: "전체"/"사진우표" are the
- * same day-by-day timeline (one box per stamp, newest month first),
- * "수집우표" instead groups keyword stamps by category (음식/날씨/동물
- * etc. — see KEYWORD_CATEGORIES) since a flat list of every kind wasn't
- * browsable once there were more than a handful. */
+ * count, not just its front one. Three tabs: "사진우표" is a day-by-day
+ * timeline (one box per photo, newest month first, dated); "수집우표"
+ * groups keyword stamps by category (음식/날씨/동물 etc. — see
+ * KEYWORD_CATEGORIES); "전체" is both at once — that same photo timeline
+ * on top, then a flat, dateless gallery of every distinct keyword
+ * collected below it (one of each kind, not one per occurrence — a
+ * keyword's own stamp art never changes, so repeating it added nothing a
+ * photo's timeline's repetition of an always-different picture does). */
 export default function StampCollectionView({ userId }: { userId: string }) {
   const push = useToast();
   const [collection, setCollection] = useState<StampCollection | null>(null);
@@ -115,13 +118,23 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                 return (
                   <div key={`${item.entryDate}-${item.session}`} className="flex flex-col gap-1.5">
                     {item.stampKind === "photo" ? (
+                      // A photo stamp's own scalloped frame (see StampFrame)
+                      // fills its box edge to edge with no built-in margin,
+                      // unlike the prepared keyword artwork (see
+                      // KeywordIcon), which already has some breathing room
+                      // baked into the image itself — at the same box size
+                      // the photo one reads as noticeably bigger. Scaled
+                      // down to 85% and centered in the same box (so the
+                      // grid cell itself, and the date label under it,
+                      // stay the same size as a keyword stamp's) instead
+                      // of shrinking the box.
                       <button
                         type="button"
                         onClick={() => setOpenPhoto(item)}
                         aria-label="사진 우표 크게 보기"
-                        className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
+                        className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
                       >
-                        {stampEl}
+                        <div className="h-[85%] w-[85%]">{stampEl}</div>
                       </button>
                     ) : (
                       <div className="aspect-[499.78/671.48]">{stampEl}</div>
@@ -189,8 +202,38 @@ export default function StampCollectionView({ userId }: { userId: string }) {
             ))}
           </div>
 
-          {tab === "all" &&
-            renderTimeline(collection.allStamps, "아직 받은 우표가 없어요. 일기를 쓰면 여기에 쌓여요.")}
+          {tab === "all" && (
+            <>
+              {collection.photoStamps.length === 0 && collection.distinctKeywordStamps.length === 0 ? (
+                <p className="text-sm text-[var(--ink-soft)]">
+                  아직 받은 우표가 없어요. 일기를 쓰면 여기에 쌓여요.
+                </p>
+              ) : (
+                <>
+                  {collection.photoStamps.length > 0 && renderTimeline(collection.photoStamps, "")}
+                  {/* Flat, dateless gallery — unlike a photo (always a
+                      different picture), the same keyword's stamp art is
+                      identical every time it's picked, so listing one row
+                      per occurrence (the same icon repeated) added nothing
+                      a single copy doesn't already show. One of each kind
+                      instead, most-recently-collected-first. */}
+                  {collection.distinctKeywordStamps.length > 0 && (
+                    <div className="grid grid-cols-4 gap-3">
+                      {collection.distinctKeywordStamps.map((stampKey) => (
+                        <div key={stampKey} className="aspect-[499.78/671.48]">
+                          <DiaryStamp
+                            stampKind="keyword"
+                            stampKey={stampKey}
+                            className="h-full w-full drop-shadow-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
           {tab === "photo" &&
             renderTimeline(collection.photoStamps, "아직 사진으로 찍은 우표가 없어요.")}
           {tab === "keyword" &&
