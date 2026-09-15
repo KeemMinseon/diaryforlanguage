@@ -70,24 +70,29 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-10">
+    <main className="flex flex-1 flex-col items-center justify-evenly px-6 py-6">
       {/* Decorative preview of the calendar "sheet" this app fills in one
           stamp at a time (see MonthCalendar/DayCell) — purely a splash
           visual, not read from any real data, so the last box is always
-          left empty to read as "today's still waiting to be written". */}
+          left empty to read as "today's still waiting to be written".
+          Its own flex item (not grouped with the text below) so
+          `justify-evenly` on <main> spreads top padding / grid / text /
+          form into even gaps that fill the screen, instead of clumping
+          together in the middle with all the leftover space dumped below
+          the form — the layout this replaced. */}
+      <div className="grid w-3/5 max-w-sm grid-cols-3 gap-1.5">
+        {STAMP_PREVIEW_TONES.map((tone, i) =>
+          tone ? (
+            <div key={i} className={`aspect-[4/5] ${tone}`} />
+          ) : (
+            <div
+              key={i}
+              className="aspect-[4/5] border border-[var(--paper-line)] bg-[var(--paper-raised)]"
+            />
+          )
+        )}
+      </div>
       <div className="w-full max-w-sm">
-        <div className="mb-8 grid w-3/5 grid-cols-3 gap-1.5">
-          {STAMP_PREVIEW_TONES.map((tone, i) =>
-            tone ? (
-              <div key={i} className={`aspect-[4/5] ${tone}`} />
-            ) : (
-              <div
-                key={i}
-                className="aspect-[4/5] border border-[var(--paper-line)] bg-[var(--paper-raised)]"
-              />
-            )
-          )}
-        </div>
         <h1 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold leading-tight text-[var(--ink)]">
           매일 쓰는 일기,
           <br />
