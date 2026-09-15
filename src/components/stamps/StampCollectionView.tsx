@@ -26,7 +26,7 @@ type FocusTarget = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword
 const PUSH_DISTANCE = 56;
 /** How small the pushed-out stamps shrink to, and how much they fade —
  * both just enough to read as "stepped back", not gone. */
-const PUSH_SCALE = 0.85;
+const PUSH_SCALE = 0.65;
 const PUSH_OPACITY = 0.35;
 
 /** Must match the hero's own transition-duration below — closeLightbox
@@ -329,7 +329,19 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">
+    <div
+      className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6"
+      // Closes on a click that lands on empty space (page background, grid
+      // gaps) while something's focused — anywhere the click bubbles up
+      // without passing through a button first. Clicking a *different*
+      // stamp still switches focus instead of closing, since that click
+      // does pass through a button (its own onClick handles it, and the
+      // hero itself stops propagation so clicking the enlarged stamp
+      // doesn't count as "empty space" either).
+      onClick={(e) => {
+        if (focus && !(e.target as HTMLElement).closest("button")) closeLightbox();
+      }}
+    >
       <Link
         href="/"
         className="flex w-fit items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
@@ -489,6 +501,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
           </button>
           <div
             className="fixed z-50 drop-shadow-xl"
+            onClick={(e) => e.stopPropagation()}
             style={{
               left: focus.hero.left,
               top: focus.hero.top,
