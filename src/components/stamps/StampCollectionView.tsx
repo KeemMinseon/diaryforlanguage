@@ -148,6 +148,17 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     const dy = source.top + source.height / 2 - (heroTop + heroHeight / 2);
     const scale = source.width / heroWidth;
 
+    // A fixed push distance isn't enough on its own — a stamp that starts
+    // right where the (much bigger) hero ends up needs to travel a lot
+    // further to actually clear it, or it's left peeking out from behind
+    // one edge. For each stamp, also compute how far it has to go along
+    // its own outward direction before its box stops overlapping the
+    // hero's, and push by whichever is larger.
+    const heroHalfW = heroWidth / 2;
+    const heroHalfH = heroHeight / 2;
+    const CLEAR_MARGIN = 16;
+    const MAX_PUSH = 600;
+
     const offsets = new Map<string, [number, number]>();
     document.querySelectorAll<HTMLElement>("[data-stamp-key]").forEach((otherEl) => {
       const otherKey = otherEl.dataset.stampKey!;
@@ -156,7 +167,17 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       const cx = r.left + r.width / 2 - vw / 2;
       const cy = r.top + r.height / 2 - vh / 2;
       const len = Math.hypot(cx, cy) || 1;
-      offsets.set(otherKey, [(cx / len) * PUSH_DISTANCE, (cy / len) * PUSH_DISTANCE]);
+      const ux = cx / len;
+      const uy = cy / len;
+
+      const txNeeded =
+        ux !== 0 ? Math.max(0, (heroHalfW + r.width / 2 + CLEAR_MARGIN - Math.abs(cx)) / Math.abs(ux)) : Infinity;
+      const tyNeeded =
+        uy !== 0 ? Math.max(0, (heroHalfH + r.height / 2 + CLEAR_MARGIN - Math.abs(cy)) / Math.abs(uy)) : Infinity;
+      const clearDistance = Math.min(txNeeded, tyNeeded, MAX_PUSH);
+      const distance = Math.max(PUSH_DISTANCE, clearDistance);
+
+      offsets.set(otherKey, [ux * distance, uy * distance]);
     });
     setPushOffsets(offsets);
 
@@ -321,7 +342,12 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       <button
                         data-stamp-key={key}
                         type="button"
-                        onClick={(e) =>
+                        onClick={(e) => {
+                          // While something's already focused, any click
+                          // out here — this stamp included — just closes
+                          // it (see the container's own onClick below);
+                          // it doesn't jump straight to a different stamp.
+                          if (focus) return;
                           // The hero shows the photo at full size (no 85%
                           // inset), so the FLIP source rect has to be the
                           // *inner* div actually holding the visible
@@ -329,8 +355,8 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                           // otherwise the hero starts ~15% too big/
                           // off-center relative to what was really on
                           // screen, popping visibly at the very first frame.
-                          openLightbox(key, { kind: "photo", item }, e.currentTarget.firstElementChild as HTMLElement)
-                        }
+                          openLightbox(key, { kind: "photo", item }, e.currentTarget.firstElementChild as HTMLElement);
+                        }}
                         style={stampButtonStyle(key)}
                         aria-label="사진 우표 크게 보기"
                         className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
@@ -341,9 +367,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       <button
                         data-stamp-key={key}
                         type="button"
-                        onClick={(e) =>
-                          item.stampKey && openLightbox(key, { kind: "keyword", stampKey: item.stampKey }, e.currentTarget)
-                        }
+                        onClick={(e) => {
+                          if (focus) return;
+                          if (item.stampKey) openLightbox(key, { kind: "keyword", stampKey: item.stampKey }, e.currentTarget);
+                        }}
                         style={stampButtonStyle(key)}
                         aria-label="우표 크게 보기"
                         className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
@@ -367,15 +394,13 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   return (
     <div
       className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6"
-      // Closes on a click that lands on empty space (page background, grid
-      // gaps) while something's focused — anywhere the click bubbles up
-      // without passing through a button first. Clicking a *different*
-      // stamp still switches focus instead of closing, since that click
-      // does pass through a button (its own onClick handles it, and the
-      // hero itself stops propagation so clicking the enlarged stamp
-      // doesn't count as "empty space" either).
-      onClick={(e) => {
-        if (focus && !(e.target as HTMLElement).closest("button")) closeLightbox();
+      // Anything outside the enlarged stamp is effectively a transparent
+      // dim — clicking it (empty space, or any other stamp, which the
+      // `if (focus) return;` guard on each stamp button's own onClick
+      // leaves unhandled) just closes. Only the hero itself is excluded,
+      // via its own stopPropagation.
+      onClick={() => {
+        if (focus) closeLightbox();
       }}
     >
       <Link
@@ -450,7 +475,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                             key={stampKey}
                             data-stamp-key={key}
                             type="button"
-                            onClick={(e) => openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget)}
+                            onClick={(e) => {
+                              if (focus) return;
+                              openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget);
+                            }}
                             style={stampButtonStyle(key)}
                             aria-label="우표 크게 보기"
                             className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
@@ -490,7 +518,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                             <button
                               data-stamp-key={key}
                               type="button"
-                              onClick={(e) => openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget)}
+                              onClick={(e) => {
+                              if (focus) return;
+                              openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget);
+                            }}
                               style={stampButtonStyle(key)}
                               aria-label="우표 크게 보기"
                               className="aspect-[499.78/671.48] w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
