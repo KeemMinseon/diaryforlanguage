@@ -1,4 +1,5 @@
 import type { WordSourceEntry } from "@/lib/diary/client";
+import { isUncertainMeaning } from "@/lib/review/readingMeaning";
 import type { ReadingKind, WordProgress } from "@/types/diary";
 
 /** One reading (a kanji compound or katakana word) collapsed across every
@@ -45,6 +46,12 @@ export function collectWords(
   for (const entry of entries) {
     for (const r of entry.readings) {
       if (!r.text || !r.reading) continue;
+      // Defense-in-depth against an entry saved before the review API
+      // route started filtering these itself (see isUncertainMeaning's own
+      // doc comment) — a word list should read like a dictionary, not
+      // surface the model's own uncertainty about whether a reading was
+      // even a real word.
+      if (r.meaning && isUncertainMeaning(r.meaning)) continue;
       const key = wordKey(r.text, r.reading);
       const existing = byKey.get(key);
       if (existing) {

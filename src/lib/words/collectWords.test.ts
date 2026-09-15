@@ -104,6 +104,27 @@ describe("collectWords", () => {
     expect(withoutMeaning[0].meaning).toBe("");
   });
 
+  // The review API is supposed to filter these out before they're ever
+  // saved (see review-paragraph/route.ts + isUncertainMeaning), but this
+  // is the fallback for anything saved before that existed — a word list
+  // should read like a dictionary, not surface the model's own hedge
+  // about whether a reading was even a real word.
+  it("excludes a reading whose meaning is a hedge about its own uncertainty", () => {
+    const words = collectWords(
+      [
+        entry({
+          readings: [
+            { text: "縦貫制限", reading: "じゅうかんせいげん", kind: "kanji", meaning: "종관 제한(오타로 추정)" },
+            { text: "会", reading: "あ", kind: "kanji", meaning: "만나다" },
+          ],
+        }),
+      ],
+      []
+    );
+    expect(words).toHaveLength(1);
+    expect(words[0].text).toBe("会");
+  });
+
   it("skips a malformed reading missing text or reading", () => {
     const words = collectWords(
       [

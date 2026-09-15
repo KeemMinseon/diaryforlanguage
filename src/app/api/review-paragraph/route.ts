@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { PARAGRAPH_REVIEW_SYSTEM_PROMPT, buildParagraphUserMessage } from "@/lib/review/paragraphPrompt";
+import { isUncertainMeaning } from "@/lib/review/readingMeaning";
 import type { Reading, Suggestion } from "@/types/diary";
 
 export const runtime = "nodejs";
@@ -60,7 +61,10 @@ const TOOL: Anthropic.Tool = {
             kind: { type: "string", enum: ["kanji", "katakana"] },
             meaning: {
               type: "string",
-              description: "이 단어의 한국어 뜻. 짧게 (1~3단어), 문맥에 맞는 뜻 하나만.",
+              description:
+                "이 단어의 한국어 뜻. 짧게 (1~3단어), 문맥에 맞는 뜻 하나만. 사전 뜻풀이처럼 담백하게 — " +
+                "'(오타로 추정)' 같은 불확실성/메타 코멘트는 절대 넣지 말 것. 표기 자체가 오타/오변환으로 " +
+                "보여 뜻을 확신할 수 없다면, 그 항목은 통째로 readings 배열에서 빼고 제출하지 말 것.",
             },
           },
           required: ["text", "reading", "kind", "meaning"],
@@ -119,7 +123,15 @@ function sanitizeReadings(raw: unknown, scanText: string): Reading[] {
         scanText.includes((r as Reading).text) &&
         ((r as Reading).kind === "kanji"
           ? KANJI_ONLY_RE.test((r as Reading).text)
-          : KATAKANA_ONLY_RE.test((r as Reading).text))
+          : KATAKANA_ONLY_RE.test((r as Reading).text)) &&
+        // Belt-and-suspenders on top of the prompt's own instruction not to
+        // hedge — a reading the model itself wasn't confident about (e.g.
+        // "(오타로 추정)" for a run it suspected was a typo) shouldn't be
+        // saved at all, not just have its meaning cleaned up. See
+        // isUncertainMeaning's own doc comment.
+        !isUncertainMeaning(
+          typeof (r as Reading).meaning === "string" ? ((r as Reading).meaning as string) : ""
+        )
     )
     .map((r) => ({
       text: r.text,
@@ -191,7 +203,9 @@ const MISSING_READINGS_TOOL: Anthropic.Tool = {
             reading: { type: "string", description: "한자는 히라가나, 가타카나는 로마자." },
             meaning: {
               type: "string",
-              description: "이 단어의 한국어 뜻. 짧게 (1~3단어), 문맥에 맞는 뜻 하나만.",
+              description:
+                "이 단어의 한국어 뜻. 짧게 (1~3단어), 문맥에 맞는 뜻 하나만. 사전 뜻풀이처럼 담백하게 — " +
+                "불확실성/메타 코멘트는 절대 넣지 말 것.",
             },
           },
           required: ["text", "reading", "meaning"],
@@ -219,7 +233,7 @@ async function fetchMissingReadings(
     model: MODEL,
     max_tokens: 500,
     system:
-      "당신은 일본어 첨삭 선생님입니다. 주어진 목록에 있는 한자/가타카나 표기 전부에 대해 정확한 읽기와 한국어 뜻을 답하세요. 한자는 히라가나, 가타카나는 로마자로 읽기를 답하세요. 뜻은 짧게 (1~3단어), 문맥에 맞는 뜻 하나만. 목록에 없는 항목은 만들지 말고, 목록에 있는 건 하나도 빠짐없이 포함하세요. \"text\"는 입력받은 표기를 절대 바꾸지 말고 그대로 돌려주세요.",
+      "당신은 일본어 첨삭 선생님입니다. 주어진 목록에 있는 한자/가타카나 표기 전부에 대해 정확한 읽기와 한국어 뜻을 답하세요. 한자는 히라가나, 가타카나는 로마자로 읽기를 답하세요. 뜻은 짧게 (1~3단어), 문맥에 맞는 뜻 하나만 — 사전 뜻풀이처럼 담백하게 적고, 불확실성/메타 코멘트('추정' 등)는 절대 넣지 마세요. 목록에 없는 항목은 만들지 말고, 목록에 있는 건 하나도 빠짐없이 포함하세요. \"text\"는 입력받은 표기를 절대 바꾸지 말고 그대로 돌려주세요.",
     messages: [
       {
         role: "user",
@@ -247,7 +261,14 @@ async function fetchMissingReadings(
         typeof r === "object" &&
         typeof (r as { text?: unknown }).text === "string" &&
         typeof (r as { reading?: unknown }).reading === "string" &&
-        kindByText.has((r as { text: string }).text)
+        kindByText.has((r as { text: string }).text) &&
+        // Same hedge check as sanitizeReadings above — see
+        // isUncertainMeaning's own doc comment.
+        !isUncertainMeaning(
+          typeof (r as { meaning?: unknown }).meaning === "string"
+            ? ((r as { meaning?: unknown }).meaning as string)
+            : ""
+        )
     )
     .map((r) => ({
       text: r.text,
