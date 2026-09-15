@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
@@ -171,16 +171,35 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     setPhase(prefersReducedMotion() ? "open" : "enter");
   }
 
+  // The timer id for closeLightbox's safety-net timeout — only ever read
+  // inside that function and finishClosing, never during render, so a
+  // plain ref (not state) is fine here.
+  const closeTimeoutRef = useRef<number | null>(null);
+
+  function finishClosing() {
+    if (closeTimeoutRef.current !== null) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setFocus(null);
+    setPhase("enter");
+  }
+
   function closeLightbox() {
     if (!focus || phase === "closing") return;
     setPhase("closing");
-    setTimeout(
-      () => {
-        setFocus(null);
-        setPhase("enter");
-      },
-      prefersReducedMotion() ? 0 : FLIP_DURATION_MS
-    );
+    if (prefersReducedMotion()) {
+      finishClosing();
+      return;
+    }
+    // Safety net only — the real trigger is the hero's own onTransitionEnd
+    // below. A fixed timer here drifts from the CSS transition's actual
+    // completion (setTimeout has no idea how long the browser really took
+    // to finish animating), which showed up as a blank flash right at the
+    // end: the hero could disappear a beat before it had visually finished
+    // shrinking back, or the original stamp could stay hidden a beat after
+    // it had. This only covers the rare case transitionend never fires.
+    closeTimeoutRef.current = window.setTimeout(finishClosing, FLIP_DURATION_MS + 150);
   }
 
   // "enter" paints the hero already sitting exactly over the clicked
@@ -519,6 +538,11 @@ export default function StampCollectionView({ userId }: { userId: string }) {
           <div
             className="fixed z-50 drop-shadow-xl"
             onClick={(e) => e.stopPropagation()}
+            // The real "closing is done" signal — see closeLightbox's own
+            // comment on why a timer alone isn't enough.
+            onTransitionEnd={(e) => {
+              if (e.propertyName === "transform" && phase === "closing") finishClosing();
+            }}
             style={{
               left: focus.hero.left,
               top: focus.hero.top,
