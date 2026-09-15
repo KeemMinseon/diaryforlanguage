@@ -1,6 +1,8 @@
 import type { StampSourceEntry } from "@/lib/diary/client";
-import type { StampId } from "@/lib/stamps/keywordMap";
+import { FOOD_STAMP_IDS, type StampId } from "@/lib/stamps/keywordMap";
 import type { SessionStamp } from "@/types/diary";
+
+const FOOD_STAMP_ID_SET = new Set<string>(FOOD_STAMP_IDS);
 
 /** One keyword stamp id and how many sessions (across every entry) it was
  * actually picked for. Only ids that appeared at least once — see
@@ -8,6 +10,11 @@ import type { SessionStamp } from "@/types/diary";
 export interface KeywordStampCount {
   stampKey: StampId;
   count: number;
+  /** Only set on the single merged "food" row (see `collectStamps`'s own
+   * comment) — how many *different* food-category keywords have shown up
+   * at least once, not a raw occurrence tally (that's what `count` is,
+   * summed across every one of them). Undefined for every other row. */
+  distinctKinds?: number;
 }
 
 /** One photo attached to some session's stamp, for the 우표 모아보기
@@ -82,9 +89,31 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
     }
   }
 
-  const keywordCounts = Array.from(countByKey.entries())
-    .map(([stampKey, count]) => ({ stampKey: stampKey as StampId, count }))
-    .sort((a, b) => b.count - a.count);
+  // Every food-category keyword (see FOOD_STAMP_IDS) collapses into one
+  // "food" row — almost every entry mentions eating something in passing
+  // (see keywordMap.ts's own "음식" tier comment), so this ranking used to
+  // be dominated by a long tail of small per-dish counts that didn't say
+  // much on their own. What's actually worth showing is variety, not a raw
+  // tally — this row's `count` still adds up every food keyword's own
+  // occurrences (for sorting purposes, same as any other row), but its
+  // displayed number (`distinctKinds`, set only here) is how many
+  // *different* food keywords have shown up at least once instead.
+  let foodTotal = 0;
+  let foodKinds = 0;
+  const keywordCounts: KeywordStampCount[] = [];
+  for (const [key, count] of countByKey) {
+    if (FOOD_STAMP_ID_SET.has(key)) {
+      foodTotal += count;
+      foodKinds += 1;
+      continue;
+    }
+    keywordCounts.push({ stampKey: key as StampId, count });
+  }
+  if (foodKinds > 0) {
+    keywordCounts.push({ stampKey: "food", count: foodTotal, distinctKinds: foodKinds });
+  }
+
+  keywordCounts.sort((a, b) => b.count - a.count);
 
   return { keywordCounts, photoStamps };
 }

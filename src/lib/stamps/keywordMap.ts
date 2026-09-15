@@ -176,6 +176,37 @@ export const STAMP_IDS = [
 
 export type StampId = (typeof STAMP_IDS)[number];
 
+/** Every keyword id in KEYWORD_RULES' own "── 음식 (food) ──" tier below —
+ * kept as an explicit, exported list (rather than derived from that
+ * comment, which isn't a real data structure) so 우표 모음 (see
+ * collectStamps.ts) can merge them into one "how many different kinds"
+ * summary instead of a long tail of individual small counts. Keep this in
+ * sync with that tier if a food keyword is ever added, renamed, or moved
+ * out of it.
+ * FOOD_STAMP_IDS 값을 바꿀 때 아래 KEYWORD_RULES의 "음식" tier도 함께 확인. */
+export const FOOD_STAMP_IDS: StampId[] = [
+  "breakfast",
+  "lunch",
+  "dinner",
+  "kfood",
+  "hamburger",
+  "pizza",
+  "sushi",
+  "salad",
+  "friedchicken",
+  "icecream",
+  "bread",
+  "cake",
+  "dessert",
+  "snack",
+  "tea",
+  "wine",
+  "beer",
+  "food",
+  "coffee",
+  "cafe",
+];
+
 type Locale = "ja";
 
 // Ordered: earlier categories win when multiple keywords match in the same

@@ -7,7 +7,7 @@ function entry(over: Partial<StampSourceEntry>): StampSourceEntry {
     entry_date: "2026-09-01",
     stamps: [],
     stamp_kind: "keyword",
-    stamp_key: "coffee",
+    stamp_key: "movie",
     photo_path: null,
     ...over,
   };
@@ -18,26 +18,26 @@ describe("collectStamps", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
-    expect(keywordCounts).toEqual([{ stampKey: "coffee", count: 1 }]);
+    expect(keywordCounts).toEqual([{ stampKey: "movie", count: 1 }]);
   });
 
   it("counts every session's own stamp, not just one per entry", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
-          { session: 1, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 1, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
     expect(keywordCounts).toEqual(
       expect.arrayContaining([
-        { stampKey: "coffee", count: 1 },
         { stampKey: "movie", count: 1 },
+        { stampKey: "cat", count: 1 },
       ])
     );
   });
@@ -46,24 +46,24 @@ describe("collectStamps", () => {
     const { keywordCounts } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
       entry({
         entry_date: "2026-09-02",
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
       entry({
         entry_date: "2026-09-03",
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
-    expect(keywordCounts[0]).toEqual({ stampKey: "movie", count: 2 });
-    expect(keywordCounts[1]).toEqual({ stampKey: "coffee", count: 1 });
+    expect(keywordCounts[0]).toEqual({ stampKey: "cat", count: 2 });
+    expect(keywordCounts[1]).toEqual({ stampKey: "movie", count: 1 });
   });
 
   it("falls back to the legacy top-level columns for an entry with no stamps array", () => {
@@ -115,5 +115,79 @@ describe("collectStamps", () => {
       }),
     ]);
     expect(keywordCounts).toEqual([{ stampKey: "default", count: 1 }]);
+  });
+
+  // Almost every entry mentions eating something in passing (see
+  // keywordMap.ts's own "음식" tier comment), so this ranking used to be
+  // dominated by a long tail of individually small per-dish counts —
+  // merged into one "food" row showing variety instead (see collectStamps'
+  // own comment).
+  describe("food keywords", () => {
+    it("merges several different food keywords into one 'food' row", () => {
+      const { keywordCounts } = collectStamps([
+        entry({
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-02",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-03",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "pizza", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+      ]);
+      expect(keywordCounts).toEqual([{ stampKey: "food", count: 3, distinctKinds: 3 }]);
+    });
+
+    it("keeps distinctKinds at 1 when the same food keyword repeats, even though count sums the occurrences", () => {
+      const { keywordCounts } = collectStamps([
+        entry({
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-02",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+      ]);
+      expect(keywordCounts).toEqual([{ stampKey: "food", count: 2, distinctKinds: 1 }]);
+    });
+
+    it("does not merge non-food keywords, and sorts the merged food row by its own summed count", () => {
+      const { keywordCounts } = collectStamps([
+        entry({
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-02",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-03",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+      ]);
+      // 2 food occurrences (sushi + coffee, merged) outrank cat's 1.
+      expect(keywordCounts).toEqual([
+        { stampKey: "food", count: 2, distinctKinds: 2 },
+        { stampKey: "cat", count: 1 },
+      ]);
+    });
   });
 });

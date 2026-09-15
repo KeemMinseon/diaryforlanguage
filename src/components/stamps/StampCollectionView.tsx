@@ -75,7 +75,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               </p>
             ) : (
               <div className="grid grid-cols-4 gap-x-5 gap-y-6">
-                {collection.keywordCounts.map(({ stampKey, count }) => (
+                {collection.keywordCounts.map(({ stampKey, count, distinctKinds }) => (
                   <div key={stampKey} className="flex flex-col items-center gap-1.5">
                     <DiaryStamp
                       stampKind="keyword"
@@ -85,7 +85,14 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     <span className="text-xs font-medium text-[var(--ink)]">
                       {STAMP_LABELS[stampKey]}
                     </span>
-                    <span className="text-[11px] text-[var(--ink-soft)]">{count}번</span>
+                    {/* The one merged "음식" row shows how many *different*
+                        food keywords have shown up (see collectStamps' own
+                        comment) rather than a raw occurrence count — a
+                        number like "12번" said less about a category this
+                        broad than "5종류" does. */}
+                    <span className="text-[11px] text-[var(--ink-soft)]">
+                      {distinctKinds !== undefined ? `${distinctKinds}종류` : `${count}번`}
+                    </span>
                   </div>
                 ))}
               </div>
