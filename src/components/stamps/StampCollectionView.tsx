@@ -233,7 +233,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                className={`px-4 py-2 text-sm font-medium transition ${
                   tab === t
                     ? "bg-[var(--ink)] text-[var(--paper)]"
                     : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
