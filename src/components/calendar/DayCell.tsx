@@ -52,40 +52,29 @@ export default function DayCell({
       }`}
     >
       {entry ? (
-        entry.stamp_kind === "photo" ? (
-          // A photo stamp still wears the scalloped StampFrame mask (see
-          // DiaryStamp) — full-bleed made it read as coextensive with the
-          // cell itself rather than a stamp glued onto it, so it gets a
-          // small margin instead.
-          //
-          // Three earlier versions of this margin all tried to make the
-          // svg's own box exactly match the mask's aspect ratio (via the
-          // svg's viewBox-inferred intrinsic size, a CSS `aspect-ratio`
-          // box, then hand-computed asymmetric inset percentages) — every
-          // one looked right on Chrome/Android but still clipped the
-          // stamp's bottom edge a hair on iOS Safari. Rather than chase a
-          // fourth way to get that match exact, this drops the
-          // requirement entirely: a plain symmetric `inset-[8%]` box (its
-          // own aspect ratio doesn't need to equal the mask's at all) with
-          // the svg set to `w-full h-full` — both dimensions fully
-          // explicit, nothing for any browser to infer — and then
-          // StampFrame's own `preserveAspectRatio="xMidYMid meet"` (see
-          // that file) does the rest: "meet" is SVG's standard, universal
-          // guarantee that the *whole* viewBox content always fits inside
-          // whatever box it's given, by letterboxing rather than ever
-          // cropping. The one visible trade-off is a sliver of empty
-          // margin beside the stamp (this box is a little wider than the
-          // mask itself) instead of the stamp filling its margin exactly
-          // — a small aesthetic cost for a fix that can't depend on any
-          // browser's sizing algorithm agreeing with any other's.
-          <div className="absolute inset-[8%] overflow-hidden">
-            <DiaryStamp
-              stampKind={entry.stamp_kind}
-              stampKey={entry.stamp_key as never}
-              stampVariant={entry.stamp_variant}
-              photoUrl={photoUrl}
-              className="h-full w-full"
-            />
+        entry.stamp_kind === "photo" && photoUrl ? (
+          // A photo stamp keeps the scalloped StampFrame mask everywhere
+          // *else* (ReviewView, 우표 모아보기, EditEntry) — but not here.
+          // Four straight attempts at sizing StampFrame's SVG inside this
+          // cell's small margin (viewBox-inferred intrinsic size, a CSS
+          // `aspect-ratio` box, hand-computed asymmetric inset percentages,
+          // then a plain symmetric inset with the svg at `w-full h-full`
+          // relying on SVG's own universal `preserveAspectRatio="meet"`
+          // guarantee) all looked correct on Chrome/Android and in a
+          // Chromium-based visual check here, but the real device this
+          // still had to work on — iOS Safari — kept clipping the stamp's
+          // bottom edge regardless, through every one of those approaches.
+          // Rather than attempt a fifth theory about *why* blind, this
+          // drops the scalloped SVG for this one small context entirely
+          // and falls back to a plain `<img>` with `object-fit: cover` —
+          // exactly the mechanism the keyword-stamp branch below already
+          // uses and which has rendered correctly in every report so far,
+          // including on the same Safari that kept failing the svg path.
+          // Simple rounded corners instead of the scalloped cut, but
+          // guaranteed to actually fill its box everywhere.
+          <div className="absolute inset-[8%] overflow-hidden rounded-lg">
+            {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time */}
+            <img src={photoUrl} alt="" className="h-full w-full object-cover" />
           </div>
         ) : (
           // A keyword stamp is just its own flat image with no mask/
