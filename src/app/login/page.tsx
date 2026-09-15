@@ -4,6 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+/** Six boxes, five toned in and the last left null (rendered as an empty
+ * bordered square) — see the splash grid in the JSX below. */
+const STAMP_PREVIEW_TONES: (string | null)[] = [
+  "bg-[var(--paper-line)]",
+  "bg-[var(--ink-tertiary)]/40",
+  "bg-[var(--paper-line)]",
+  "bg-[var(--ink-tertiary)]/40",
+  "bg-[var(--paper-line)]",
+  null,
+];
+
 /**
  * Code-entry login only — not a "click the link" flow: a magic link only
  * completes if it's opened in the SAME browser the sign-in started in
@@ -59,15 +70,36 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-[var(--paper-raised)] p-8">
-        <h1 className="mb-1 text-center font-[family-name:var(--font-heading)] text-2xl font-bold text-[var(--ink)]">
-          우표일기
+    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-10">
+      {/* Decorative preview of the calendar "sheet" this app fills in one
+          stamp at a time (see MonthCalendar/DayCell) — purely a splash
+          visual, not read from any real data, so the last box is always
+          left empty to read as "today's still waiting to be written". */}
+      <div className="w-full max-w-sm">
+        <div className="mb-8 grid grid-cols-3 gap-3">
+          {STAMP_PREVIEW_TONES.map((tone, i) =>
+            tone ? (
+              <div key={i} className={`aspect-[4/5] rounded-xl ${tone}`} />
+            ) : (
+              <div
+                key={i}
+                className="aspect-[4/5] rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)]"
+              />
+            )
+          )}
+        </div>
+        <h1 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold leading-tight text-[var(--ink)]">
+          빈 칸이 채워지는
+          <br />
+          일본어 일기
         </h1>
-        <p className="mb-8 text-center text-sm text-[var(--ink-soft)]">
-          매일 한 줄, 일본어로 적는 나의 일기장
+        <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
+          하루 세 문장을 쓰면 바로 고쳐 드립니다. 고친 일기를 저장한 날만 시트에 우표가 한 칸
+          채워집니다.
         </p>
+      </div>
 
+      <div className="w-full max-w-sm rounded-2xl bg-[var(--paper-raised)] p-8">
         {step === "email" ? (
           <form onSubmit={handleSendCode} className="flex flex-col gap-3">
             <input
