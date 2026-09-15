@@ -49,7 +49,12 @@ export async function GET(request: Request) {
       ...row,
       ...decryptEntryFields({
         content: row.content,
-        title: row.title,
+        // `?? null`, not the raw column — the `title` column may not
+        // exist yet if this deploy landed before the schema.sql migration
+        // that adds it ran, in which case Supabase's own `select("*")`
+        // just omits the key entirely (`undefined`, not `null`), and
+        // decryptNullable only tolerates `null`.
+        title: row.title ?? null,
         overall_comment: row.overall_comment,
         suggestions: row.suggestions,
         paragraphs: row.paragraphs,

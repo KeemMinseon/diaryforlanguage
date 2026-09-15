@@ -49,7 +49,10 @@ export default async function EntryPage({
     ...rawEntry,
     ...decryptEntryFields({
       content: rawEntry.content,
-      title: rawEntry.title,
+      // See the identical comment in /api/diary/entries — `rawEntry.title`
+      // can be genuinely `undefined` (not `null`) if this deploy predates
+      // the schema.sql migration that adds the column.
+      title: rawEntry.title ?? null,
       overall_comment: rawEntry.overall_comment,
       suggestions: rawEntry.suggestions,
       paragraphs: rawEntry.paragraphs,

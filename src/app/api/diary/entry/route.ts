@@ -47,7 +47,10 @@ export async function GET(request: Request) {
     const row = data as DiaryEntry;
     const decrypted = decryptEntryFields({
       content: row.content,
-      title: row.title,
+      // See the identical comment in /api/diary/entries — `row.title` can
+      // be genuinely `undefined` (not `null`) if this deploy predates the
+      // schema.sql migration that adds the column.
+      title: row.title ?? null,
       overall_comment: row.overall_comment,
       suggestions: row.suggestions,
       paragraphs: row.paragraphs,

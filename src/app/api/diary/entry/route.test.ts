@@ -73,4 +73,27 @@ describe("GET /api/diary/entry", () => {
     expect(body.entry.title).toBe("영화 본 날");
     expect(body.entry.overall_comment).toBe("재밌었겠다!");
   });
+
+  it("doesn't choke on a row with no title column at all (pre-migration deploy)", async () => {
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    const encrypted = encryptEntryFields({
+      content: "今日は映画を見た。",
+      title: null,
+      overall_comment: null,
+      suggestions: [],
+      paragraphs: [],
+    });
+    // No `title` key at all — Supabase's own select("*") omits it entirely
+    // when the column doesn't exist yet, which is `undefined`, not `null`.
+    delete (encrypted as { title?: unknown }).title;
+    selectResult = {
+      data: { id: "e1", user_id: "u1", entry_date: "2026-09-08", readings: [], stamps: [], ...encrypted },
+      error: null,
+    };
+    const { GET } = await import("@/app/api/diary/entry/route");
+    const res = await GET(new Request("http://x/api/diary/entry?date=2026-09-08"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.entry.title).toBeNull();
+  });
 });
