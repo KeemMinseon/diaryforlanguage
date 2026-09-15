@@ -202,23 +202,21 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <div className="flex flex-col gap-8">
                 {collection.keywordCategories.map((group) => (
                   <section key={group.label} className="flex flex-col gap-3">
-                    <h2 className="text-sm font-medium text-[var(--ink)]">
-                      {group.label}{" "}
-                      <span className="text-[var(--ink-soft)]">({group.items.length}종류)</span>
-                    </h2>
+                    <h2 className="text-sm font-medium text-[var(--ink)]">{group.label}</h2>
                     <hr className="border-t border-[var(--paper-line)]" />
-                    <div className="grid grid-cols-4 gap-x-5 gap-y-6">
-                      {group.items.map(({ stampKey, count }) => (
+                    <div className="grid grid-cols-4 gap-3">
+                      {group.items.map(({ stampKey }) => (
                         <div key={stampKey} className="flex flex-col items-center gap-1.5">
-                          <DiaryStamp
-                            stampKind="keyword"
-                            stampKey={stampKey}
-                            className="w-full drop-shadow-sm"
-                          />
+                          <div className="aspect-[499.78/671.48] w-full">
+                            <DiaryStamp
+                              stampKind="keyword"
+                              stampKey={stampKey}
+                              className="h-full w-full drop-shadow-sm"
+                            />
+                          </div>
                           <span className="text-xs font-medium text-[var(--ink)]">
                             {STAMP_LABELS[stampKey]}
                           </span>
-                          <span className="text-[11px] text-[var(--ink-soft)]">{count}번</span>
                         </div>
                       ))}
                     </div>
