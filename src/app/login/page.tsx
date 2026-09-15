@@ -101,18 +101,18 @@ export default function LoginPage() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
+              maxLength={8}
               required
               placeholder="인증 코드"
               value={code}
               // `inputMode="numeric"` only hints which mobile keyboard to
               // show — it doesn't filter what actually lands in the field,
               // so pasting (or an autofill suggestion inserting) anything
-              // non-digit, or longer than the 6-digit code Supabase's OTP
+              // non-digit, or longer than the 8-digit code Supabase's OTP
               // actually is, just kept growing the field with nothing to
-              // stop it. Stripped to digits and capped at 6 here instead of
+              // stop it. Stripped to digits and capped at 8 here instead of
               // just `maxLength` alone, which caps length but not content.
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
               className="rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-center text-lg tracking-[0.3em] text-[var(--ink)] outline-none focus:border-[var(--ink)]"
             />
             {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
