@@ -327,18 +327,24 @@ export async function POST(request: Request) {
   try {
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
-      // Comfortably under this route's `maxDuration` (45s) so a slow
-      // model response surfaces as our own friendly error in the catch
-      // block below, instead of the platform silently killing the
-      // function once its own timeout fires first — that skips this
-      // catch entirely and hands the client a much uglier, unhandled
-      // failure with no Korean error message at all.
-      timeout: 35_000,
-      // One retry is enough to smooth over a single transient blip (a
-      // dropped connection, a momentary 429/5xx) — the SDK's own default
-      // (2) risks stacking multiple full-length attempts past
-      // `maxDuration` on top of each other.
-      maxRetries: 1,
+      // This same client is reused below for the missing-readings
+      // follow-up call (see `fetchMissingReadings`) when one is needed —
+      // so the real worst case for this route is *two* calls at this
+      // timeout back to back, not one. At 20s each with no retry, that's
+      // 40s worst case, comfortably under this route's `maxDuration`
+      // (45s) — a slow model response (or a dropped connection) surfaces
+      // as our own friendly error in the catch block below well before
+      // the platform's own limit would silently kill the function
+      // mid-flight instead, which skips this catch entirely and can
+      // leave the client's own fetch hanging with no response ever sent
+      // (see ChatEditor's AbortSignal.timeout on that fetch for the
+      // client-side half of this same fix). A retry previously set here
+      // (1, i.e. up to 2 full-length attempts) undercounted this route's
+      // real two-call worst case against `maxDuration` the same way —
+      // dropped in favor of just failing fast once, since the client already
+      // has its own bounded timeout to fall back on.
+      timeout: 20_000,
+      maxRetries: 0,
     });
     const response = await anthropic.messages.create({
       model: MODEL,

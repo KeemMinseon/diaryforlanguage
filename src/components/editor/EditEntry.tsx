@@ -278,6 +278,14 @@ export default function EditEntry({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ fullText }),
+            // Bounds the wait to a bit past this route's own `maxDuration`
+            // (30s) — see ChatEditor's identical comment. Without this, a
+            // request the platform kills mid-flight (or one that just
+            // never gets a response for some other reason) left this
+            // promise hanging forever instead of ever reaching the catch
+            // block below, which is what actually saves a visible
+            // "failed" status.
+            signal: AbortSignal.timeout(35_000),
           }),
           Promise.all(
             trimmed.map((p, i) =>
@@ -291,6 +299,8 @@ export default function EditEntry({
                     .map((pp) => pp.text)
                     .join("\n\n"),
                 }),
+                // See above — bounds past this route's own `maxDuration` (45s).
+                signal: AbortSignal.timeout(50_000),
               })
             )
           ),

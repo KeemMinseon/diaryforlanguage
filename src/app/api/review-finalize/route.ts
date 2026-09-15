@@ -67,13 +67,15 @@ export async function POST(request: Request) {
   try {
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
-      // See /api/review-paragraph for why these are set explicitly:
-      // comfortably under this route's `maxDuration` (30s) so a slow
-      // response surfaces as our own friendly error below rather than
-      // an unhandled platform-level timeout, and one retry instead of
-      // the SDK default (2) to avoid stacking attempts past that budget.
+      // See /api/review-paragraph for why these are set explicitly: at
+      // 22s with no retry, the worst case stays comfortably under this
+      // route's `maxDuration` (30s) so a slow response surfaces as our
+      // own friendly error below rather than the platform silently
+      // killing the function mid-flight — a retry previously set here
+      // (1, i.e. up to 44s across two full-length attempts) exceeded
+      // that same `maxDuration` on its own.
       timeout: 22_000,
-      maxRetries: 1,
+      maxRetries: 0,
     });
     const response = await anthropic.messages.create({
       model: MODEL,

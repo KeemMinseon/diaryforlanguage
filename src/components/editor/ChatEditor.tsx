@@ -361,6 +361,14 @@ export default function ChatEditor({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paragraph: chunk, priorText }),
+      // Bounds the wait to a bit past this route's own `maxDuration` (45s)
+      // — without this, a request the platform kills mid-flight (or one
+      // that just never gets a response back for some other reason) left
+      // this promise hanging forever instead of ever reaching the catch
+      // block below, which is what actually saves a visible "failed"
+      // status. A learner watching "검토 중이에요…" has no way to tell
+      // that apart from it actually still being in progress.
+      signal: AbortSignal.timeout(50_000),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "첨삭 요청에 실패했어요.");
@@ -537,6 +545,10 @@ export default function ChatEditor({
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ fullText: newContent }),
+            // See reviewChunk's identical comment — bounds this past its
+            // own route's `maxDuration` (30s) instead of risking an
+            // indefinitely hanging promise.
+            signal: AbortSignal.timeout(35_000),
           }),
         ]);
         const allRounds = round ? [...rounds, { ...round, text: rawChunk }] : rounds;
