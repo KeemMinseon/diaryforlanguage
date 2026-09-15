@@ -9,20 +9,64 @@ import { fetchAllEntriesForStamps, photoPublicUrl } from "@/lib/diary/client";
 import { collectStamps, type StampCollection, type TimelineStampItem } from "@/lib/stamps/collectStamps";
 import type { StampId } from "@/lib/stamps/keywordMap";
 import { STAMP_LABELS } from "@/lib/stamps/stampLabels";
-import { setStatusBarDimmed } from "@/lib/theme/statusBar";
 
 type Tab = "all" | "photo" | "keyword";
 
-/** What the lightbox is currently showing — a specific session's own
- * photo, or just a keyword's representative art (no particular day, so
- * no date to show alongside it). */
-type OpenStamp = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword"; stampKey: StampId };
+/** Same box ratio used everywhere else a stamp is shown (calendar cells,
+ * entry-detail header, this screen's own grids). */
+const STAMP_ASPECT = 499.78 / 671.48;
 
-/** Must match lightbox-*-out's own animation-duration in globals.css —
- * closing waits this long before actually unmounting, so the exit
- * animation gets to finish playing instead of the content just vanishing
- * mid-transition. */
-const LIGHTBOX_CLOSE_MS = 160;
+/** What the focused stamp is currently showing — a specific session's own
+ * photo, or just a keyword's representative art (no particular day, so no
+ * date to show alongside it). */
+type FocusTarget = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword"; stampKey: StampId };
+
+/** How far (in px) every *other* visible stamp gets pushed outward, away
+ * from screen center, once one is focused. */
+const PUSH_DISTANCE = 56;
+/** How small the pushed-out stamps shrink to, and how much they fade —
+ * both just enough to read as "stepped back", not gone. */
+const PUSH_SCALE = 0.85;
+const PUSH_OPACITY = 0.35;
+
+/** Must match the hero's own transition-duration below — closeLightbox
+ * delays actually dropping `focus` until the shrink-back animation (and
+ * the other stamps' own return-to-place animation, which shares this same
+ * duration) has had time to finish playing. */
+const FLIP_DURATION_MS = 320;
+
+type Phase = "enter" | "open" | "closing";
+
+interface FlipGeometry {
+  /** The hero's fixed, unchanging on-screen box — always centered,
+   * already at its full grown-up size. */
+  hero: { left: number; top: number; width: number; height: number };
+  /** The transform that, applied to the hero box above, makes it exactly
+   * overlap the clicked stamp's own on-screen position/size — the "First"
+   * half of FLIP. Removing this transform (down to identity) is the
+   * entire grow-and-move-to-center animation; re-applying it on close is
+   * the entire shrink-back-into-place animation. */
+  flipTransform: string;
+}
+
+interface Focus extends FlipGeometry {
+  key: string;
+  target: FocusTarget;
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** One stamp's own identifying key across every place it can be clicked
+ * from — stable no matter which section/tab rendered it, since only one
+ * tab is ever mounted at a time. */
+function photoKey(item: TimelineStampItem): string {
+  return `photo:${item.entryDate}:${item.session}`;
+}
+function keywordKey(stampKey: StampId): string {
+  return `keyword:${stampKey}`;
+}
 
 const TAB_LABELS: Record<Tab, string> = { all: "전체", photo: "사진우표", keyword: "수집우표" };
 
@@ -71,26 +115,106 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   const push = useToast();
   const [collection, setCollection] = useState<StampCollection | null>(null);
   const [tab, setTab] = useState<Tab>("all");
-  const [openStamp, setOpenStamp] = useState<OpenStamp | null>(null);
-  const [closing, setClosing] = useState(false);
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const [phase, setPhase] = useState<Phase>("enter");
+  // Read by every stamp button during render (see stampButtonStyle), so
+  // this has to be real state, not a ref — computed once per open, in the
+  // same openLightbox call that sets `focus`.
+  const [pushOffsets, setPushOffsets] = useState(new Map<string, [number, number]>());
 
-  // The OS status bar sits above the webview entirely — the lightbox's own
-  // `fixed inset-0` backdrop can never dim it, so it's tinted separately
-  // here (see statusBar.ts) in step with the same open/close timing.
-  function openLightbox(stamp: OpenStamp) {
-    setOpenStamp(stamp);
-    setStatusBarDimmed(true);
+  // Selected stamp grows in place and moves to center; every other visible
+  // one shrinks and scatters outward — a spotlight effect instead of a
+  // generic modal, and (since nothing ever covers the full screen) with
+  // no OS status bar to keep in sync either.
+  //
+  // Finding every *other* currently-visible stamp (to push them outward)
+  // is a plain DOM query (data-stamp-key, set on every stamp button below)
+  // rather than a React ref registry — this only ever runs inside a click
+  // handler, but a per-item ref used for this same measurement read inside
+  // an onClick sitting right next to that same ref's own `ref` prop trips
+  // react-hooks/refs's static check regardless; sidestepping refs
+  // entirely for this one read avoids that false positive.
+  function openLightbox(key: string, target: FocusTarget, sourceEl: HTMLElement) {
+    const source = sourceEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const heroWidth = Math.min(320, vw * 0.72);
+    const heroHeight = heroWidth / STAMP_ASPECT;
+    const heroLeft = (vw - heroWidth) / 2;
+    const heroTop = (vh - heroHeight) / 2;
+
+    const dx = source.left + source.width / 2 - (heroLeft + heroWidth / 2);
+    const dy = source.top + source.height / 2 - (heroTop + heroHeight / 2);
+    const scale = source.width / heroWidth;
+
+    const offsets = new Map<string, [number, number]>();
+    document.querySelectorAll<HTMLElement>("[data-stamp-key]").forEach((otherEl) => {
+      const otherKey = otherEl.dataset.stampKey!;
+      if (otherKey === key) return;
+      const r = otherEl.getBoundingClientRect();
+      const cx = r.left + r.width / 2 - vw / 2;
+      const cy = r.top + r.height / 2 - vh / 2;
+      const len = Math.hypot(cx, cy) || 1;
+      offsets.set(otherKey, [(cx / len) * PUSH_DISTANCE, (cy / len) * PUSH_DISTANCE]);
+    });
+    setPushOffsets(offsets);
+
+    setFocus({
+      key,
+      target,
+      hero: { left: heroLeft, top: heroTop, width: heroWidth, height: heroHeight },
+      flipTransform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+    });
+    // Reduced motion: skip straight to "open" — there's no separate frame
+    // where the hero visibly sits over the source stamp first.
+    setPhase(prefersReducedMotion() ? "open" : "enter");
   }
 
   function closeLightbox() {
-    if (closing) return;
-    setClosing(true);
-    setStatusBarDimmed(false);
-    setTimeout(() => {
-      setOpenStamp(null);
-      setClosing(false);
-    }, LIGHTBOX_CLOSE_MS);
+    if (!focus || phase === "closing") return;
+    setPhase("closing");
+    setTimeout(
+      () => {
+        setFocus(null);
+        setPhase("enter");
+      },
+      prefersReducedMotion() ? 0 : FLIP_DURATION_MS
+    );
   }
+
+  // "enter" paints the hero already sitting exactly over the clicked
+  // stamp (flipTransform, no transition); flipping to "open" a couple of
+  // frames later removes that transform *with* a transition — the actual
+  // grow-and-move-to-center animation. Skipping straight to "open" would
+  // paint the hero at its final position on the very first frame, with
+  // nothing to visibly animate from.
+  useEffect(() => {
+    if (!focus || phase !== "enter") return;
+    let innerId = 0;
+    const outerId = requestAnimationFrame(() => {
+      innerId = requestAnimationFrame(() => setPhase("open"));
+    });
+    return () => {
+      cancelAnimationFrame(outerId);
+      cancelAnimationFrame(innerId);
+    };
+  }, [focus, phase]);
+
+  useEffect(() => {
+    if (!focus) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeLightbox();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // Re-subscribing on every `phase` change (not just `focus`) is what
+    // keeps closeLightbox's own `phase === "closing"` guard reading the
+    // *current* phase — a listener attached once at "enter" and left alone
+    // would keep closing over that stale value forever, so a second
+    // Escape press mid-close would never see it's already closing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus, phase]);
 
   const load = useCallback(async () => {
     try {
@@ -108,15 +232,20 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     load();
   }, [load]);
 
-  useEffect(() => {
-    if (!openStamp) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") closeLightbox();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- closeLightbox reads `closing` fresh via its own closure each call; re-subscribing on every `closing` toggle would just churn the listener for no behavioral difference.
-  }, [openStamp]);
+  /** Inline style for one stamp button *in the grid* (not the hero) — hidden
+   * once it's the focused one (the hero is showing an enlarged copy in its
+   * place), pushed outward if something else is focused, or untouched. */
+  function stampButtonStyle(key: string): React.CSSProperties {
+    const active = focus !== null && phase !== "closing";
+    const duration = prefersReducedMotion() ? 0 : FLIP_DURATION_MS;
+    if (active && focus!.key === key) return { opacity: 0, transition: `opacity ${duration}ms ease` };
+    const offset = active ? pushOffsets.get(key) : undefined;
+    return {
+      transform: offset ? `translate(${offset[0]}px, ${offset[1]}px) scale(${PUSH_SCALE})` : undefined,
+      opacity: offset ? PUSH_OPACITY : 1,
+      transition: `transform ${duration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${duration}ms ease`,
+    };
+  }
 
   function renderTimeline(items: TimelineStampItem[], emptyText: string) {
     if (items.length === 0) {
@@ -135,6 +264,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
             <hr className="border-t border-[var(--ink)]" />
             <div className="grid grid-cols-4 gap-3">
               {group.items.map((item) => {
+                const key = photoKey(item);
                 const stampEl = (
                   <DiaryStamp
                     stampKind={item.stampKind}
@@ -149,7 +279,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                   />
                 );
                 return (
-                  <div key={`${item.entryDate}-${item.session}`} className="flex flex-col gap-1.5">
+                  <div key={key} className="flex flex-col gap-1.5">
                     {item.stampKind === "photo" ? (
                       // A photo stamp's own scalloped frame (see StampFrame)
                       // fills its box edge to edge with no built-in margin,
@@ -162,8 +292,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       // stay the same size as a keyword stamp's) instead
                       // of shrinking the box.
                       <button
+                        data-stamp-key={key}
                         type="button"
-                        onClick={() => openLightbox({ kind: "photo", item })}
+                        onClick={(e) => openLightbox(key, { kind: "photo", item }, e.currentTarget)}
+                        style={stampButtonStyle(key)}
                         aria-label="사진 우표 크게 보기"
                         className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
                       >
@@ -171,10 +303,12 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       </button>
                     ) : (
                       <button
+                        data-stamp-key={key}
                         type="button"
-                        onClick={() =>
-                          item.stampKey && openLightbox({ kind: "keyword", stampKey: item.stampKey })
+                        onClick={(e) =>
+                          item.stampKey && openLightbox(key, { kind: "keyword", stampKey: item.stampKey }, e.currentTarget)
                         }
+                        style={stampButtonStyle(key)}
                         aria-label="우표 크게 보기"
                         className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
                       >
@@ -261,21 +395,26 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       instead, most-recently-collected-first. */}
                   {collection.distinctKeywordStamps.length > 0 && (
                     <div className="grid grid-cols-4 gap-3">
-                      {collection.distinctKeywordStamps.map((stampKey) => (
-                        <button
-                          key={stampKey}
-                          type="button"
-                          onClick={() => openLightbox({ kind: "keyword", stampKey })}
-                          aria-label="우표 크게 보기"
-                          className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
-                        >
-                          <DiaryStamp
-                            stampKind="keyword"
-                            stampKey={stampKey}
-                            className="h-full w-full drop-shadow-sm"
-                          />
-                        </button>
-                      ))}
+                      {collection.distinctKeywordStamps.map((stampKey) => {
+                        const key = keywordKey(stampKey);
+                        return (
+                          <button
+                            key={stampKey}
+                            data-stamp-key={key}
+                            type="button"
+                            onClick={(e) => openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget)}
+                            style={stampButtonStyle(key)}
+                            aria-label="우표 크게 보기"
+                            className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
+                          >
+                            <DiaryStamp
+                              stampKind="keyword"
+                              stampKey={stampKey}
+                              className="h-full w-full drop-shadow-sm"
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </>
@@ -296,25 +435,30 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     <h2 className="text-sm font-medium text-[var(--ink)]">{group.label}</h2>
                     <hr className="border-t border-[var(--paper-line)]" />
                     <div className="grid grid-cols-4 gap-3">
-                      {group.items.map(({ stampKey }) => (
-                        <div key={stampKey} className="flex flex-col items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => openLightbox({ kind: "keyword", stampKey })}
-                            aria-label="우표 크게 보기"
-                            className="aspect-[499.78/671.48] w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
-                          >
-                            <DiaryStamp
-                              stampKind="keyword"
-                              stampKey={stampKey}
-                              className="h-full w-full drop-shadow-sm"
-                            />
-                          </button>
-                          <span className="text-xs font-medium text-[var(--ink)]">
-                            {STAMP_LABELS[stampKey]}
-                          </span>
-                        </div>
-                      ))}
+                      {group.items.map(({ stampKey }) => {
+                        const key = keywordKey(stampKey);
+                        return (
+                          <div key={stampKey} className="flex flex-col items-center gap-1.5">
+                            <button
+                              data-stamp-key={key}
+                              type="button"
+                              onClick={(e) => openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget)}
+                              style={stampButtonStyle(key)}
+                              aria-label="우표 크게 보기"
+                              className="aspect-[499.78/671.48] w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
+                            >
+                              <DiaryStamp
+                                stampKind="keyword"
+                                stampKey={stampKey}
+                                className="h-full w-full drop-shadow-sm"
+                              />
+                            </button>
+                            <span className="text-xs font-medium text-[var(--ink)]">
+                              {STAMP_LABELS[stampKey]}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </section>
                 ))}
@@ -323,51 +467,49 @@ export default function StampCollectionView({ userId }: { userId: string }) {
         </>
       )}
 
-      {/* Lightbox: just a bigger version of the same stamp in place, no
-          navigation to that day's entry — this screen is about the
-          stamps themselves, not a shortcut back into any one entry. Both
-          the backdrop and the stamp itself get a real enter *and* exit
-          animation (see globals.css) — `closing` switches to the "-out"
-          class immediately, and closeLightbox delays the actual unmount
-          (LIGHTBOX_CLOSE_MS) until that animation's had time to play,
-          instead of the whole thing just vanishing mid-transition. */}
-      {openStamp && (
-        <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-10 ${
-            closing ? "lightbox-backdrop-out" : "lightbox-backdrop-in"
-          }`}
-          onClick={closeLightbox}
-        >
+      {/* The focused stamp itself — no full-screen backdrop at all (the
+          radial push on every other stamp already does the work of
+          drawing focus, and skipping a backdrop means there's no OS
+          status bar color to keep in sync with anything). Starts each
+          open already sitting exactly over the clicked stamp
+          (flipTransform, "enter" phase, no transition), then "open" drops
+          that transform with a transition — the grow-to-center animation.
+          Closing just plays the same transform back on, then unmounts. */}
+      {focus && (
+        <>
           <button
             type="button"
             onClick={closeLightbox}
             aria-label="닫기"
-            className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white"
+            className="fixed right-5 top-5 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] text-[var(--ink)] shadow-md"
           >
             <UiIcon name="close-line" className="h-4 w-4" alt="">
               ✕
             </UiIcon>
           </button>
           <div
-            className={`w-full max-w-xs aspect-[499.78/671.48] ${closing ? "lightbox-stamp-out" : "lightbox-stamp-in"}`}
-            onClick={(e) => e.stopPropagation()}
+            className="fixed z-50 drop-shadow-xl"
+            style={{
+              left: focus.hero.left,
+              top: focus.hero.top,
+              width: focus.hero.width,
+              height: focus.hero.height,
+              transform: phase === "open" ? "translate(0, 0) scale(1)" : focus.flipTransform,
+              transition: `transform ${prefersReducedMotion() ? 0 : FLIP_DURATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+            }}
           >
-            {openStamp.kind === "photo" ? (
+            {focus.target.kind === "photo" ? (
               <DiaryStamp
                 stampKind="photo"
                 stampKey={null}
-                photoUrl={photoPublicUrl(openStamp.item.photoPath!, openStamp.item.createdAt)}
-                className="w-full drop-shadow-xl"
+                photoUrl={photoPublicUrl(focus.target.item.photoPath!, focus.target.item.createdAt)}
+                className="h-full w-full"
               />
             ) : (
-              <DiaryStamp
-                stampKind="keyword"
-                stampKey={openStamp.stampKey}
-                className="w-full drop-shadow-xl"
-              />
+              <DiaryStamp stampKind="keyword" stampKey={focus.target.stampKey} className="h-full w-full" />
             )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
