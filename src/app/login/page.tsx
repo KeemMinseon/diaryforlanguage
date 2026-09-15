@@ -70,17 +70,27 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-start justify-evenly px-6 py-6">
+    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-evenly px-6 pt-6 pb-12">
       {/* Decorative preview of the calendar "sheet" this app fills in one
           stamp at a time (see MonthCalendar/DayCell) — purely a splash
           visual, not read from any real data, so the last box is always
           left empty to read as "today's still waiting to be written".
           Its own flex item (not grouped with the text below) so
-          `justify-evenly` on <main> spreads top padding / grid / text /
-          form into even gaps that fill the screen, instead of clumping
-          together in the middle with all the leftover space dumped below
-          the form — the layout this replaced. */}
-      <div className="grid w-3/5 max-w-sm grid-cols-3 gap-1.5">
+          `justify-evenly` on <main> spreads grid / text / form into even
+          gaps that fill the screen, instead of clumping together in the
+          middle with all the leftover space dumped below the form — the
+          layout this replaced. `mx-auto max-w-sm` on <main> itself (not
+          `items-center` on each child) keeps this whole column centered
+          on a wide screen while grid/text/form share one left edge inside
+          it — centering each block on its own *different* width used to
+          leave the grid looking indented relative to the text above it.
+          `pb-12` outweighs `pt-6` on purpose: a device tall enough to
+          leave `justify-evenly` lots of slack (a tablet, a folded-out
+          phone) grew every gap including the top one, but the *bottom*
+          gap is the one that actually needs to stay generous — so it
+          gets its own floor instead of being just one more equal share of
+          the leftover space. */}
+      <div className="grid w-1/2 grid-cols-3 gap-1.5">
         {STAMP_PREVIEW_TONES.map((tone, i) =>
           tone ? (
             <div key={i} className={`aspect-[4/5] ${tone}`} />
