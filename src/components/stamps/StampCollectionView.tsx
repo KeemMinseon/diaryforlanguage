@@ -116,7 +116,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       <div className="flex flex-col gap-8">
         {groupByMonth(items).map((group) => (
           <div key={group.key} className="flex flex-col gap-3">
-            <div className="flex items-baseline gap-2 font-mono">
+            <div className="flex items-baseline gap-2">
               <span className="text-base font-bold text-[var(--ink)]">
                 {group.year} · {String(group.month).padStart(2, "0")}
               </span>
@@ -171,7 +171,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                         {stampEl}
                       </button>
                     )}
-                    <span className="font-mono text-xs text-[var(--ink-soft)]">
+                    <span className="text-xs text-[var(--ink-soft)]">
                       {shortDate(item.entryDate)}
                     </span>
                   </div>
@@ -207,7 +207,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               </p>
               <p className="text-sm text-[var(--ink-soft)]">모은 우표</p>
             </div>
-            <div className="text-right font-mono text-sm text-[var(--ink-soft)]">
+            <div className="text-right text-sm text-[var(--ink-soft)]">
               <p>
                 사진우표 <span className="font-medium text-[var(--ink)]">{collection.photoCount}</span>
               </p>
