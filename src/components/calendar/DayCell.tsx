@@ -1,5 +1,6 @@
 import Link from "next/link";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
+import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMask";
 import { photoPublicUrl } from "@/lib/diary/client";
 import type { DiaryEntry } from "@/types/diary";
 
@@ -58,30 +59,38 @@ export default function DayCell({
           // cell itself rather than a stamp glued onto it, so it gets a
           // small margin instead. That margin needs its own centering
           // wrapper rather than putting `inset-[8%]` directly on the
-          // StampFrame <svg> — an absolutely positioned element with all
+          // StampFrame <svg> (an absolutely positioned element with all
           // four inset sides set but no explicit width/height falls back
-          // to its own intrinsic aspect ratio (the mask's, ~0.69) instead
-          // of stretching to fill the inset box (the cell's own ~0.8),
-          // anchoring to one corner rather than centering, which is what
-          // made the stamp look shifted down with its far edge cut off.
-          // `h-full` + `w-auto` inside a centered flex box sidesteps that
-          // entirely — the browser sizes the svg from its own aspect
-          // ratio, and the flex box centers whatever that comes out to.
-          // `max-h-full` on the svg plus `overflow-hidden` here on the
-          // wrapper are a belt-and-suspenders pair against sub-pixel
-          // rounding at a real (small, non-integer) cell size — `h-full`
-          // alone measured out flush in an isolated test at one size, but
-          // percentage-of-percentage-of-grid-track math like this can
-          // still round a hair long at other sizes, and neither of these
-          // can ever legitimately need to clip anything real.
+          // to its own intrinsic size, which anchors it to one corner
+          // instead of centering it in the box).
+          //
+          // The inner box below carries the mask's own aspect ratio as an
+          // explicit CSS `aspect-ratio` (computed from STAMP_MASK_WIDTH/
+          // HEIGHT, so it can never drift out of sync with the mask
+          // itself), sized to the available height and centered by the
+          // outer flex wrapper — deliberately *not* relying on the svg's
+          // own viewBox-derived intrinsic ratio for its sizing (`h-full
+          // w-auto` on the svg directly, an earlier version of this fix):
+          // that depends on browsers correctly inferring an aspect ratio
+          // from an SVG's `viewBox` for CSS auto-sizing, which is exactly
+          // where this still broke on iOS Safari (worked fine on Chrome/
+          // Android) — a real, known WebKit inconsistency, not just
+          // sub-pixel rounding. The svg inside this box gets plain,
+          // unambiguous `w-full h-full` — no browser-dependent intrinsic-
+          // ratio inference left anywhere in this path.
           <div className="absolute inset-[8%] flex items-center justify-center overflow-hidden">
-            <DiaryStamp
-              stampKind={entry.stamp_kind}
-              stampKey={entry.stamp_key as never}
-              stampVariant={entry.stamp_variant}
-              photoUrl={photoUrl}
-              className="h-full w-auto max-h-full max-w-full"
-            />
+            <div
+              className="h-full max-w-full overflow-hidden"
+              style={{ aspectRatio: `${STAMP_MASK_WIDTH} / ${STAMP_MASK_HEIGHT}` }}
+            >
+              <DiaryStamp
+                stampKind={entry.stamp_kind}
+                stampKey={entry.stamp_key as never}
+                stampVariant={entry.stamp_variant}
+                photoUrl={photoUrl}
+                className="h-full w-full"
+              />
+            </div>
           </div>
         ) : (
           // A keyword stamp is just its own flat image with no mask/
