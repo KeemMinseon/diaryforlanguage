@@ -578,9 +578,7 @@ export default function ChatEditor({
         // is already gone (the screen moved on right after the pending
         // save above), so there's no feed left here to update.
         toast(
-          initialEntry
-            ? "이어서 쓴 내용까지 도장이 다시 찍혔어요! 📮"
-            : "오늘 일기에 도장이 찍혔어요! 📮"
+          initialEntry ? "이어서 쓴 내용까지 우표가 붙었어요! 📮" : "오늘 일기에 우표가 붙었어요! 📮"
         );
         // Lets the calendar — if it's the screen showing right now, which
         // it usually is, since the pending save above already sent the
