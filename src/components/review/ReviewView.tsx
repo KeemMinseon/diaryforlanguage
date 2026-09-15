@@ -177,21 +177,31 @@ export default function ReviewView({
               stamp stays the same modest size as one in a five-stamp
               day, instead of stretching to fill the whole row on its
               own; a day with more stamps than fit on one line just
-              wraps. */}
+              wraps.
+
+              The stamp itself is picked (and saved) immediately, well
+              before its review ever starts — but showing it here while
+              still pending would read as "done" for a day that isn't,
+              the same reasoning that already keeps the content section
+              below hidden until review lands. Hidden here on the same
+              `!isPending` condition, not a separate one, so both appear
+              at exactly the same moment. */}
           <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap gap-2">
-              {stamps.map((s) => (
-                <div key={s.session} className="aspect-[499.78/671.48] w-24 shrink-0">
-                  <DiaryStamp
-                    stampKind={s.stampKind}
-                    stampKey={s.stampKey as never}
-                    stampVariant={s.stampVariant}
-                    photoUrl={stampPhotoUrl(s)}
-                    className="h-full w-full drop-shadow-sm"
-                  />
-                </div>
-              ))}
-            </div>
+            {!isPending && (
+              <div className="flex flex-wrap gap-2">
+                {stamps.map((s) => (
+                  <div key={s.session} className="aspect-[499.78/671.48] w-24 shrink-0">
+                    <DiaryStamp
+                      stampKind={s.stampKind}
+                      stampKey={s.stampKey as never}
+                      stampVariant={s.stampVariant}
+                      photoUrl={stampPhotoUrl(s)}
+                      className="h-full w-full drop-shadow-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
                 {formatDateStamp(entry.entry_date)}
