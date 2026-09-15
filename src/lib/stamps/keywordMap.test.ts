@@ -42,9 +42,22 @@ describe("pickStamp", () => {
   // so past tense is the common case, not the rare one — an i-adjective
   // trigger word needs to match its conjugated forms too, not just the
   // dictionary form ("悲しい"). This was a real miss: an entry written as
-  // "悲しかった" fell all the way through to "default".
+  // "悲しかった" fell all the way through to "default". Same fix applied
+  // to every other emotion category built on an i-adjective.
   it("matches an i-adjective's conjugated (past-tense) form, not just its dictionary form", () => {
     expect(pickStamp("今日はとても悲しかった。")).toBe("sad");
+    expect(pickStamp("彼女が恋しかった。")).toBe("longing");
+    expect(pickStamp("懐かしかったです。")).toBe("longing");
+    expect(pickStamp("一人でとても寂しかった。")).toBe("loneliness");
+    expect(pickStamp("暗い道が怖かった。")).toBe("fear");
+    expect(pickStamp("とても楽しかった一日だった。")).toBe("joy");
+  });
+
+  // "不安" used to be listed under both "fear" and "anxiety" — "fear"
+  // comes first in priority order, so every "不安" mention matched "fear"
+  // and "anxiety"'s own copy of that word could never actually be reached.
+  it("reaches anxiety via 不安 now that fear no longer claims that word too", () => {
+    expect(pickStamp("将来が不安だ。")).toBe("anxiety");
   });
 
   // "lover" (relationships tier) sits ahead of "date" (activities tier) in

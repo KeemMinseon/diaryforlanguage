@@ -214,14 +214,24 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "hello", words: ["こんにちは", "挨拶"] },
     { id: "breakup", words: ["別れ話", "失恋"] },
     { id: "serendipity", words: ["偶然の出会い", "運命的"] },
-    { id: "longing", words: ["恋しい", "懐かしい"] },
-    { id: "loneliness", words: ["寂しい", "孤独"] },
+    // Same past-tense/conjugation gap as "sad" (see its own comment below)
+    // — these four are all i-adjectives, trimmed to their shared stem so
+    // "恋しかった"/"懐かしかった"/"寂しかった"/"怖かった" (all ordinary
+    // past-tense diary phrasing) match, not just the dictionary form.
+    { id: "longing", words: ["恋し", "懐かし"] },
+    { id: "loneliness", words: ["寂し", "孤独"] },
     { id: "gratitude", words: ["感謝"] },
     { id: "hope", words: ["希望"] },
     { id: "wish", words: ["願い", "願う"] },
     { id: "peace", words: ["平和", "穏やか"] },
     { id: "comfort", words: ["癒し", "安心"] },
-    { id: "fear", words: ["怖い", "不安"] },
+    // "不安" used to be listed under both "fear" and "anxiety" — since
+    // "fear" comes first, every "不安" entry matched "fear" and
+    // "anxiety"'s own copy of that same word could never actually be
+    // reached (only "心配" could ever land there). "不安" (unease/anxious)
+    // fits "anxiety" better than "fear" (怖い, a reaction to something
+    // actually scary) anyway, so it moved rather than staying duplicated.
+    { id: "fear", words: ["怖"] },
     { id: "anxiety", words: ["不安", "心配"] },
     { id: "sick", words: ["体調不良", "風邪", "病院"] },
     { id: "romance", words: ["恋愛", "ロマンス"] },
@@ -317,7 +327,10 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "together", words: ["一緒に"] },
     { id: "date", words: ["デート"] },
     { id: "chat", words: ["おしゃべり", "雑談"] },
-    { id: "joy", words: ["嬉しい", "楽しい", "幸せ"] },
+    // "嬉しい"/"楽しい" are i-adjectives too — same stem trim as "longing"/
+    // "loneliness"/"fear" above ("幸せ" is a na-adjective/noun, so its own
+    // ending never changes and needed no fix).
+    { id: "joy", words: ["嬉し", "楽し", "幸せ"] },
     { id: "happiness", words: ["幸福"] },
     // "悲しい" (dictionary form) missed a diary entry that was written in
     // past tense ("悲しかった") — an i-adjective's ending changes with
