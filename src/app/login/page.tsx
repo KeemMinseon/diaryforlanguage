@@ -70,7 +70,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-evenly px-6 py-6">
+    <main className="flex flex-1 flex-col items-start justify-evenly px-6 py-6">
       {/* Decorative preview of the calendar "sheet" this app fills in one
           stamp at a time (see MonthCalendar/DayCell) — purely a splash
           visual, not read from any real data, so the last box is always
@@ -107,7 +107,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="w-full max-w-sm rounded-2xl bg-[var(--paper-raised)] p-8">
+      <div className="w-full max-w-sm">
         {step === "email" ? (
           <form onSubmit={handleSendCode} className="flex flex-col gap-3">
             <input
