@@ -245,18 +245,26 @@ export default function ReviewView({
               <hr className="border-t border-[var(--paper-line)]" />
               <div className="flex flex-col gap-4">
                 {paragraphs.map((p, pi) => (
-                  <div key={pi} className="flex flex-col gap-1.5">
-                    <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
-                      {applyCorrections(p.text, p.suggestions)}
-                    </p>
-                    {p.translation && (
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ink-soft)]">
-                        {p.translation}
-                      </p>
-                    )}
-                  </div>
+                  <p
+                    key={pi}
+                    className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]"
+                  >
+                    {applyCorrections(p.text, p.suggestions)}
+                  </p>
                 ))}
               </div>
+              {paragraphs.some((p) => p.translation) && (
+                <div className="flex flex-col gap-4">
+                  {paragraphs.map(
+                    (p, pi) =>
+                      p.translation && (
+                        <p key={pi} className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--ink-soft)]">
+                          {p.translation}
+                        </p>
+                      )
+                  )}
+                </div>
+              )}
             </div>
           )}
 
