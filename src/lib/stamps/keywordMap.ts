@@ -207,6 +207,76 @@ export const FOOD_STAMP_IDS: StampId[] = [
   "cafe",
 ];
 
+/** One category's own label + every keyword id in it — for 우표 모음's
+ * "수집우표" tab, which groups collected keyword stamps by category rather
+ * than listing all 151 keywords flat. Mirrors KEYWORD_RULES' own tier
+ * boundaries below (same "── 라벨 ──" sections) as a real, importable data
+ * structure, since those are just comments in an array literal. Keep this
+ * in sync with KEYWORD_RULES if a tier's boundary ever moves — an id added,
+ * renamed, or moved between tiers there needs the same change here.
+ * "default" (그 밖의 하루, pickStamp's own fallback) isn't part of any real
+ * tier, so it gets its own single-id "기타" category instead. */
+export interface KeywordCategory {
+  label: string;
+  ids: StampId[];
+}
+
+export const KEYWORD_CATEGORIES: KeywordCategory[] = [
+  {
+    label: "감정",
+    ids: [
+      "birthday", "xmas", "appointment", "goodbye", "hello", "breakup",
+      "serendipity", "longing", "loneliness", "gratitude", "hope", "wish",
+      "peace", "comfort", "fear", "anxiety", "joy", "happiness", "sad",
+      "memories", "dream", "sick", "romance", "queer",
+    ],
+  },
+  {
+    label: "활동",
+    ids: [
+      "hiking", "running", "workout", "yoga", "soccer", "football",
+      "basketball", "dance", "game", "music", "sing", "read", "book",
+      "study", "writing", "poetry", "knitting", "drive", "walk", "picnic",
+      "cleaning", "cook", "recipe", "shopping",
+    ],
+  },
+  { label: "관계", ids: ["family", "lover", "friendship", "together", "date", "chat"] },
+  {
+    label: "여행",
+    ids: [
+      "airport", "flight", "passport", "ticket", "suitcase", "hotel", "map",
+      "journey", "vacation", "travel", "japan", "korea", "china", "vietnam",
+      "seoul", "busan", "daejeon", "gwangju", "jeonju", "gyeongju", "jeju",
+      "tokyo", "osaka", "kyoto", "train",
+    ],
+  },
+  {
+    label: "장소",
+    ids: [
+      "mountain", "ocean", "river", "lake", "forest", "tree", "flower",
+      "rose", "garden", "park", "beach", "city", "home", "school",
+    ],
+  },
+  {
+    label: "일상",
+    ids: [
+      "morning", "afternoon", "evening", "nap", "sleep", "rest", "phone",
+      "calendar", "routine", "youth", "work", "weekend", "movie", "engraving",
+    ],
+  },
+  {
+    label: "날씨",
+    ids: [
+      "rain", "snow", "sunny", "cloudy", "wind", "breeze", "rainbow", "sky",
+      "star", "moon", "dawn", "sunset", "midnight", "spring", "summer",
+      "autumn", "winter", "season", "sun",
+    ],
+  },
+  { label: "음식", ids: FOOD_STAMP_IDS },
+  { label: "동물", ids: ["cat", "dog", "bird", "rabbit", "butterfly"] },
+  { label: "기타", ids: ["default"] },
+];
+
 type Locale = "ja";
 
 // Ordered: earlier categories win when multiple keywords match in the same

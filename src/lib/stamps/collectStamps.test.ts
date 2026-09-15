@@ -14,19 +14,20 @@ function entry(over: Partial<StampSourceEntry>): StampSourceEntry {
 }
 
 describe("collectStamps", () => {
-  it("counts a keyword stamp from the stamps array", () => {
-    const { keywordCounts } = collectStamps([
+  it("puts a keyword stamp from the stamps array into its own category", () => {
+    const { keywordCategories } = collectStamps([
       entry({
         stamps: [
           { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
-    expect(keywordCounts).toEqual([{ stampKey: "movie", count: 1 }]);
+    // "movie" is in the "일상" tier — see KEYWORD_CATEGORIES.
+    expect(keywordCategories).toEqual([{ label: "일상", items: [{ stampKey: "movie", count: 1 }] }]);
   });
 
   it("counts every session's own stamp, not just one per entry", () => {
-    const { keywordCounts } = collectStamps([
+    const { keywordCategories } = collectStamps([
       entry({
         stamps: [
           { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
@@ -34,7 +35,8 @@ describe("collectStamps", () => {
         ],
       }),
     ]);
-    expect(keywordCounts).toEqual(
+    const allItems = keywordCategories.flatMap((g) => g.items);
+    expect(allItems).toEqual(
       expect.arrayContaining([
         { stampKey: "movie", count: 1 },
         { stampKey: "cat", count: 1 },
@@ -42,17 +44,60 @@ describe("collectStamps", () => {
     );
   });
 
-  it("sorts keyword counts most-picked-first", () => {
-    const { keywordCounts } = collectStamps([
+  it("sorts a category's own items most-picked-first", () => {
+    const { keywordCategories } = collectStamps([
       entry({
         stamps: [
-          { session: 0, stampKind: "keyword", stampKey: "movie", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
       entry({
         entry_date: "2026-09-02",
         stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "dog", stampVariant: null, photoPath: null, createdAt: "" },
+        ],
+      }),
+      entry({
+        entry_date: "2026-09-03",
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "dog", stampVariant: null, photoPath: null, createdAt: "" },
+        ],
+      }),
+    ]);
+    const animals = keywordCategories.find((g) => g.label === "동물")!;
+    expect(animals.items[0]).toEqual({ stampKey: "dog", count: 2 });
+    expect(animals.items[1]).toEqual({ stampKey: "cat", count: 1 });
+  });
+
+  it("falls back to the legacy top-level columns for an entry with no stamps array", () => {
+    const { keywordCategories } = collectStamps([
+      entry({ stamps: [], stamp_kind: "keyword", stamp_key: "sun" }),
+    ]);
+    expect(keywordCategories).toEqual([{ label: "날씨", items: [{ stampKey: "sun", count: 1 }] }]);
+  });
+
+  it("leaves out a category with nothing collected in it, rather than showing it empty", () => {
+    const { keywordCategories } = collectStamps([
+      entry({
+        stamps: [
           { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
+        ],
+      }),
+    ]);
+    expect(keywordCategories.map((g) => g.label)).toEqual(["동물"]);
+  });
+
+  it("groups keywords from different tiers into their own separate categories", () => {
+    const { keywordCategories } = collectStamps([
+      entry({
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
+        ],
+      }),
+      entry({
+        entry_date: "2026-09-02",
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "rain", stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
       entry({
@@ -62,41 +107,34 @@ describe("collectStamps", () => {
         ],
       }),
     ]);
-    expect(keywordCounts[0]).toEqual({ stampKey: "cat", count: 2 });
-    expect(keywordCounts[1]).toEqual({ stampKey: "movie", count: 1 });
+    expect(keywordCategories.map((g) => g.label)).toEqual(["날씨", "음식", "동물"]);
   });
 
-  it("falls back to the legacy top-level columns for an entry with no stamps array", () => {
-    const { keywordCounts } = collectStamps([
-      entry({ stamps: [], stamp_kind: "keyword", stamp_key: "sun" }),
-    ]);
-    expect(keywordCounts).toEqual([{ stampKey: "sun", count: 1 }]);
-  });
-
-  it("collects photo stamps separately, keeping entries' given order", () => {
-    const { keywordCounts, photoStamps } = collectStamps([
+  it("collects a photo stamp into allStamps and photoStamps, keeping entries' given order", () => {
+    const { allStamps, photoStamps } = collectStamps([
       entry({
         entry_date: "2026-09-08",
         stamps: [
-          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-08.jpg", createdAt: "" },
+          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-08.jpg", createdAt: "t1" },
         ],
       }),
       entry({
         entry_date: "2026-09-01",
         stamps: [
-          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-01.jpg", createdAt: "" },
+          { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-01.jpg", createdAt: "t2" },
         ],
       }),
     ]);
-    expect(keywordCounts).toEqual([]);
-    expect(photoStamps).toEqual([
-      { photoPath: "u1/2026-09-08.jpg", entryDate: "2026-09-08", session: 0, createdAt: "" },
-      { photoPath: "u1/2026-09-01.jpg", entryDate: "2026-09-01", session: 0, createdAt: "" },
-    ]);
+    const expected = [
+      { stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-08.jpg", entryDate: "2026-09-08", session: 0, createdAt: "t1" },
+      { stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/2026-09-01.jpg", entryDate: "2026-09-01", session: 0, createdAt: "t2" },
+    ];
+    expect(allStamps).toEqual(expected);
+    expect(photoStamps).toEqual(expected);
   });
 
-  it("drops a photo session with no actual photo path", () => {
-    const { photoStamps } = collectStamps([
+  it("drops a photo session with no actual photo path from allStamps too", () => {
+    const { allStamps, photoStamps } = collectStamps([
       entry({
         stamps: [
           { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: null, createdAt: "" },
@@ -104,105 +142,43 @@ describe("collectStamps", () => {
       }),
     ]);
     expect(photoStamps).toEqual([]);
+    expect(allStamps).toEqual([]);
   });
 
-  it("counts a keyword stamp with no stampKey as the default bucket", () => {
-    const { keywordCounts } = collectStamps([
+  it("counts a keyword stamp with no stampKey as the default bucket, under 기타", () => {
+    const { keywordCategories } = collectStamps([
       entry({
         stamps: [
           { session: 0, stampKind: "keyword", stampKey: null, stampVariant: null, photoPath: null, createdAt: "" },
         ],
       }),
     ]);
-    expect(keywordCounts).toEqual([{ stampKey: "default", count: 1 }]);
+    expect(keywordCategories).toEqual([{ label: "기타", items: [{ stampKey: "default", count: 1 }] }]);
   });
 
-  // Almost every entry mentions eating something in passing (see
-  // keywordMap.ts's own "음식" tier comment), so this ranking used to be
-  // dominated by a long tail of individually small per-dish counts —
-  // kept as its own list (foodStampCounts) instead, so 우표 모음 can still
-  // show each dish's own stamp art in its own section (see collectStamps'
-  // own comment).
-  describe("food keywords", () => {
-    it("keeps food keywords out of keywordCounts and puts them in foodStampCounts instead", () => {
-      const { keywordCounts, foodStampCounts } = collectStamps([
-        entry({
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-02",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-03",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "pizza", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-      ]);
-      expect(keywordCounts).toEqual([]);
-      expect(foodStampCounts).toEqual(
-        expect.arrayContaining([
-          { stampKey: "sushi", count: 1 },
-          { stampKey: "coffee", count: 1 },
-          { stampKey: "pizza", count: 1 },
-        ])
-      );
-      expect(foodStampCounts).toHaveLength(3);
-    });
+  it("reports totalCount/photoCount/keywordCount across both kinds", () => {
+    const collection = collectStamps([
+      entry({
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 1, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/p.jpg", createdAt: "" },
+        ],
+      }),
+    ]);
+    expect(collection.totalCount).toBe(2);
+    expect(collection.photoCount).toBe(1);
+    expect(collection.keywordCount).toBe(1);
+  });
 
-    it("sums repeated occurrences of the same food keyword instead of merging kinds together", () => {
-      const { foodStampCounts } = collectStamps([
-        entry({
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-02",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-      ]);
-      expect(foodStampCounts).toEqual([{ stampKey: "sushi", count: 2 }]);
-    });
-
-    it("sorts foodStampCounts most-picked-first, independently of keywordCounts", () => {
-      const { keywordCounts, foodStampCounts } = collectStamps([
-        entry({
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-02",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-03",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-04",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-      ]);
-      expect(foodStampCounts).toEqual([
-        { stampKey: "sushi", count: 2 },
-        { stampKey: "coffee", count: 1 },
-      ]);
-      expect(keywordCounts).toEqual([{ stampKey: "cat", count: 1 }]);
-    });
+  it("mixes keyword and photo sessions in allStamps in the same given order", () => {
+    const { allStamps } = collectStamps([
+      entry({
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
+          { session: 1, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/p.jpg", createdAt: "" },
+        ],
+      }),
+    ]);
+    expect(allStamps.map((s) => s.stampKind)).toEqual(["keyword", "photo"]);
   });
 });
