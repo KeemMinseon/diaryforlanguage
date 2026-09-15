@@ -55,27 +55,30 @@ export default function DayCell({
         entry.stamp_kind === "photo" && photoUrl ? (
           // A photo stamp keeps the scalloped StampFrame mask everywhere
           // *else* (ReviewView, 우표 모아보기, EditEntry) — but not here.
-          // Four straight attempts at sizing StampFrame's SVG inside this
-          // cell's small margin (viewBox-inferred intrinsic size, a CSS
-          // `aspect-ratio` box, hand-computed asymmetric inset percentages,
-          // then a plain symmetric inset with the svg at `w-full h-full`
-          // relying on SVG's own universal `preserveAspectRatio="meet"`
-          // guarantee) all looked correct on Chrome/Android and in a
-          // Chromium-based visual check here, but the real device this
-          // still had to work on — iOS Safari — kept clipping the stamp's
-          // bottom edge regardless, through every one of those approaches.
-          // Rather than attempt a fifth theory about *why* blind, this
-          // drops the scalloped SVG for this one small context entirely
-          // and falls back to a plain `<img>` with `object-fit: cover` —
-          // exactly the mechanism the keyword-stamp branch below already
-          // uses and which has rendered correctly in every report so far,
-          // including on the same Safari that kept failing the svg path.
-          // Simple rounded corners instead of the scalloped cut, but
-          // guaranteed to actually fill its box everywhere.
-          <div className="absolute inset-[8%] overflow-hidden rounded-lg">
-            {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time */}
-            <img src={photoUrl} alt="" className="h-full w-full object-cover" />
-          </div>
+          // Five straight attempts at this cell's small photo margin (four
+          // ways of sizing StampFrame's SVG inside a wrapper div, then a
+          // plain `<img>` inside that same wrapper div) all looked correct
+          // on Chrome/Android but kept clipping the same way on iOS
+          // Safari's small mobile viewport specifically (confirmed fine on
+          // desktop Safari) — with the *img* version, the clipped edge
+          // wasn't even rounded any more, meaning the clip was happening on
+          // the wrapper `<div>`'s own square edge, one level further out
+          // than the rounded corner. That points at the one thing common
+          // to every attempt so far and different from the working
+          // keyword-stamp branch below: a wrapper div nesting its own
+          // `overflow-hidden` inside this cell's `overflow-hidden` already.
+          //
+          // This drops that wrapper entirely — top/left position it,
+          // explicit height/width size it (no `inset`, no `bottom`/`right`,
+          // nothing for any browser to solve for), directly on the `<img>`
+          // itself, exactly one level deep, exactly like the keyword
+          // branch already does successfully on the same device.
+          // eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time
+          <img
+            src={photoUrl}
+            alt=""
+            className="absolute top-[8%] left-[8%] h-[84%] w-[84%] rounded-lg object-cover"
+          />
         ) : (
           // A keyword stamp is just its own flat image with no mask/
           // border of its own, so it still fills the cell edge to edge —
