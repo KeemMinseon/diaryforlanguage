@@ -67,13 +67,20 @@ export default function DayCell({
           // `h-full` + `w-auto` inside a centered flex box sidesteps that
           // entirely — the browser sizes the svg from its own aspect
           // ratio, and the flex box centers whatever that comes out to.
-          <div className="absolute inset-[8%] flex items-center justify-center">
+          // `max-h-full` on the svg plus `overflow-hidden` here on the
+          // wrapper are a belt-and-suspenders pair against sub-pixel
+          // rounding at a real (small, non-integer) cell size — `h-full`
+          // alone measured out flush in an isolated test at one size, but
+          // percentage-of-percentage-of-grid-track math like this can
+          // still round a hair long at other sizes, and neither of these
+          // can ever legitimately need to clip anything real.
+          <div className="absolute inset-[8%] flex items-center justify-center overflow-hidden">
             <DiaryStamp
               stampKind={entry.stamp_kind}
               stampKey={entry.stamp_key as never}
               stampVariant={entry.stamp_variant}
               photoUrl={photoUrl}
-              className="h-full w-auto"
+              className="h-full w-auto max-h-full max-w-full"
             />
           </div>
         ) : (
