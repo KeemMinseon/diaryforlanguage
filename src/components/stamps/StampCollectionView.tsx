@@ -9,6 +9,7 @@ import { fetchAllEntriesForStamps, photoPublicUrl } from "@/lib/diary/client";
 import { collectStamps, type StampCollection, type TimelineStampItem } from "@/lib/stamps/collectStamps";
 import type { StampId } from "@/lib/stamps/keywordMap";
 import { STAMP_LABELS } from "@/lib/stamps/stampLabels";
+import { setStatusBarDimmed } from "@/lib/theme/statusBar";
 
 type Tab = "all" | "photo" | "keyword";
 
@@ -73,9 +74,18 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   const [openStamp, setOpenStamp] = useState<OpenStamp | null>(null);
   const [closing, setClosing] = useState(false);
 
+  // The OS status bar sits above the webview entirely — the lightbox's own
+  // `fixed inset-0` backdrop can never dim it, so it's tinted separately
+  // here (see statusBar.ts) in step with the same open/close timing.
+  function openLightbox(stamp: OpenStamp) {
+    setOpenStamp(stamp);
+    setStatusBarDimmed(true);
+  }
+
   function closeLightbox() {
     if (closing) return;
     setClosing(true);
+    setStatusBarDimmed(false);
     setTimeout(() => {
       setOpenStamp(null);
       setClosing(false);
@@ -153,7 +163,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       // of shrinking the box.
                       <button
                         type="button"
-                        onClick={() => setOpenStamp({ kind: "photo", item })}
+                        onClick={() => openLightbox({ kind: "photo", item })}
                         aria-label="사진 우표 크게 보기"
                         className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
                       >
@@ -163,7 +173,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       <button
                         type="button"
                         onClick={() =>
-                          item.stampKey && setOpenStamp({ kind: "keyword", stampKey: item.stampKey })
+                          item.stampKey && openLightbox({ kind: "keyword", stampKey: item.stampKey })
                         }
                         aria-label="우표 크게 보기"
                         className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
@@ -255,7 +265,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                         <button
                           key={stampKey}
                           type="button"
-                          onClick={() => setOpenStamp({ kind: "keyword", stampKey })}
+                          onClick={() => openLightbox({ kind: "keyword", stampKey })}
                           aria-label="우표 크게 보기"
                           className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
                         >
@@ -290,7 +300,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                         <div key={stampKey} className="flex flex-col items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setOpenStamp({ kind: "keyword", stampKey })}
+                            onClick={() => openLightbox({ kind: "keyword", stampKey })}
                             aria-label="우표 크게 보기"
                             className="aspect-[499.78/671.48] w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
                           >
