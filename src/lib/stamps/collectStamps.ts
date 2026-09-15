@@ -10,11 +10,6 @@ const FOOD_STAMP_ID_SET = new Set<string>(FOOD_STAMP_IDS);
 export interface KeywordStampCount {
   stampKey: StampId;
   count: number;
-  /** Only set on the single merged "food" row (see `collectStamps`'s own
-   * comment) — how many *different* food-category keywords have shown up
-   * at least once, not a raw occurrence tally (that's what `count` is,
-   * summed across every one of them). Undefined for every other row. */
-  distinctKinds?: number;
 }
 
 /** One photo attached to some session's stamp, for the 우표 모아보기
@@ -35,8 +30,17 @@ export interface PhotoStampItem {
 }
 
 export interface StampCollection {
-  /** Sorted most-picked-first. */
+  /** Every non-food keyword, sorted most-picked-first. */
   keywordCounts: KeywordStampCount[];
+  /** Every food-category keyword (see FOOD_STAMP_IDS) that's shown up at
+   * least once, sorted most-picked-first — kept as its own list rather
+   * than folded into `keywordCounts` so 우표 모음 can still show each
+   * dish's own stamp art in its own section (a single merged "먹었어요
+   * N번" row was tried first, but that hid the actual stamps — the whole
+   * point of a *collection* screen is seeing what you've collected).
+   * `keywordCounts.length` is exactly "몇 종류의 음식 우표를 모았는지"
+   * for that section's own header. */
+  foodStampCounts: KeywordStampCount[];
   /** Same order as `entries` was given in (most-recent-entry-first, see
    * fetchAllEntriesForStamps) — multiple photos on the same day keep
    * their session order within that day. */
@@ -64,6 +68,10 @@ function resolveStamps(entry: StampSourceEntry): SessionStamp[] {
   ];
 }
 
+function sortMostPickedFirst(counts: KeywordStampCount[]): KeywordStampCount[] {
+  return counts.sort((a, b) => b.count - a.count);
+}
+
 /** `entries` should already be sorted most-recent-first (see
  * fetchAllEntriesForStamps) so `photoStamps` comes out in that same
  * order without a separate sort here. */
@@ -89,31 +97,16 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
     }
   }
 
-  // Every food-category keyword (see FOOD_STAMP_IDS) collapses into one
-  // "food" row — almost every entry mentions eating something in passing
-  // (see keywordMap.ts's own "음식" tier comment), so this ranking used to
-  // be dominated by a long tail of small per-dish counts that didn't say
-  // much on their own. What's actually worth showing is variety, not a raw
-  // tally — this row's `count` still adds up every food keyword's own
-  // occurrences (for sorting purposes, same as any other row), but its
-  // displayed number (`distinctKinds`, set only here) is how many
-  // *different* food keywords have shown up at least once instead.
-  let foodTotal = 0;
-  let foodKinds = 0;
   const keywordCounts: KeywordStampCount[] = [];
+  const foodStampCounts: KeywordStampCount[] = [];
   for (const [key, count] of countByKey) {
-    if (FOOD_STAMP_ID_SET.has(key)) {
-      foodTotal += count;
-      foodKinds += 1;
-      continue;
-    }
-    keywordCounts.push({ stampKey: key as StampId, count });
-  }
-  if (foodKinds > 0) {
-    keywordCounts.push({ stampKey: "food", count: foodTotal, distinctKinds: foodKinds });
+    const item = { stampKey: key as StampId, count };
+    (FOOD_STAMP_ID_SET.has(key) ? foodStampCounts : keywordCounts).push(item);
   }
 
-  keywordCounts.sort((a, b) => b.count - a.count);
-
-  return { keywordCounts, photoStamps };
+  return {
+    keywordCounts: sortMostPickedFirst(keywordCounts),
+    foodStampCounts: sortMostPickedFirst(foodStampCounts),
+    photoStamps,
+  };
 }

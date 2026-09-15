@@ -120,11 +120,12 @@ describe("collectStamps", () => {
   // Almost every entry mentions eating something in passing (see
   // keywordMap.ts's own "음식" tier comment), so this ranking used to be
   // dominated by a long tail of individually small per-dish counts —
-  // merged into one "food" row showing variety instead (see collectStamps'
+  // kept as its own list (foodStampCounts) instead, so 우표 모음 can still
+  // show each dish's own stamp art in its own section (see collectStamps'
   // own comment).
   describe("food keywords", () => {
-    it("merges several different food keywords into one 'food' row", () => {
-      const { keywordCounts } = collectStamps([
+    it("keeps food keywords out of keywordCounts and puts them in foodStampCounts instead", () => {
+      const { keywordCounts, foodStampCounts } = collectStamps([
         entry({
           stamps: [
             { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
@@ -143,11 +144,19 @@ describe("collectStamps", () => {
           ],
         }),
       ]);
-      expect(keywordCounts).toEqual([{ stampKey: "food", count: 3, distinctKinds: 3 }]);
+      expect(keywordCounts).toEqual([]);
+      expect(foodStampCounts).toEqual(
+        expect.arrayContaining([
+          { stampKey: "sushi", count: 1 },
+          { stampKey: "coffee", count: 1 },
+          { stampKey: "pizza", count: 1 },
+        ])
+      );
+      expect(foodStampCounts).toHaveLength(3);
     });
 
-    it("keeps distinctKinds at 1 when the same food keyword repeats, even though count sums the occurrences", () => {
-      const { keywordCounts } = collectStamps([
+    it("sums repeated occurrences of the same food keyword instead of merging kinds together", () => {
+      const { foodStampCounts } = collectStamps([
         entry({
           stamps: [
             { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
@@ -160,11 +169,11 @@ describe("collectStamps", () => {
           ],
         }),
       ]);
-      expect(keywordCounts).toEqual([{ stampKey: "food", count: 2, distinctKinds: 1 }]);
+      expect(foodStampCounts).toEqual([{ stampKey: "sushi", count: 2 }]);
     });
 
-    it("does not merge non-food keywords, and sorts the merged food row by its own summed count", () => {
-      const { keywordCounts } = collectStamps([
+    it("sorts foodStampCounts most-picked-first, independently of keywordCounts", () => {
+      const { keywordCounts, foodStampCounts } = collectStamps([
         entry({
           stamps: [
             { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
@@ -173,21 +182,27 @@ describe("collectStamps", () => {
         entry({
           entry_date: "2026-09-02",
           stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+            { session: 0, stampKind: "keyword", stampKey: "sushi", stampVariant: null, photoPath: null, createdAt: "" },
           ],
         }),
         entry({
           entry_date: "2026-09-03",
           stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "coffee", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-04",
+          stamps: [
             { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
           ],
         }),
       ]);
-      // 2 food occurrences (sushi + coffee, merged) outrank cat's 1.
-      expect(keywordCounts).toEqual([
-        { stampKey: "food", count: 2, distinctKinds: 2 },
-        { stampKey: "cat", count: 1 },
+      expect(foodStampCounts).toEqual([
+        { stampKey: "sushi", count: 2 },
+        { stampKey: "coffee", count: 1 },
       ]);
+      expect(keywordCounts).toEqual([{ stampKey: "cat", count: 1 }]);
     });
   });
 });
