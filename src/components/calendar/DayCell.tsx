@@ -4,6 +4,38 @@ import { STAMP_MASK_HEIGHT, STAMP_MASK_WIDTH } from "@/components/stamps/stampMa
 import { photoPublicUrl } from "@/lib/diary/client";
 import type { DiaryEntry } from "@/types/diary";
 
+/** The cell itself is `aspect-[4/5]` (see below) — kept as a plain
+ * number here too so the photo-stamp margin math can reference it
+ * without re-deriving it from a Tailwind class string. */
+const CELL_ASPECT = 4 / 5;
+
+/** Vertical (top/bottom) margin fraction for a photo stamp's small
+ * "glued onto the cell" gap — see the photo-stamp branch below. Picked
+ * directly (was "8%" before); the matching horizontal margin is derived
+ * from it, not picked separately, so the resulting box's aspect ratio is
+ * always exactly the mask's own regardless of what either aspect ratio
+ * happens to be. */
+const PHOTO_STAMP_VERTICAL_MARGIN = 0.08;
+
+const MASK_ASPECT = STAMP_MASK_WIDTH / STAMP_MASK_HEIGHT;
+
+/** Horizontal margin fraction that makes the resulting inset box's own
+ * aspect ratio come out to exactly `MASK_ASPECT`, given the cell's own
+ * aspect ratio and the chosen vertical margin — see the derivation: with
+ * vertical margin `my`, the box height is `cellHeight * (1 - 2*my)`; for
+ * the box width (`cellWidth * (1 - 2*mx)`) to equal `boxHeight *
+ * MASK_ASPECT`, given `cellWidth = cellHeight * CELL_ASPECT`, solving for
+ * `mx` gives this. Plain top/bottom/left/right percentages computed this
+ * way (as opposed to `aspect-ratio` + flex centering, or the svg's own
+ * viewBox-inferred intrinsic size) is the one approach here that doesn't
+ * depend on any browser inferring anything — every value is an explicit
+ * number, which is what finally made this render identically on iOS
+ * Safari after two earlier attempts (viewBox-inferred auto-sizing, then
+ * an `aspect-ratio` div) still looked right on Chrome/Android but not on
+ * Safari. */
+const PHOTO_STAMP_HORIZONTAL_MARGIN =
+  0.5 * (1 - (1 - 2 * PHOTO_STAMP_VERTICAL_MARGIN) * (MASK_ASPECT / CELL_ASPECT));
+
 /** One day of the month's "sheet" grid (see MonthCalendar) — not a
  * weekday-aligned calendar cell, just the Nth square in a plain
  * sequential 1..daysInMonth grid. A filled square (has an entry) shows
@@ -57,40 +89,39 @@ export default function DayCell({
           // A photo stamp still wears the scalloped StampFrame mask (see
           // DiaryStamp) — full-bleed made it read as coextensive with the
           // cell itself rather than a stamp glued onto it, so it gets a
-          // small margin instead. That margin needs its own centering
-          // wrapper rather than putting `inset-[8%]` directly on the
-          // StampFrame <svg> (an absolutely positioned element with all
-          // four inset sides set but no explicit width/height falls back
-          // to its own intrinsic size, which anchors it to one corner
-          // instead of centering it in the box).
+          // small margin instead.
           //
-          // The inner box below carries the mask's own aspect ratio as an
-          // explicit CSS `aspect-ratio` (computed from STAMP_MASK_WIDTH/
-          // HEIGHT, so it can never drift out of sync with the mask
-          // itself), sized to the available height and centered by the
-          // outer flex wrapper — deliberately *not* relying on the svg's
-          // own viewBox-derived intrinsic ratio for its sizing (`h-full
-          // w-auto` on the svg directly, an earlier version of this fix):
-          // that depends on browsers correctly inferring an aspect ratio
-          // from an SVG's `viewBox` for CSS auto-sizing, which is exactly
-          // where this still broke on iOS Safari (worked fine on Chrome/
-          // Android) — a real, known WebKit inconsistency, not just
-          // sub-pixel rounding. The svg inside this box gets plain,
-          // unambiguous `w-full h-full` — no browser-dependent intrinsic-
-          // ratio inference left anywhere in this path.
-          <div className="absolute inset-[8%] flex items-center justify-center overflow-hidden">
-            <div
-              className="h-full max-w-full overflow-hidden"
-              style={{ aspectRatio: `${STAMP_MASK_WIDTH} / ${STAMP_MASK_HEIGHT}` }}
-            >
-              <DiaryStamp
-                stampKind={entry.stamp_kind}
-                stampKey={entry.stamp_key as never}
-                stampVariant={entry.stamp_variant}
-                photoUrl={photoUrl}
-                className="h-full w-full"
-              />
-            </div>
+          // This box's four inset percentages (top/bottom fixed at
+          // PHOTO_STAMP_VERTICAL_MARGIN, left/right derived from it) are
+          // the *only* numbers involved — no flex centering, no CSS
+          // `aspect-ratio`, and no relying on the svg's own viewBox to
+          // imply a width from `height: 100%`. Two earlier versions of
+          // this fix (in order: `inset-[8%]` directly on the svg; then
+          // `h-full w-auto` in a centered flex box; then an `aspect-ratio`
+          // div around a `w-full h-full` svg) each looked correct on
+          // Chrome/Android but still clipped a hair on iOS Safari —
+          // apparently different browsers resolve "the other axis, from
+          // an implied ratio" differently once flex and/or `aspect-ratio`
+          // are involved. Precomputing plain top/bottom/left/right
+          // percentages ahead of time removes every one of those implied
+          // calculations — the svg is just told its literal box, in the
+          // one way that's never been ambiguous in any browser.
+          <div
+            className="absolute overflow-hidden"
+            style={{
+              top: `${PHOTO_STAMP_VERTICAL_MARGIN * 100}%`,
+              bottom: `${PHOTO_STAMP_VERTICAL_MARGIN * 100}%`,
+              left: `${PHOTO_STAMP_HORIZONTAL_MARGIN * 100}%`,
+              right: `${PHOTO_STAMP_HORIZONTAL_MARGIN * 100}%`,
+            }}
+          >
+            <DiaryStamp
+              stampKind={entry.stamp_kind}
+              stampKey={entry.stamp_key as never}
+              stampVariant={entry.stamp_variant}
+              photoUrl={photoUrl}
+              className="h-full w-full"
+            />
           </div>
         ) : (
           // A keyword stamp is just its own flat image with no mask/
