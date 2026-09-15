@@ -3,13 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import PhotoCropModal from "@/components/editor/PhotoCropModal";
 import UiIcon from "@/components/icons/UiIcon";
-import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { pickStampVariant } from "@/lib/stamps/stampVariants";
-import { photoPublicUrl, saveEntry, uploadStampPhoto } from "@/lib/diary/client";
+import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
-import type { DiaryEntry, DiaryParagraph, SessionStamp, StampKind } from "@/types/diary";
+import type { DiaryEntry, DiaryParagraph, SessionStamp } from "@/types/diary";
 
 interface EditableParagraph {
   session: number;
@@ -146,29 +145,6 @@ export default function EditEntry({
   // calendar always shows stamps[0]) and keeps every other sitting's own
   // photo/keyword stamp completely out of this whole-entry photo flow.
   const frontHasPhoto = Boolean(croppedPreviewUrl) || keepExistingPhoto;
-  const frontPreviewPhotoUrl = croppedPreviewUrl ?? (keepExistingPhoto ? existingPhotoUrl : null);
-
-  /** What a paragraph's own stamp looks like *right now*, live — a
-   * keyword stamp recomputes instantly from its own current text (pure,
-   * local, no AI call needed), while a sitting that was originally a
-   * photo keeps that exact photo untouched by any text edit here (only
-   * the front slot's own photo controls above can ever change a photo
-   * stamp) — editing session 2's text was never going to know anything
-   * about a photo taken for session 2 in the first place. */
-  function previewFor(p: EditableParagraph, index: number) {
-    if (index === 0 && frontHasPhoto) {
-      return { stampKind: "photo" as StampKind, stampKey: null, photoUrl: frontPreviewPhotoUrl };
-    }
-    const original = originalStamps.find((s) => s.session === p.session);
-    if (original?.stampKind === "photo" && original.photoPath) {
-      return {
-        stampKind: "photo" as StampKind,
-        stampKey: null,
-        photoUrl: photoPublicUrl(original.photoPath, original.createdAt),
-      };
-    }
-    return { stampKind: "keyword" as StampKind, stampKey: pickStamp(p.text), photoUrl: null };
-  }
 
   async function handleSave() {
     const trimmed = paragraphs
@@ -392,33 +368,19 @@ export default function EditEntry({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4">
         {paragraphs.map((p, i) => {
-          const preview = previewFor(p, i);
           return (
             <div key={p.session} className="flex flex-col gap-3">
-              {/* Stamp beside the text box (not below it, and not just
-                  at wider viewports) — the stamp reads as this sitting's
-                  own label/marker for its text, so it sits right next to
-                  it always. Camera/delete controls moved out into their
-                  own full-width row underneath instead of stacking in
-                  the stamp's own narrow column, which used to visually
-                  tie them to the stamp rather than to the sitting as a
-                  whole. */}
-              <div className="flex flex-row items-start gap-4">
-                <div className="w-28 shrink-0">
-                  <DiaryStamp
-                    stampKind={preview.stampKind}
-                    stampKey={preview.stampKey}
-                    photoUrl={preview.photoUrl}
-                    className="w-full drop-shadow-md"
-                  />
-                </div>
-                <textarea
-                  value={p.text}
-                  onChange={(e) => updateParagraphText(i, e.target.value)}
-                  disabled={saving}
-                  className="min-h-[16vh] flex-1 resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
-                />
-              </div>
+              {/* No stamp preview here any more — which stamp a sitting
+                  ends up with is decided once, at save time (see
+                  handleSave's own `pickStamp` call), and showing a live
+                  guess here while the text was still being edited used to
+                  visibly disagree with what actually got saved. */}
+              <textarea
+                value={p.text}
+                onChange={(e) => updateParagraphText(i, e.target.value)}
+                disabled={saving}
+                className="min-h-[16vh] w-full resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
+              />
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   {i === 0 && (

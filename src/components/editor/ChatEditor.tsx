@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PhotoCropModal from "@/components/editor/PhotoCropModal";
 import UiIcon from "@/components/icons/UiIcon";
-import DiaryStamp from "@/components/stamps/DiaryStamp";
 import FuriganaText from "@/components/review/FuriganaText";
 import ReadingsHint from "@/components/review/ReadingsHint";
 import { useToast } from "@/components/toast/ToastProvider";
@@ -295,8 +294,6 @@ export default function ChatEditor({
       : priorContentForBlock
     : content;
   const hasPhoto = Boolean(croppedPreviewUrl);
-  const previewPhotoUrl = croppedPreviewUrl;
-  const previewStampKey = hasPhoto ? null : pickStamp(content);
 
   function handleContentChange(next: string) {
     setContent(next);
@@ -760,17 +757,15 @@ export default function ChatEditor({
           </div>
         </div>
 
+        {/* No stamp preview here — which stamp this sitting ends up with
+            (this photo, or an auto-picked keyword) is only decided once,
+            at save time (see handleFinish's own `pickStamp` call below),
+            not guessed live here while the text is still being typed —
+            that guess used to visibly disagree with what actually got
+            saved. */}
         <div className="flex shrink-0 items-center gap-2.5 rounded-xl bg-[var(--paper-raised)] px-2.5 py-2">
-          <div className="w-10 shrink-0">
-            <DiaryStamp
-              stampKind={hasPhoto ? "photo" : "keyword"}
-              stampKey={previewStampKey}
-              photoUrl={previewPhotoUrl}
-              className="w-full drop-shadow-md"
-            />
-          </div>
           <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
-            사진을 추가하고, 오늘의 우표로 붙여보세요.
+            {hasPhoto ? "사진이 첨부됐어요." : "사진을 추가하고, 오늘의 우표로 붙여보세요."}
           </p>
           <input
             ref={fileInputRef}
