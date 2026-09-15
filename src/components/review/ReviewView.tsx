@@ -184,7 +184,20 @@ export default function ReviewView({
             </p>
           )}
 
-          {paragraphs.length > 0 && (
+          {/* Hidden while still pending — the calendar's own TODAY card
+              used to show this same content immediately regardless of
+              status (nothing gated it there), while a "이어서 쓰기"
+              sitting's just-written text specifically doesn't land in
+              `paragraphs` until its own review comes back (see
+              ChatEditor's pending save), so this screen could otherwise
+              go on showing an *older* sitting's content while the
+              newest one silently isn't there yet — same underlying gap,
+              opposite symptom. Gating both on "not pending" (reviewed
+              *or* failed, not just reviewed — a failed review still has
+              real saved text worth seeing) makes them agree: nothing
+              shows until this sitting's own review has actually landed,
+              on either screen. */}
+          {!isPending && paragraphs.length > 0 && (
             <div className="flex flex-col gap-3">
               <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">일기 내용</p>
               <hr className="border-t border-[var(--paper-line)]" />

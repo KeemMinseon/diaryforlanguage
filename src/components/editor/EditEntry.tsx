@@ -356,7 +356,7 @@ export default function EditEntry({
           stamps,
         });
 
-        toast("첨삭이 반영되고 우표가 붙었어요! 📮");
+        toast("첨삭을 반영하고 우표를 붙였어요! 📮");
         // Lets the calendar, if it's what's showing right now, play a
         // real stamp-landing animation on this exact day — see
         // ChatEditor's identical call for the full reasoning.

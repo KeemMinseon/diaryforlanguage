@@ -257,9 +257,21 @@ export default function MonthCalendar() {
             NO.{parseDateKey(today).getDate()}
           </p>
           {todayEntry ? (
-            <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink)] line-clamp-2">
-              {todayEntry.content}
-            </p>
+            // Matches the entry detail screen (ReviewView): a "이어서
+            // 쓰기" sitting's just-written text doesn't land anywhere
+            // this card or that screen can show it until its own review
+            // comes back (see ChatEditor's pending save) — showing this
+            // raw `content` unconditionally used to let this card get
+            // ahead of that, displaying text the detail screen itself
+            // couldn't yet. Gated the same way there: nothing shown
+            // until review is no longer pending (reviewed *or* failed).
+            todayEntry.status === "pending" ? (
+              <p className="text-sm text-[var(--ink-soft)]">검토 중이에요…</p>
+            ) : (
+              <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink)] line-clamp-2">
+                {todayEntry.content}
+              </p>
+            )
           ) : (
             <p className="font-[family-name:var(--font-diary)] text-sm text-[var(--ink-soft)]">
               오늘의 일기를 써보세요.
