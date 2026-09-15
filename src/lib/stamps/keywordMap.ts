@@ -319,7 +319,14 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "chat", words: ["おしゃべり", "雑談"] },
     { id: "joy", words: ["嬉しい", "楽しい", "幸せ"] },
     { id: "happiness", words: ["幸福"] },
-    { id: "sad", words: ["悲しい", "辛い", "落ち込", "泣", "涙"] },
+    // "悲しい" (dictionary form) missed a diary entry that was written in
+    // past tense ("悲しかった") — an i-adjective's ending changes with
+    // conjugation, so matching only the dictionary form misses every past-
+    // tense/negative/etc. entry, which for a diary (almost always written
+    // about something already over) is the common case, not the rare one.
+    // Trimmed to the shared stem "悲し", the same way "落ち込" (further
+    // below) already avoids this by not including 落ち込む's own ending.
+    { id: "sad", words: ["悲し", "辛い", "落ち込", "泣", "涙"] },
     { id: "memories", words: ["思い出"] },
     { id: "dream", words: ["夢"] },
     { id: "morning", words: ["朝"] },

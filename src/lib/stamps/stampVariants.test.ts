@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StampId } from "@/lib/stamps/keywordMap";
 import { STAMP_VARIANT_COUNT, pickStampVariant, stampVariantCount } from "@/lib/stamps/stampVariants";
 
 describe("stampVariantCount", () => {
-  it("is 1 for a keyword with no entry in STAMP_VARIANT_COUNT (e.g. the fallback id)", () => {
-    expect(stampVariantCount("default")).toBe(1);
+  it("is 1 for a keyword with no entry in STAMP_VARIANT_COUNT", () => {
+    // Every real StampId has its own entry now (the fallback id, "default",
+    // used to be the one gap this tested against, until it got its own
+    // entry too — see stampVariants.ts) — cast an id that can't exist to
+    // exercise the `?? 1` fallback itself, not any particular real gap.
+    expect(stampVariantCount("__no_such_stamp__" as StampId)).toBe(1);
   });
 
   it("reflects the configured count for a keyword with several prepared variants", () => {

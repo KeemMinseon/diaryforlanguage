@@ -164,6 +164,15 @@ export const STAMP_VARIANT_COUNT: Partial<Record<StampId, number>> = {
   food: 1,
   coffee: 4,
   cafe: 4,
+  // No dedicated image set was ever prepared for "default" (그 밖의 하루,
+  // the catch-all when nothing else matched) — see KeywordIcon's own doc
+  // comment: an id with nothing uploaded under DEFAULT-<n> just renders
+  // nothing. Set to 2 on the expectation that the two leftover "WRITE-0"/
+  // "WRITE-1" images (orphaned under an id that no longer matches any
+  // current keyword — "writing" is the current one) get renamed to
+  // "DEFAULT-0"/"DEFAULT-1" in the stamp-icons bucket to fill this gap;
+  // bump or trim this if a different image set ends up there instead.
+  default: 2,
 };
 
 export function stampVariantCount(id: StampId): number {

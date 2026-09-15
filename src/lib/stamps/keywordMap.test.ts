@@ -38,6 +38,15 @@ describe("pickStamp", () => {
     expect(pickStamp("今日はとても嬉しい一日でした。")).toBe("joy");
   });
 
+  // A diary entry is almost always written about something already over,
+  // so past tense is the common case, not the rare one — an i-adjective
+  // trigger word needs to match its conjugated forms too, not just the
+  // dictionary form ("悲しい"). This was a real miss: an entry written as
+  // "悲しかった" fell all the way through to "default".
+  it("matches an i-adjective's conjugated (past-tense) form, not just its dictionary form", () => {
+    expect(pickStamp("今日はとても悲しかった。")).toBe("sad");
+  });
+
   // "lover" (relationships tier) sits ahead of "date" (activities tier) in
   // KEYWORD_RULES, so a sentence naming both a partner and a date still
   // resolves to the relationship, not the activity.
