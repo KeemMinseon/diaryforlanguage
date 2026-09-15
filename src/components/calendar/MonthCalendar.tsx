@@ -61,6 +61,20 @@ export default function MonthCalendar() {
     });
   }, [load, monthStartKey, monthEndKey]);
 
+  // Fallback for whenever that event is missed (this component wasn't
+  // mounted yet the instant the background review finished elsewhere) —
+  // without this, a still-pending entry's "검토 중이에요…" (see the
+  // TODAY card below) could stay frozen even though the review actually
+  // finished. Only polls while something in view is actually pending, and
+  // stops itself the moment a refetch brings back a non-pending status
+  // for all of them.
+  const hasPendingEntry = Object.values(entries).some((e) => e.status === "pending");
+  useEffect(() => {
+    if (!hasPendingEntry) return;
+    const interval = setInterval(load, 4000);
+    return () => clearInterval(interval);
+  }, [hasPendingEntry, load]);
+
   function goToMonth(nextYear: number, nextMonth: number) {
     let y = nextYear;
     let m = nextMonth;

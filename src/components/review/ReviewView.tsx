@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { deleteEntry, photoPublicUrl } from "@/lib/diary/client";
+import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { applyCorrections } from "@/lib/review/highlight";
 import { formatDateStamp } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
@@ -38,6 +39,27 @@ export default function ReviewView({
   const isReviewed = entry.status === "reviewed";
   const isPending = entry.status === "pending";
   const isFailed = entry.status === "failed";
+
+  // Server-rendered page: nothing re-fetches this screen on its own once
+  // the background review (see ChatEditor/EditEntry) finishes elsewhere —
+  // without this, a learner just sitting here watching "검토 중이에요…"
+  // would see it frozen forever even after the review actually landed.
+  // `onDiaryStamped` covers the common case (this exact tab, still open,
+  // hears the event the moment the background save finishes); the
+  // interval is a fallback for whenever that's missed (e.g. this screen
+  // wasn't mounted yet the instant the event fired). Both stop themselves
+  // as soon as a refresh brings back a non-pending status.
+  useEffect(() => {
+    if (!isPending) return;
+    const unsubscribe = onDiaryStamped((dateKey) => {
+      if (dateKey === entry.entry_date) router.refresh();
+    });
+    const interval = setInterval(() => router.refresh(), 4000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [isPending, entry.entry_date, router]);
 
   // One per writing session (see `SessionStamp`) — an entry saved before
   // that existed has an empty array, so synthesize the one implicit stamp
