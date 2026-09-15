@@ -188,6 +188,7 @@ type Locale = "ja";
 // bare food match shouldn't outrank whatever the entry was actually about.
 const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
   ja: [
+    // ── 날씨/계절 (weather/season) ──────────────────────────────────────
     { id: "rain", words: ["雨", "梅雨", "傘", "台風"] },
     { id: "snow", words: ["雪", "雪だるま"] },
     { id: "sunny", words: ["晴れ", "快晴"] },
@@ -207,6 +208,17 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "winter", words: ["冬"] },
     { id: "season", words: ["季節"] },
     { id: "sun", words: ["太陽", "日差し", "暑い", "猛暑"] },
+
+    // ── 감정/기념일 (emotion/occasions) ─────────────────────────────────
+    // "joy"/"happiness"/"sad"/"memories"/"dream" used to sit much further
+    // down (after travel, nature, animals, specific foods, activities, and
+    // relationships) — a second, stray emotion tier separate from this
+    // one, left over from however these categories were added over time.
+    // Moved in here with the rest, so any emotion word — not just the ones
+    // that happened to land in this first tier — outranks an activity or a
+    // meal mentioned alongside it, matching this file's own header comment
+    // ("weather/sky/season, then explicit occasions and strong emotion
+    // words...").
     { id: "birthday", words: ["誕生日", "バースデー"] },
     { id: "xmas", words: ["クリスマス"] },
     { id: "appointment", words: ["約束", "予定"] },
@@ -233,9 +245,64 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     // actually scary) anyway, so it moved rather than staying duplicated.
     { id: "fear", words: ["怖"] },
     { id: "anxiety", words: ["不安", "心配"] },
+    // "嬉しい"/"楽しい" are i-adjectives too — same stem trim as "longing"/
+    // "loneliness"/"fear" above ("幸せ" is a na-adjective/noun, so its own
+    // ending never changes and needed no fix).
+    { id: "joy", words: ["嬉し", "楽し", "幸せ"] },
+    { id: "happiness", words: ["幸福"] },
+    // "悲しい" (dictionary form) missed a diary entry that was written in
+    // past tense ("悲しかった") — an i-adjective's ending changes with
+    // conjugation, so matching only the dictionary form misses every past-
+    // tense/negative/etc. entry, which for a diary (almost always written
+    // about something already over) is the common case, not the rare one.
+    // Trimmed to the shared stem "悲し", the same way "落ち込" already
+    // avoids this by not including 落ち込む's own ending.
+    { id: "sad", words: ["悲し", "辛い", "落ち込", "泣", "涙"] },
+    { id: "memories", words: ["思い出"] },
+    { id: "dream", words: ["夢"] },
     { id: "sick", words: ["体調不良", "風邪", "病院"] },
     { id: "romance", words: ["恋愛", "ロマンス"] },
     { id: "queer", words: ["クィア", "性的少数者"] },
+
+    // ── 활동/취미 (activities/hobbies) ──────────────────────────────────
+    // Moved up ahead of travel/nature/animals/food — an entry that's
+    // fundamentally about an activity shouldn't lose to an incidental meal
+    // or scenery mention along the way, the same reasoning "food"/"coffee"/
+    // "cafe" already get placed dead last for.
+    { id: "hiking", words: ["ハイキング", "山登り"] },
+    { id: "running", words: ["ランニング", "走る"] },
+    { id: "workout", words: ["筋トレ", "トレーニング"] },
+    { id: "yoga", words: ["ヨガ"] },
+    { id: "soccer", words: ["サッカー"] },
+    { id: "football", words: ["アメフト"] },
+    { id: "basketball", words: ["バスケ", "バスケットボール"] },
+    { id: "dance", words: ["ダンス", "踊り"] },
+    { id: "game", words: ["ゲーム"] },
+    { id: "music", words: ["音楽", "歌", "ライブ", "バンド"] },
+    { id: "sing", words: ["歌う", "カラオケ"] },
+    { id: "read", words: ["読書", "本を読む"] },
+    { id: "book", words: ["本", "小説", "図書館", "雑誌"] },
+    { id: "study", words: ["勉強", "宿題", "テスト", "試験", "日本語"] },
+    { id: "writing", words: ["文章を書く", "日記を書く"] },
+    { id: "poetry", words: ["詩"] },
+    { id: "knitting", words: ["編み物"] },
+    { id: "drive", words: ["ドライブ"] },
+    { id: "walk", words: ["散歩"] },
+    { id: "picnic", words: ["ピクニック"] },
+    { id: "cleaning", words: ["掃除"] },
+    { id: "cook", words: ["自炊", "料理", "キッチン"] },
+    { id: "recipe", words: ["レシピ"] },
+    { id: "shopping", words: ["買い物", "ショッピング", "デパート", "セール"] },
+
+    // ── 관계 (relationships) ────────────────────────────────────────────
+    { id: "family", words: ["家族"] },
+    { id: "lover", words: ["恋人", "彼氏", "彼女"] },
+    { id: "friendship", words: ["友情", "友達"] },
+    { id: "together", words: ["一緒に"] },
+    { id: "date", words: ["デート"] },
+    { id: "chat", words: ["おしゃべり", "雑談"] },
+
+    // ── 여행 (travel) ───────────────────────────────────────────────────
     { id: "airport", words: ["空港"] },
     { id: "flight", words: ["飛行機", "フライト"] },
     { id: "passport", words: ["パスポート", "旅券"] },
@@ -261,6 +328,8 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "osaka", words: ["大阪"] },
     { id: "kyoto", words: ["京都"] },
     { id: "train", words: ["電車", "新幹線", "駅"] },
+
+    // ── 자연/장소 (nature/places) ───────────────────────────────────────
     { id: "mountain", words: ["山", "登山"] },
     { id: "ocean", words: ["海"] },
     { id: "river", words: ["川"] },
@@ -275,11 +344,17 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "city", words: ["街", "都市"] },
     { id: "home", words: ["家", "自宅"] },
     { id: "school", words: ["学校", "授業"] },
+
+    // ── 동물 (animals) ──────────────────────────────────────────────────
     { id: "cat", words: ["猫", "ペット"] },
     { id: "dog", words: ["犬"] },
     { id: "bird", words: ["鳥"] },
     { id: "rabbit", words: ["うさぎ"] },
     { id: "butterfly", words: ["蝶"] },
+
+    // ── 음식 (food) — 감정/활동보다 뒤로, 이 파일 안에서 가장 나중 ──────
+    // 거의 모든 일기가 뭔가를 먹었다는 얘기를 지나가듯 언급하니, 음식이
+    // 먼저 걸리면 정작 그 날의 진짜 내용(감정, 활동)을 가려버린다.
     { id: "breakfast", words: ["朝食", "朝ごはん"] },
     { id: "lunch", words: ["昼食", "ランチ"] },
     { id: "dinner", words: ["夕食", "晩ごはん"] },
@@ -297,51 +372,11 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "tea", words: ["紅茶", "お茶"] },
     { id: "wine", words: ["ワイン"] },
     { id: "beer", words: ["ビール"] },
-    { id: "hiking", words: ["ハイキング", "山登り"] },
-    { id: "running", words: ["ランニング", "走る"] },
-    { id: "workout", words: ["筋トレ", "トレーニング"] },
-    { id: "yoga", words: ["ヨガ"] },
-    { id: "soccer", words: ["サッカー"] },
-    { id: "football", words: ["アメフト"] },
-    { id: "basketball", words: ["バスケ", "バスケットボール"] },
-    { id: "dance", words: ["ダンス", "踊り"] },
-    { id: "game", words: ["ゲーム"] },
-    { id: "music", words: ["音楽", "歌", "ライブ", "バンド"] },
-    { id: "sing", words: ["歌う", "カラオケ"] },
-    { id: "read", words: ["読書", "本を読む"] },
-    { id: "book", words: ["本", "小説", "図書館", "雑誌"] },
-    { id: "study", words: ["勉強", "宿題", "テスト", "試験", "日本語"] },
-    { id: "writing", words: ["文章を書く", "日記を書く"] },
-    { id: "poetry", words: ["詩"] },
-    { id: "knitting", words: ["編み物"] },
-    { id: "drive", words: ["ドライブ"] },
-    { id: "walk", words: ["散歩"] },
-    { id: "picnic", words: ["ピクニック"] },
-    { id: "cleaning", words: ["掃除"] },
-    { id: "cook", words: ["自炊", "料理", "キッチン"] },
-    { id: "recipe", words: ["レシピ"] },
-    { id: "shopping", words: ["買い物", "ショッピング", "デパート", "セール"] },
-    { id: "family", words: ["家族"] },
-    { id: "lover", words: ["恋人", "彼氏", "彼女"] },
-    { id: "friendship", words: ["友情", "友達"] },
-    { id: "together", words: ["一緒に"] },
-    { id: "date", words: ["デート"] },
-    { id: "chat", words: ["おしゃべり", "雑談"] },
-    // "嬉しい"/"楽しい" are i-adjectives too — same stem trim as "longing"/
-    // "loneliness"/"fear" above ("幸せ" is a na-adjective/noun, so its own
-    // ending never changes and needed no fix).
-    { id: "joy", words: ["嬉し", "楽し", "幸せ"] },
-    { id: "happiness", words: ["幸福"] },
-    // "悲しい" (dictionary form) missed a diary entry that was written in
-    // past tense ("悲しかった") — an i-adjective's ending changes with
-    // conjugation, so matching only the dictionary form misses every past-
-    // tense/negative/etc. entry, which for a diary (almost always written
-    // about something already over) is the common case, not the rare one.
-    // Trimmed to the shared stem "悲し", the same way "落ち込" (further
-    // below) already avoids this by not including 落ち込む's own ending.
-    { id: "sad", words: ["悲し", "辛い", "落ち込", "泣", "涙"] },
-    { id: "memories", words: ["思い出"] },
-    { id: "dream", words: ["夢"] },
+    { id: "food", words: ["ご飯", "食べ", "レストラン", "居酒屋"] },
+    { id: "coffee", words: ["コーヒー"] },
+    { id: "cafe", words: ["カフェ"] },
+
+    // ── 일상/시간 (daily life/time) ─────────────────────────────────────
     { id: "morning", words: ["朝"] },
     { id: "afternoon", words: ["午後"] },
     { id: "evening", words: ["夕方", "夜"] },
@@ -356,9 +391,6 @@ const KEYWORD_RULES: Record<Locale, Array<{ id: StampId; words: string[] }>> = {
     { id: "weekend", words: ["週末"] },
     { id: "movie", words: ["映画", "ドラマ", "映画館"] },
     { id: "engraving", words: ["刻む", "彫刻"] },
-    { id: "food", words: ["ご飯", "食べ", "レストラン", "居酒屋"] },
-    { id: "coffee", words: ["コーヒー"] },
-    { id: "cafe", words: ["カフェ"] },
   ],
 };
 
