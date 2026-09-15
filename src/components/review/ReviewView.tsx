@@ -243,7 +243,7 @@ export default function ReviewView({
             <div className="flex flex-col gap-3">
               <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">일기 내용</p>
               <hr className="border-t border-[var(--paper-line)]" />
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
                 {paragraphs.map((p, pi) => (
                   <p
                     key={pi}
@@ -254,7 +254,7 @@ export default function ReviewView({
                 ))}
               </div>
               {paragraphs.some((p) => p.translation) && (
-                <div className="mt-3 flex flex-col gap-4">
+                <div className="mt-3 flex flex-col gap-1">
                   {paragraphs.map(
                     (p, pi) =>
                       p.translation && (
