@@ -76,14 +76,14 @@ export default function LoginPage() {
           visual, not read from any real data, so the last box is always
           left empty to read as "today's still waiting to be written". */}
       <div className="w-full max-w-sm">
-        <div className="mb-8 grid grid-cols-3 gap-3">
+        <div className="mb-8 grid w-3/5 grid-cols-3 gap-1.5">
           {STAMP_PREVIEW_TONES.map((tone, i) =>
             tone ? (
-              <div key={i} className={`aspect-[4/5] rounded-xl ${tone}`} />
+              <div key={i} className={`aspect-[4/5] ${tone}`} />
             ) : (
               <div
                 key={i}
-                className="aspect-[4/5] rounded-xl border border-[var(--paper-line)] bg-[var(--paper-raised)]"
+                className="aspect-[4/5] border border-[var(--paper-line)] bg-[var(--paper-raised)]"
               />
             )
           )}
