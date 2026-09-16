@@ -13,7 +13,7 @@ import {
 } from "@/lib/diary/client";
 import { collectWords, wordKey, type WordItem } from "@/lib/words/collectWords";
 import WordQuiz from "@/components/words/WordQuiz";
-import { parseDateKey } from "@/lib/utils/date";
+import { toDateKey, todayKey } from "@/lib/utils/date";
 
 /** Below this many words-with-a-meaning, a match-the-pairs round would
  * be too short to feel like a real round — quieter to just not offer it
@@ -25,7 +25,7 @@ const QUIZ_MIN_WORDS = 4;
  * ever played, not a consecutive streak (see recordQuizCorrect). A miss
  * doesn't reset the count, and the flag only ever gets set, never
  * cleared, by the quiz — the learner can still manually un-mark a word
- * with the "외웠어요" button below regardless of this count. */
+ * by tapping its row regardless of this count. */
 const QUIZ_MEMORIZE_THRESHOLD = 3;
 
 type Filter = "all" | "memorized" | "learning";
@@ -35,6 +35,16 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "learning", label: "아직" },
   { value: "memorized", label: "외운 단어" },
 ];
+
+/** Yesterday's date key, in local time — used only to size the "오늘
+ * 복습할 단어" card (see below); computed via Date's own day-rollover
+ * arithmetic rather than subtracting 86400000ms, which breaks across a
+ * DST transition. */
+function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return toDateKey(d);
+}
 
 export default function WordListView({ userId }: { userId: string }) {
   const push = useToast();
@@ -65,6 +75,26 @@ export default function WordListView({ userId }: { userId: string }) {
 
   const memorizedCount = useMemo(() => words?.filter((w) => w.memorized).length ?? 0, [words]);
 
+  // "오늘 복습할 단어" — no real spaced-repetition schedule behind this
+  // (there's no per-word "next due" data at all), so it's approximated as
+  // every not-yet-memorized word seen recently (today or yesterday):
+  // freshly-learned words are exactly the ones worth reinforcing, and this
+  // needs nothing beyond what collectWords already returns.
+  const reviewQueue = useMemo(() => {
+    if (!words) return [];
+    const today = todayKey();
+    const yesterday = yesterdayKey();
+    return words.filter((w) => !w.memorized && (w.lastSeen === today || w.lastSeen === yesterday));
+  }, [words]);
+  const reviewQueueKeys = useMemo(
+    () => new Set(reviewQueue.map((w) => wordKey(w.text, w.reading))),
+    [reviewQueue]
+  );
+  const addedYesterdayCount = useMemo(
+    () => reviewQueue.filter((w) => w.lastSeen === yesterdayKey()).length,
+    [reviewQueue]
+  );
+
   const visible = useMemo(() => {
     if (!words) return [];
     const filtered =
@@ -85,6 +115,13 @@ export default function WordListView({ userId }: { userId: string }) {
   // nothing on the "meaning" side of the quiz to match against, so it's
   // left out of the draw entirely rather than shown with a blank card.
   const quizPool = useMemo(() => words?.filter((w) => w.meaning) ?? [], [words]);
+  // "복습 시작" quizzes the review queue specifically when it's big enough
+  // to make a real round — otherwise falls back to the full pool rather
+  // than refusing to start one at all.
+  const reviewQuizPool = useMemo(() => {
+    const scoped = reviewQueue.filter((w) => w.meaning);
+    return scoped.length >= QUIZ_MIN_WORDS ? scoped : quizPool;
+  }, [reviewQueue, quizPool]);
 
   async function toggle(word: WordItem) {
     const next = !word.memorized;
@@ -148,175 +185,147 @@ export default function WordListView({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-5 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <Link
-          href="/"
-          className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
-        >
-          <UiIcon name="bracket-left-line" className="h-3.5 w-3.5" alt="">
-            ←
-          </UiIcon>
-          캘린더
-        </Link>
-        <h1 className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
-          단어장
-        </h1>
-        <span className="w-[52px]" aria-hidden="true" />
-      </header>
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6">
+      <Link
+        href="/"
+        className="flex w-fit items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
+      >
+        <UiIcon name="bracket-left-line" className="h-3.5 w-3.5" alt="">
+          ←
+        </UiIcon>
+        캘린더
+      </Link>
 
-      {words && words.length > 0 && !quizzing && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-[var(--ink-soft)]">
-            {words.length}개 중 {memorizedCount}개 외웠어요
-          </p>
-          <div className="flex gap-1 rounded-full bg-[var(--paper-raised)] p-0.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                type="button"
-                onClick={() => setFilter(f.value)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  filter === f.value
-                    ? "bg-[var(--paper)] text-[var(--ink)]"
-                    : "text-[var(--ink-soft)]"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {words === null && <p className="text-sm text-[var(--ink-soft)]">불러오는 중…</p>}
 
-      {/* Below the min, a round would either be too short to bother with
-          or not really be the "10" the feature is about — quietly hidden
-          rather than offered half-empty. Styled as its own card in the
-          app's postmark red rather than another outlined pill (which just
-          blended into the filter chips above it) — it's a distinct little
-          game, not one more list filter. */}
-      {!quizzing && quizPool.length >= QUIZ_MIN_WORDS && (
-        <button
-          type="button"
-          onClick={() => setQuizzing(true)}
-          className="flex items-center gap-3 rounded-2xl bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
-            <UiIcon name="cards-line" className="h-5 w-5" alt="">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-                <rect x="3" y="7.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth={1.6} />
-                <path
-                  d="M8 7.5V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 1-1.5 1.5h-1.5"
-                  stroke="currentColor"
-                  strokeWidth={1.6}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </UiIcon>
-          </span>
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-semibold">단어 테스트</span>
-            <span className="text-xs text-white/75">단어와 뜻을 짝지어 맞혀보세요</span>
-          </span>
-          {/* Layout/color classes go on this wrapping span, not on UiIcon's
-              own `className` — its no-override fallback renders `children`
-              inside a plain hardcoded span and doesn't forward the prop, so
-              `ml-auto` etc. would silently never reach the DOM (matches the
-              pattern already used for MonthCalendar's nav icons). */}
-          <span className="ml-auto flex h-4 w-4 shrink-0 items-center justify-center text-white/70">
-            <UiIcon name="chevron-right-line" className="h-4 w-4" alt="">
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-                <path
-                  d="M9 6l6 6-6 6"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </UiIcon>
-          </span>
-        </button>
-      )}
-
-      {quizzing ? (
-        <WordQuiz pool={quizPool} onClose={() => setQuizzing(false)} onCorrect={handleQuizCorrect} />
-      ) : (
+      {words !== null && (
         <>
-          {words === null && <p className="text-sm text-[var(--ink-soft)]">불러오는 중…</p>}
+          <div className="flex items-start justify-between">
+            <p className="font-[family-name:var(--font-heading)] text-5xl font-bold text-[var(--ink)]">
+              {words.length}
+            </p>
+            <p className="pt-2 text-xs font-medium tracking-widest text-[var(--ink-soft)]">
+              WORDS
+            </p>
+          </div>
 
-          {words !== null && words.length === 0 && (
+          {words.length === 0 ? (
             <p className="text-sm text-[var(--ink-soft)]">
               아직 모은 단어가 없어요. 일기를 쓰고 첨삭을 받으면 여기에 쌓여요.
             </p>
-          )}
-
-          {words !== null && words.length > 0 && visible.length === 0 && (
-            <p className="text-sm text-[var(--ink-soft)]">해당하는 단어가 없어요.</p>
-          )}
-
-          <div className="flex flex-col gap-2">
-            {visible.map((w) => {
-              const key = wordKey(w.text, w.reading);
-              // A word marked memorized by hand (not via 3 quiz passes)
-              // still shows all 3 dots filled — they track "done", not
-              // literally quiz_correct_count once that's true.
-              const filled = w.memorized
-                ? QUIZ_MEMORIZE_THRESHOLD
-                : Math.min(w.quizCorrectCount, QUIZ_MEMORIZE_THRESHOLD);
-              return (
-                <div
-                  key={key}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--paper-raised)] p-4"
-                >
-                  <div className="flex flex-1 flex-col gap-1">
-                    <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
-                      <FuriganaText
-                        text={w.text}
-                        readings={[{ text: w.text, reading: w.reading, kind: w.kind }]}
-                      />
-                    </span>
-                    {/* Empty for a word saved before `meaning` was collected —
-                        no placeholder text, just one fewer line for that card. */}
-                    {w.meaning && <p className="text-sm text-[var(--ink)]">{w.meaning}</p>}
-                    <span className="text-[11px] text-[var(--ink-soft)]">
-                      {parseDateKey(w.lastSeen).toLocaleDateString("ko-KR", {
-                        month: "long",
-                        day: "numeric",
-                      })}
-                      {w.occurrences > 1 && ` · ${w.occurrences}번 등장`}
-                    </span>
+          ) : (
+            <>
+              {!quizzing && reviewQueue.length > 0 && (
+                <div className="flex items-center justify-between rounded-2xl bg-[var(--paper-raised)] px-5 py-4">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm font-bold text-[var(--ink)]">오늘 복습할 단어</p>
+                    {addedYesterdayCount > 0 && (
+                      <p className="text-xs text-[var(--ink-soft)]">
+                        어제 담은 {addedYesterdayCount}개 포함
+                      </p>
+                    )}
                   </div>
-                  {/* Same manual toggle as before (tap to mark memorized,
-                      tap again to un-mark) — but no separate "외웠어요"
-                      badge anymore: memorized is just all 3 dots filled,
-                      the natural end state of the same progress dots
-                      rather than a different-looking element replacing
-                      them. */}
-                  <button
-                    type="button"
-                    onClick={() => toggle(w)}
-                    aria-label={
-                      w.memorized
-                        ? "외운 단어 — 눌러서 취소"
-                        : `퀴즈 통과 ${filled}/${QUIZ_MEMORIZE_THRESHOLD} — 눌러서 외운 단어로 표시`
-                    }
-                    className="flex shrink-0 items-center gap-1 p-2"
-                  >
-                    {Array.from({ length: QUIZ_MEMORIZE_THRESHOLD }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`h-2 w-2 rounded-full ${
-                          i < filled ? "bg-[var(--shu)]" : "border border-[var(--paper-line)]"
-                        }`}
-                      />
-                    ))}
-                  </button>
+                  <p className="text-3xl font-bold text-[var(--ink)]">{reviewQueue.length}</p>
                 </div>
-              );
-            })}
-          </div>
+              )}
+
+              {!quizzing && (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-[var(--ink-soft)]">
+                    {words.length}개 중 {memorizedCount}개 외웠어요
+                  </p>
+                  <div className="flex gap-1 rounded-full bg-[var(--paper-raised)] p-0.5">
+                    {FILTERS.map((f) => (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => setFilter(f.value)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                          filter === f.value
+                            ? "bg-[var(--paper)] text-[var(--ink)]"
+                            : "text-[var(--ink-soft)]"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {quizzing ? (
+                <WordQuiz
+                  pool={reviewQuizPool}
+                  onClose={() => setQuizzing(false)}
+                  onCorrect={handleQuizCorrect}
+                />
+              ) : (
+                <>
+                  <hr className="border-t border-[var(--ink)]" />
+
+                  {visible.length === 0 ? (
+                    <p className="text-sm text-[var(--ink-soft)]">해당하는 단어가 없어요.</p>
+                  ) : (
+                    <div className="flex flex-col">
+                      {visible.map((w, i) => {
+                        const key = wordKey(w.text, w.reading);
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => toggle(w)}
+                            aria-label={
+                              w.memorized
+                                ? `${w.text} — 외운 단어, 눌러서 취소`
+                                : `${w.text} — 눌러서 외운 단어로 표시`
+                            }
+                            className={`flex flex-col gap-1 py-4 text-left ${
+                              i > 0 ? "border-t border-[var(--paper-line)]" : ""
+                            }`}
+                          >
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="flex items-baseline gap-2">
+                                <span className="font-[family-name:var(--font-diary)] text-xl font-bold text-[var(--ink)]">
+                                  <FuriganaText
+                                    text={w.text}
+                                    readings={[{ text: w.text, reading: w.reading, kind: w.kind }]}
+                                  />
+                                </span>
+                              </span>
+                              {/* Marks a word still in today's review queue —
+                                  cleared the moment it's memorized (by hand
+                                  or via the quiz), so this only ever flags
+                                  something actually left to do. */}
+                              {reviewQueueKeys.has(key) && (
+                                <span
+                                  aria-hidden="true"
+                                  className="h-2 w-2 shrink-0 rounded-[2px] bg-[var(--ink)]"
+                                />
+                              )}
+                            </div>
+                            {/* Empty for a word saved before `meaning` was
+                                collected — no placeholder text, just one
+                                fewer line for that row. */}
+                            {w.meaning && <p className="text-sm text-[var(--ink)]">{w.meaning}</p>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {quizPool.length >= QUIZ_MIN_WORDS && (
+                    <button
+                      type="button"
+                      onClick={() => setQuizzing(true)}
+                      className="rounded-full bg-[var(--ink)] py-4 text-center text-sm font-bold text-[var(--paper)] transition hover:opacity-90"
+                    >
+                      복습 시작
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </>
       )}
     </div>
