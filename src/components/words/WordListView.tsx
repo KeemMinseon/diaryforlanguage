@@ -32,7 +32,7 @@ type Filter = "all" | "memorized" | "learning";
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "전체" },
-  { value: "learning", label: "아직" },
+  { value: "learning", label: "학습 단어" },
   { value: "memorized", label: "외운 단어" },
 ];
 
@@ -86,10 +86,6 @@ export default function WordListView({ userId }: { userId: string }) {
     const yesterday = yesterdayKey();
     return words.filter((w) => !w.memorized && (w.lastSeen === today || w.lastSeen === yesterday));
   }, [words]);
-  const reviewQueueKeys = useMemo(
-    () => new Set(reviewQueue.map((w) => wordKey(w.text, w.reading))),
-    [reviewQueue]
-  );
   const addedYesterdayCount = useMemo(
     () => reviewQueue.filter((w) => w.lastSeen === yesterdayKey()).length,
     [reviewQueue]
@@ -201,12 +197,21 @@ export default function WordListView({ userId }: { userId: string }) {
       {words !== null && (
         <>
           <div className="flex items-start justify-between">
-            <p className="font-[family-name:var(--font-heading)] text-5xl font-bold text-[var(--ink)]">
-              {words.length}
-            </p>
-            <p className="pt-2 text-xs font-medium tracking-widest text-[var(--ink-soft)]">
-              WORDS
-            </p>
+            <div>
+              <p className="font-[family-name:var(--font-heading)] text-5xl font-bold text-[var(--ink)]">
+                {words.length}
+              </p>
+              <p className="text-sm text-[var(--ink-soft)]">모은 단어</p>
+            </div>
+            <div className="text-right text-sm text-[var(--ink-soft)]">
+              <p>
+                학습 단어{" "}
+                <span className="font-medium text-[var(--ink)]">{words.length - memorizedCount}</span>
+              </p>
+              <p>
+                외운 단어 <span className="font-medium text-[var(--ink)]">{memorizedCount}</span>
+              </p>
+            </div>
           </div>
 
           {words.length === 0 ? (
@@ -230,27 +235,70 @@ export default function WordListView({ userId }: { userId: string }) {
               )}
 
               {!quizzing && (
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-[var(--ink-soft)]">
-                    {words.length}개 중 {memorizedCount}개 외웠어요
-                  </p>
-                  <div className="flex gap-1 rounded-full bg-[var(--paper-raised)] p-0.5">
-                    {FILTERS.map((f) => (
-                      <button
-                        key={f.value}
-                        type="button"
-                        onClick={() => setFilter(f.value)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                          filter === f.value
-                            ? "bg-[var(--paper)] text-[var(--ink)]"
-                            : "text-[var(--ink-soft)]"
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex gap-2">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setFilter(f.value)}
+                      className={`px-4 py-2 text-sm font-medium transition ${
+                        filter === f.value
+                          ? "bg-[var(--ink)] text-[var(--paper)]"
+                          : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
                 </div>
+              )}
+
+              {/* Below the min, a round would either be too short to bother
+                  with or not really be the "10" the feature is about —
+                  quietly hidden rather than offered half-empty. */}
+              {!quizzing && quizPool.length >= QUIZ_MIN_WORDS && (
+                <button
+                  type="button"
+                  onClick={() => setQuizzing(true)}
+                  className="flex items-center gap-3 rounded-2xl bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+                    <UiIcon name="cards-line" className="h-5 w-5" alt="">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                        <rect x="3" y="7.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth={1.6} />
+                        <path
+                          d="M8 7.5V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 1-1.5 1.5h-1.5"
+                          stroke="currentColor"
+                          strokeWidth={1.6}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </UiIcon>
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm font-semibold">단어 테스트</span>
+                    <span className="text-xs text-white/75">단어와 뜻을 짝지어 맞혀보세요</span>
+                  </span>
+                  {/* Layout/color classes go on this wrapping span, not on
+                      UiIcon's own `className` — its no-override fallback
+                      renders `children` inside a plain hardcoded span and
+                      doesn't forward the prop, so `ml-auto` etc. would
+                      silently never reach the DOM. */}
+                  <span className="ml-auto flex h-4 w-4 shrink-0 items-center justify-center text-white/70">
+                    <UiIcon name="chevron-right-line" className="h-4 w-4" alt="">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                        <path
+                          d="M9 6l6 6-6 6"
+                          stroke="currentColor"
+                          strokeWidth={1.8}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </UiIcon>
+                  </span>
+                </button>
               )}
 
               {quizzing ? (
@@ -269,6 +317,13 @@ export default function WordListView({ userId }: { userId: string }) {
                     <div className="flex flex-col">
                       {visible.map((w, i) => {
                         const key = wordKey(w.text, w.reading);
+                        // A word marked memorized by hand (not via 3 quiz
+                        // passes) still shows all 3 squares filled — they
+                        // track "done", not literally quiz_correct_count
+                        // once that's true.
+                        const filled = w.memorized
+                          ? QUIZ_MEMORIZE_THRESHOLD
+                          : Math.min(w.quizCorrectCount, QUIZ_MEMORIZE_THRESHOLD);
                         return (
                           <button
                             key={key}
@@ -277,7 +332,7 @@ export default function WordListView({ userId }: { userId: string }) {
                             aria-label={
                               w.memorized
                                 ? `${w.text} — 외운 단어, 눌러서 취소`
-                                : `${w.text} — 눌러서 외운 단어로 표시`
+                                : `${w.text} — 퀴즈 통과 ${filled}/${QUIZ_MEMORIZE_THRESHOLD}, 눌러서 외운 단어로 표시`
                             }
                             className={`flex flex-col gap-1 py-4 text-left ${
                               i > 0 ? "border-t border-[var(--paper-line)]" : ""
@@ -292,16 +347,19 @@ export default function WordListView({ userId }: { userId: string }) {
                                   />
                                 </span>
                               </span>
-                              {/* Marks a word still in today's review queue —
-                                  cleared the moment it's memorized (by hand
-                                  or via the quiz), so this only ever flags
-                                  something actually left to do. */}
-                              {reviewQueueKeys.has(key) && (
-                                <span
-                                  aria-hidden="true"
-                                  className="h-2 w-2 shrink-0 rounded-[2px] bg-[var(--ink)]"
-                                />
-                              )}
+                              <span className="ml-auto flex shrink-0 items-center gap-1">
+                                {Array.from({ length: QUIZ_MEMORIZE_THRESHOLD }).map((_, i2) => (
+                                  <span
+                                    key={i2}
+                                    aria-hidden="true"
+                                    className={`h-2 w-2 rounded-[2px] ${
+                                      i2 < filled
+                                        ? "bg-[var(--ink)]"
+                                        : "border border-[var(--paper-line)]"
+                                    }`}
+                                  />
+                                ))}
+                              </span>
                             </div>
                             {/* Empty for a word saved before `meaning` was
                                 collected — no placeholder text, just one
@@ -311,16 +369,6 @@ export default function WordListView({ userId }: { userId: string }) {
                         );
                       })}
                     </div>
-                  )}
-
-                  {quizPool.length >= QUIZ_MIN_WORDS && (
-                    <button
-                      type="button"
-                      onClick={() => setQuizzing(true)}
-                      className="rounded-full bg-[var(--ink)] py-4 text-center text-sm font-bold text-[var(--paper)] transition hover:opacity-90"
-                    >
-                      복습 시작
-                    </button>
                   )}
                 </>
               )}
