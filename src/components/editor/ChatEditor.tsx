@@ -12,7 +12,7 @@ import { pickStampVariant } from "@/lib/stamps/stampVariants";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
 import { buildHighlightSegments } from "@/lib/review/highlight";
-import { formatSavedAt, parseDateKey } from "@/lib/utils/date";
+import { formatEntryHeaderDate, formatSavedAt, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 interface FeedbackRound {
@@ -274,13 +274,6 @@ export default function ChatEditor({
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ block: "nearest" });
   }, [feedHistory.length, sending]);
-
-  const dateLabel = parseDateKey(dateKey).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  });
 
   // Text typed since the last successful review (based on where it stops
   // matching what was already reviewed, not a fixed offset — so editing
@@ -639,40 +632,49 @@ export default function ChatEditor({
 
   const busy = sending || finishing;
 
-  return (
-    // Fixed to the viewport height (not the page's natural scroll height) so
-    // the feedback feed and the compose area below split the screen and
-    // scroll independently — previously this whole block just grew with
-    // every sent paragraph, pushing the input further down each time and
-    // forcing a scroll-hunt for it (which read as "having to start over").
-    <div className="mx-auto flex h-dvh w-full max-w-2xl flex-col px-4 py-4">
-      <header className="flex shrink-0 items-center justify-between pb-3">
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="flex items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
-        >
-          <UiIcon name="bracket-left-line" className="h-3.5 w-3.5" alt="">
-            ←
-          </UiIcon>
-          캘린더
-        </button>
-        <p className="font-[family-name:var(--font-heading)] text-sm font-bold text-[var(--ink-soft)]">
-          {dateLabel}
-        </p>
-      </header>
+  // This visit's own suggestions/readings, flattened across every round
+  // reviewed so far — `feedHistory` (unlike `rounds`) never rolls back
+  // when the learner fixes a flagged spot, so a fix already applied still
+  // shows up here as a record of what was caught, instead of vanishing
+  // from the "고칠 곳" list the moment its own cause is gone.
+  const suggestionEntries = feedHistory.flatMap((r) =>
+    r.suggestions.map((s) => ({ suggestion: s, readings: r.readings }))
+  );
+  const allReadingsSoFar = feedHistory.flatMap((r) => r.readings);
+  const latestComment = feedHistory.length > 0 ? feedHistory[feedHistory.length - 1].comment : "";
+  const hasReviewed = feedHistory.length > 0;
 
-      {/* Top half: locked history first (if any), then this visit's own
-          feedback so far, scrolls on its own. This visit's own text stays
-          only in the box below — it's never echoed back up here; locked
-          rounds show their text right here instead, since it's not in the
-          box at all anymore. */}
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-1">
-        {feedHistory.length === 0 && lockedRounds.length === 0 && !sending && (
-          <p className="text-sm text-[var(--ink-soft)]">
-            오늘 하루는 어땠나요? 편하게 적어보세요 — 한 문단씩 보낼 때마다 짧은 피드백을 드릴게요.
-          </p>
-        )}
+  const charCount = content.trim().length;
+  const sentenceCount = (content.match(/[。.!?！？]/g) ?? []).length;
+
+  return (
+    <div className="mx-auto flex h-dvh w-full max-w-2xl flex-col px-4 py-4">
+      <button
+        type="button"
+        onClick={() => router.push("/")}
+        className="flex w-fit shrink-0 items-center gap-1 pb-3 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
+      >
+        <UiIcon name="bracket-left-line" className="h-3.5 w-3.5" alt="">
+          ←
+        </UiIcon>
+        캘린더
+      </button>
+
+      {/* Big day-of-month number, same visual weight as the calendar/
+          stamps/words screens' own big headline number — the top-right
+          label switches from the plain date to a running "N NOTES" count
+          the moment this visit's own writing has actually been reviewed
+          at least once, same trigger as the "고칠 곳" card below. */}
+      <div className="flex shrink-0 items-end justify-between pb-4">
+        <p className="font-[family-name:var(--font-heading)] text-6xl font-bold text-[var(--ink)]">
+          {parseDateKey(dateKey).getDate()}
+        </p>
+        <p className="pb-1 font-mono text-xs tracking-wide text-[var(--ink-soft)]">
+          {hasReviewed ? `${suggestionEntries.length} NOTES` : formatEntryHeaderDate(dateKey)}
+        </p>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
         {lockedRounds.map((r, i) => renderLockedRound(r, dateKey, `locked-${i}`))}
         {lockedRounds.length > 0 && (
           <div className="flex items-center gap-2">
@@ -681,34 +683,43 @@ export default function ChatEditor({
             <span className="h-px flex-1 bg-[var(--paper-line)]" />
           </div>
         )}
-        {feedHistory.map((r, i) => (
-          <div key={i} className="flex items-start gap-2 bg-black/[0.035] px-3 py-2.5">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-[var(--ink-soft)]" />
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] text-[var(--ink-tertiary)]">{formatSavedAt(r.savedAt, dateKey)}</p>
-              <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>
-              <ReadingsHint readings={r.readings} label="읽는 법" />
-              {r.suggestions.map((s, j) => (
-                <span
-                  key={j}
-                  className="inline-flex w-fit items-center gap-1.5 border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
-                >
-                  <span className="text-[13px] text-[var(--ink-soft)] line-through">
-                    <FuriganaText text={s.original} readings={r.readings} />
-                  </span>
-                  <UiIcon name="arrow-right-line" className="h-3 w-3" alt="">
-                    <span aria-hidden="true">→</span>
-                  </UiIcon>
-                  <span className="font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)]">
-                    <FuriganaText text={s.suggestion} readings={r.readings} />
-                  </span>
-                </span>
-              ))}
-            </div>
+
+        {/* This backdrop is decoration only — every character in it is
+            invisible, it just paints a highlight behind where a matched
+            suggestion sits. The textarea on top keeps its own text fully
+            visible and completely normal, so typing (Japanese IME
+            composition included) still works exactly like a plain input;
+            only the highlight lives underneath. Kept in sync on scroll
+            since only the (topmost, interactive) textarea actually
+            receives scroll input. No bordered box around it any more —
+            it now reads as one continuous page, not an input pinned
+            inside its own card. */}
+        <div className="relative min-h-[35vh] flex-1">
+          <div
+            ref={backdropRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words text-transparent font-[family-name:var(--font-diary)] text-lg leading-relaxed"
+          >
+            {renderBoxHighlight(rounds, pendingText)}
           </div>
-        ))}
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => handleContentChange(e.target.value)}
+            onKeyDown={handleTextareaKeyDown}
+            onScroll={(e) => {
+              if (backdropRef.current) backdropRef.current.scrollTop = e.currentTarget.scrollTop;
+            }}
+            placeholder={
+              initialEntry ? "여기에 이어서 편하게 적어주세요…" : "오늘 하루는 어땠나요? 편하게 적어보세요."
+            }
+            disabled={busy}
+            className="absolute inset-0 resize-none whitespace-pre-wrap break-words bg-transparent font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
+          />
+        </div>
+
         {sending && (
-          <div className="flex items-center gap-2 bg-black/[0.035] px-3 py-2.5">
+          <p className="flex shrink-0 items-center gap-2 text-[12.5px] text-[var(--ink-soft)]">
             <span className="flex items-center gap-1">
               <span
                 className="h-1.5 w-1.5 bg-[var(--ink-soft)]"
@@ -723,107 +734,91 @@ export default function ChatEditor({
                 style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "300ms" }}
               />
             </span>
-            <p className="text-[12.5px] text-[var(--ink-soft)]">살펴보고 있어요</p>
-          </div>
+            살펴보고 있어요
+          </p>
         )}
+
+        {/* One aggregated card for everything this visit's writing has
+            been flagged for so far, right under the text it's about —
+            replaces the old running feed of one card per "살펴보기"
+            click stacked above the box. */}
+        {suggestionEntries.length > 0 && (
+          <section className="flex flex-col gap-3 bg-[var(--paper-raised)] p-4">
+            <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
+              고칠 곳 {suggestionEntries.length}
+            </p>
+            {latestComment && (
+              <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{latestComment}</p>
+            )}
+            <div className="flex flex-col gap-2.5">
+              {suggestionEntries.map(({ suggestion: s, readings }, i) => (
+                <div key={i} className="flex flex-col gap-0.5 border-l-2 border-[var(--paper-line)] pl-3">
+                  <p className="font-[family-name:var(--font-diary)] text-base text-[var(--ink)]">
+                    <span className="text-[var(--ink-tertiary)] line-through decoration-1">
+                      <FuriganaText text={s.original} readings={readings} />
+                    </span>{" "}
+                    → <FuriganaText text={s.suggestion} readings={readings} />
+                  </p>
+                  {s.note && <p className="text-xs text-[var(--ink-soft)]">{s.note}</p>}
+                </div>
+              ))}
+            </div>
+            <ReadingsHint readings={allReadingsSoFar} label="읽는 법" />
+          </section>
+        )}
+
         <div ref={threadEndRef} />
       </div>
 
-      {/* Bottom half: everything about writing the next paragraph, pinned in place.
-          Weighted heavier than the feed above — this half also carries the
-          stamp bar and the full-width finish button, so giving it the same
-          flex-1 as the feed left the actual textarea box visibly smaller
-          than the feed area even though the two halves were equal height. */}
-      <div className="flex min-h-0 flex-[1.4] flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
-        <div className="flex min-h-0 flex-1 flex-col gap-2 border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
-          {/* This backdrop is decoration only — every character in it is
-              invisible, it just paints a highlight behind where a matched
-              suggestion sits. The textarea on top keeps its own text fully
-              visible and completely normal, so typing (Japanese IME
-              composition included) still works exactly like a plain input;
-              only the highlight lives underneath. Kept in sync on scroll
-              since only the (topmost, interactive) textarea actually
-              receives scroll input. */}
-          <div className="relative min-h-0 flex-1">
-            <div
-              ref={backdropRef}
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words text-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed"
-            >
-              {renderBoxHighlight(rounds, pendingText)}
-            </div>
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => handleContentChange(e.target.value)}
-              onKeyDown={handleTextareaKeyDown}
-              onScroll={(e) => {
-                if (backdropRef.current) backdropRef.current.scrollTop = e.currentTarget.scrollTop;
-              }}
-              placeholder="여기에 이어서 편하게 적어주세요…"
-              disabled={busy}
-              className="absolute inset-0 resize-none whitespace-pre-wrap break-words bg-transparent font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)] outline-none placeholder:text-[var(--ink-soft)] disabled:opacity-60"
-            />
-          </div>
-          <div className="flex shrink-0 justify-end">
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={!pendingText.trim() || busy}
-              className="border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
-            >
-              {sending ? "살펴보는 중…" : "살펴보기"}
-            </button>
-          </div>
-        </div>
+      {error && <p className="shrink-0 pt-2 text-sm font-medium text-[var(--ink)]">{error}</p>}
 
-        {/* No stamp preview here — which stamp this sitting ends up with
-            (this photo, or an auto-picked keyword) is only decided once,
-            at save time (see handleFinish's own `pickStamp` call below),
-            not guessed live here while the text is still being typed —
-            that guess used to visibly disagree with what actually got
-            saved. */}
-        <div className="flex shrink-0 items-center gap-2.5 bg-[var(--paper-raised)] px-2.5 py-2">
-          <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
-            {hasPhoto ? "사진이 첨부됐어요." : "사진을 추가하고, 오늘의 우표로 붙여보세요."}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
+      {/* One slim action bar: photo attach, a live char/sentence count,
+          then 첨삭(review) and 저장(save) side by side — replaces the old
+          stacked "사진 추가" row + full-width "마치기" button. Which
+          stamp this sitting ends up with (this photo, or an auto-picked
+          keyword) is still only decided at save time (see handleFinish's
+          own `pickStamp` call below), not guessed live here. */}
+      <div className="flex shrink-0 items-center gap-2.5 border-t border-[var(--paper-line)] pt-3">
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label={hasPhoto ? "사진 다시 선택" : "사진 추가"}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center border ${
+            hasPhoto ? "border-[var(--ink)] text-[var(--ink)]" : "border-[var(--paper-line)] text-[var(--ink-soft)]"
+          }`}
+        >
+          <UiIcon name="camera-line" className="h-4 w-4" alt="">
+            📷
+          </UiIcon>
+        </button>
+        {hasPhoto && (
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex shrink-0 items-center gap-1 border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
+            onClick={handleRemovePhoto}
+            className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
           >
-            <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
-              📷
-            </UiIcon>
-            사진
+            지우기
           </button>
-          {hasPhoto && (
-            <button
-              type="button"
-              onClick={handleRemovePhoto}
-              className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
-            >
-              지우기
-            </button>
-          )}
-        </div>
-
-        {error && <p className="shrink-0 text-sm font-medium text-[var(--ink)]">{error}</p>}
-
+        )}
+        <p className="flex-1 text-right font-mono text-[11px] text-[var(--ink-soft)]">
+          {charCount} CHARS · {sentenceCount} SENT
+        </p>
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={!pendingText.trim() || busy}
+          className="shrink-0 border border-[var(--ink)] px-4 py-2 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+        >
+          {sending ? "확인 중…" : "첨삭"}
+        </button>
         <button
           type="button"
           onClick={handleFinish}
           disabled={!content.trim() || busy}
-          className="shrink-0 w-full bg-[var(--cta)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
+          className="shrink-0 bg-[var(--cta)] px-5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
         >
-          {finishing ? "마무리하는 중…" : initialEntry ? "이어서 쓴 일기 마치기" : "오늘 일기 마치기"}
+          {finishing ? "저장 중…" : "저장"}
         </button>
       </div>
 

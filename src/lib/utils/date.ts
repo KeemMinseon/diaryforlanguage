@@ -30,6 +30,30 @@ export function daysInMonth(year: number, month: number): Date[] {
 }
 
 const WEEKDAY_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const MONTH_EN = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+
+/** "SEP 2026 · SUN" — the entry-writing screen's own header date, next to
+ * the big day-of-month number. Hand-written (not `Intl`/`toLocaleDateString`)
+ * for the same reason as `formatTimeKo` below: a "use client" component
+ * using one during render risks disagreeing with itself between the
+ * server's bundled ICU and the browser's own. */
+export function formatEntryHeaderDate(dateKey: string): string {
+  const d = parseDateKey(dateKey);
+  return `${MONTH_EN[d.getMonth()]} ${d.getFullYear()} · ${WEEKDAY_EN[d.getDay()]}`;
+}
 
 /** "2026.09.13 SUN" — the entry detail screen's own compact date stamp,
  * shown next to that day's stamp art. */

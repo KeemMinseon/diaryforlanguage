@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { daysInMonth, formatDateStamp, formatSavedAt, toDateKey } from "@/lib/utils/date";
+import {
+  daysInMonth,
+  formatDateStamp,
+  formatEntryHeaderDate,
+  formatSavedAt,
+  toDateKey,
+} from "@/lib/utils/date";
 
 describe("daysInMonth", () => {
   it("returns every day of a 30-day month, in order, with no padding", () => {
@@ -48,5 +54,16 @@ describe("formatDateStamp", () => {
 
   it("zero-pads month and day", () => {
     expect(formatDateStamp("2026-01-05")).toBe("2026.01.05 MON");
+  });
+});
+
+describe("formatEntryHeaderDate", () => {
+  it("formats as English month abbreviation, year, and weekday", () => {
+    expect(formatEntryHeaderDate("2026-09-13")).toBe("SEP 2026 · SUN");
+  });
+
+  it("handles every month abbreviation correctly", () => {
+    expect(formatEntryHeaderDate("2026-01-05")).toBe("JAN 2026 · MON");
+    expect(formatEntryHeaderDate("2026-12-25")).toBe("DEC 2026 · FRI");
   });
 });
