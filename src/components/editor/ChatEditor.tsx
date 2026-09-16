@@ -40,44 +40,6 @@ function frontStamp(stamps: SessionStamp[]): SessionStamp {
   return stamps.find((s) => s.stampKind === "photo") ?? stamps[0];
 }
 
-/** How far the true bottom edge of what's actually visible sits above the
- * bottom of the layout viewport — 0 with no on-screen keyboard, roughly
- * the keyboard's own height once one is open. `interactiveWidget:
- * resizes-content` (see layout.tsx) asks the browser to shrink the layout
- * viewport itself so plain `dvh` sizing already accounts for the
- * keyboard — Chrome honors that, but real-device testing on Safari (iOS)
- * showed it does not: the layout viewport, and anything sized in `vh`/
- * `dvh`, stayed exactly the same after the keyboard opened, so a plain
- * `position: fixed` bottom bar (or one sized off `dvh`) ended up hidden
- * behind the keyboard. `visualViewport` tracks the actually-visible
- * region directly and reliably shrinks on every browser regardless of
- * that meta hint, so this is used to keep the bottom action bar pinned
- * just above whatever's currently covering the screen instead of trusting
- * viewport units alone. */
-function useKeyboardInset(): number {
-  const [inset, setInset] = useState(0);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    function update() {
-      const hidden = window.innerHeight - (vv!.height + vv!.offsetTop);
-      setInset(Math.max(0, Math.round(hidden)));
-    }
-
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
-
-  return inset;
-}
-
 /** How much of `text` matches `prefix` from the start. */
 function commonPrefixLength(prefix: string, text: string): number {
   const max = Math.min(prefix.length, text.length);
@@ -236,7 +198,17 @@ export default function ChatEditor({
 }) {
   const router = useRouter();
   const toast = useToast();
-  const keyboardInset = useKeyboardInset();
+  // Just for hiding the big day-number header while the learner is
+  // actually typing (see the header's own render below) — a rough proxy
+  // for "the keyboard is probably open" that doesn't need to know its
+  // real height. An earlier version tried to track and pin the *action
+  // bar* itself to the keyboard's actual height via `visualViewport`, but
+  // real-device Safari testing showed that fighting Safari's own floating
+  // compact URL bar for the same strip of screen — the action bar now
+  // just sits in normal document flow like the rest of the page instead,
+  // so this state only needs to answer "is the keyboard probably up,"
+  // not "exactly how tall is it."
+  const [textareaFocused, setTextareaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -687,15 +659,8 @@ export default function ChatEditor({
   const sentenceCount = (content.match(/[。.!?！？]/g) ?? []).length;
 
   return (
-    <>
-      {/* A normal scrolling page, not an internal split-pane — see
-          useKeyboardInset's own comment for why the bottom bar below is
-          `position: fixed` and JS-tracked instead of relying on `dvh`
-          sizing here. `pb-24` reserves room so the last line of text (or
-          the "고칠 곳" card) can always scroll clear of that fixed bar
-          instead of sitting hidden underneath it. */}
-      <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 pb-24 pt-4">
-        <button
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 pb-6 pt-4">
+      <button
           type="button"
           onClick={() => router.push("/")}
           className="flex w-fit shrink-0 items-center gap-1 text-sm text-[var(--ink-soft)] hover:text-[var(--ink)]"
@@ -717,7 +682,7 @@ export default function ChatEditor({
             once the learner had already scrolled past it. The back link
             above stays up regardless, so leaving the screen is never
             blocked on dismissing the keyboard first. */}
-        <div className={`flex shrink-0 items-end justify-between ${keyboardInset > 0 ? "hidden" : ""}`}>
+        <div className={`flex shrink-0 items-end justify-between ${textareaFocused ? "hidden" : ""}`}>
           <p className="font-[family-name:var(--font-heading)] text-6xl font-bold text-[var(--ink)]">
             {parseDateKey(dateKey).getDate()}
           </p>
@@ -745,8 +710,8 @@ export default function ChatEditor({
             receives scroll input. No bordered box around it any more —
             it now reads as one continuous page, not an input pinned
             inside its own card. `min-h` is just an initial comfortable
-            size here, not load-bearing for keyboard handling (see
-            useKeyboardInset) — plain `vh` is fine. */}
+            size here, not load-bearing for keyboard handling — plain
+            `vh` is fine. */}
         <div className="relative min-h-[40vh] flex-1">
           <div
             ref={backdropRef}
@@ -760,6 +725,8 @@ export default function ChatEditor({
             value={content}
             onChange={(e) => handleContentChange(e.target.value)}
             onKeyDown={handleTextareaKeyDown}
+            onFocus={() => setTextareaFocused(true)}
+            onBlur={() => setTextareaFocused(false)}
             onScroll={(e) => {
               if (backdropRef.current) backdropRef.current.scrollTop = e.currentTarget.scrollTop;
             }}
@@ -822,76 +789,78 @@ export default function ChatEditor({
 
         {error && <p className="shrink-0 text-sm font-medium text-[var(--ink)]">{error}</p>}
 
-        <div ref={threadEndRef} />
-      </div>
-
-      {/* One slim action bar: photo attach, a live char/sentence count,
-          then 첨삭(review) and 저장(save) side by side. Pinned via
-          `position: fixed` with a JS-tracked `bottom` offset (see
-          useKeyboardInset) rather than sitting in normal flow at the end
-          of an `h-dvh` column — that relied on the browser actually
-          shrinking `dvh` for an open keyboard, which real-device Safari
-          testing showed it does not. Which stamp this sitting ends up
-          with (this photo, or an auto-picked keyword) is still only
-          decided at save time (see handleFinish's own `pickStamp` call
-          below), not guessed live here. */}
-      <div
-        className="fixed inset-x-0 z-10 mx-auto flex w-full max-w-2xl items-center gap-2.5 border-t border-[var(--paper-line)] bg-[var(--paper)] px-4 py-3"
-        style={{ bottom: keyboardInset }}
-      >
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label={hasPhoto ? "사진 다시 선택" : "사진 추가"}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center border ${
-            hasPhoto ? "border-[var(--ink)] text-[var(--ink)]" : "border-[var(--paper-line)] text-[var(--ink-soft)]"
-          }`}
-        >
-          <UiIcon name="camera-line" className="h-4 w-4" alt="">
-            📷
-          </UiIcon>
-        </button>
-        {hasPhoto && (
+        {/* One slim action bar: photo attach, a live char/sentence count,
+            then 첨삭(review) and 저장(save) side by side. Sits in normal
+            document flow, right after everything above — not
+            `position: fixed`. An earlier version pinned this to the
+            bottom of the visible screen (tracked via `visualViewport`, to
+            work around `dvh` not actually shrinking for an open keyboard
+            on Safari — see git history on this branch), but real-device
+            testing showed that fighting Safari's own floating compact URL
+            bar for the same strip of screen, the two overlapping into an
+            unreadable mess. Being a plain flow element sidesteps that
+            entirely: it can never collide with browser chrome it doesn't
+            know about, at the cost of needing a scroll to reach it once
+            the "고칠 곳" card above grows tall. Which stamp this sitting
+            ends up with (this photo, or an auto-picked keyword) is still
+            only decided at save time (see handleFinish's own `pickStamp`
+            call below), not guessed live here. */}
+        <div className="flex shrink-0 items-center gap-2.5 border-t border-[var(--paper-line)] pt-3">
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
           <button
             type="button"
-            onClick={handleRemovePhoto}
-            className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label={hasPhoto ? "사진 다시 선택" : "사진 추가"}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center border ${
+              hasPhoto ? "border-[var(--ink)] text-[var(--ink)]" : "border-[var(--paper-line)] text-[var(--ink-soft)]"
+            }`}
           >
-            지우기
+            <UiIcon name="camera-line" className="h-4 w-4" alt="">
+              📷
+            </UiIcon>
           </button>
-        )}
-        <p className="flex-1 text-right font-mono text-[11px] text-[var(--ink-soft)]">
-          {charCount} CHARS · {sentenceCount} SENT
-        </p>
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!pendingText.trim() || busy}
-          className="shrink-0 border border-[var(--ink)] px-4 py-2 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
-        >
-          {sending ? "확인 중…" : "첨삭"}
-        </button>
-        <button
-          type="button"
-          onClick={handleFinish}
-          disabled={!content.trim() || busy}
-          className="shrink-0 bg-[var(--cta)] px-5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
-        >
-          {finishing ? "저장 중…" : "저장"}
-        </button>
-      </div>
+          {hasPhoto && (
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
+            >
+              지우기
+            </button>
+          )}
+          <p className="flex-1 text-right font-mono text-[11px] text-[var(--ink-soft)]">
+            {charCount} CHARS · {sentenceCount} SENT
+          </p>
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!pendingText.trim() || busy}
+            className="shrink-0 border border-[var(--ink)] px-4 py-2 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+          >
+            {sending ? "확인 중…" : "첨삭"}
+          </button>
+          <button
+            type="button"
+            onClick={handleFinish}
+            disabled={!content.trim() || busy}
+            className="shrink-0 bg-[var(--cta)] px-5 py-2 text-[12.5px] font-semibold text-white disabled:opacity-40"
+          >
+            {finishing ? "저장 중…" : "저장"}
+          </button>
+        </div>
 
-      {rawImageUrl && (
-        <PhotoCropModal
-          imageSrc={rawImageUrl}
-          onCancel={() => {
-            URL.revokeObjectURL(rawImageUrl);
-            setRawImageUrl(null);
-          }}
-          onConfirm={handleCropConfirm}
-        />
-      )}
-    </>
+        <div ref={threadEndRef} />
+
+        {rawImageUrl && (
+          <PhotoCropModal
+            imageSrc={rawImageUrl}
+            onCancel={() => {
+              URL.revokeObjectURL(rawImageUrl);
+              setRawImageUrl(null);
+            }}
+            onConfirm={handleCropConfirm}
+          />
+        )}
+    </div>
   );
 }
