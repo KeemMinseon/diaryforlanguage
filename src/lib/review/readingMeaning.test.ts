@@ -6,6 +6,10 @@ describe("isUncertainMeaning", () => {
     expect(isUncertainMeaning("종관 제한(오타로 추정)")).toBe(true);
   });
 
+  it("flags a meaning marked as misuse of a made-up, not-in-any-dictionary term", () => {
+    expect(isUncertainMeaning("종관 제한(오용)")).toBe(true);
+  });
+
   it("flags other common uncertainty phrasing", () => {
     expect(isUncertainMeaning("확실하지 않음")).toBe(true);
     expect(isUncertainMeaning("불확실한 표현")).toBe(true);
