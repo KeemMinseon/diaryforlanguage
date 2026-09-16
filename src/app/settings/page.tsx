@@ -37,8 +37,6 @@ export default async function SettingsPage() {
         캘린더
       </Link>
 
-      <h1 className="font-[family-name:var(--font-heading)] text-4xl font-bold text-[var(--ink)]">설정</h1>
-
       <div className="flex items-center gap-4 bg-[var(--paper-raised)] px-5 py-4">
         <div
           className="flex h-14 w-14 shrink-0 items-center justify-center bg-[var(--paper-line)] font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink-soft)]"
