@@ -43,6 +43,14 @@
    * background instead. */
   --success: #34d399;
   --success-soft: #ecfdf5;
+  /* A warm off-white, one step past --paper-raised's plain white — for a
+   * card meant to stand out slightly from the surrounding raised surfaces
+   * (오늘의 일기 on the calendar, 고칠 곳 on the writing screen) rather than
+   * blend in like every other bg-[var(--paper-raised)] block. No dark-mode
+   * spec given for this one yet, so it falls back to plain --paper-raised
+   * there — same as this card looked before this token existed — rather
+   * than guessing a value that might read as a stray light patch. */
+  --card-highlight: #f5f3f1;
 
   /* The device's own font, not a loaded webfont — one stack for every
    * role (body/heading/diary) rather than each specifying its own. */
@@ -75,6 +83,7 @@
     --shu-soft: #5a2c1e;
     --success: #34d399;
     --success-soft: #064e3b;
+    --card-highlight: var(--paper-raised);
   }
 }
 :root[data-theme="dark"] {
@@ -88,6 +97,7 @@
   --shu-soft: #5a2c1e;
   --success: #34d399;
   --success-soft: #064e3b;
+  --card-highlight: var(--paper-raised);
 }
 
 @theme inline {
