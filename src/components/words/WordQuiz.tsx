@@ -155,7 +155,7 @@ export default function WordQuiz({
     if (isSelected) {
       return "border-[var(--ink)] bg-black/5";
     }
-    return "border-transparent bg-[var(--paper-raised)]";
+    return "border-[var(--paper-line)] bg-[var(--paper-raised)]";
   }
 
   if (done) {
