@@ -142,17 +142,12 @@ describe("collectStamps", () => {
     expect(photoStamps).toEqual([]);
   });
 
-  describe("distinctKeywordStamps", () => {
-    it("lists each distinct keyword once, most-recently-collected-first", () => {
-      const { distinctKeywordStamps } = collectStamps([
+  describe("allStamps", () => {
+    it("lists each distinct keyword once, anchored to its first (oldest) occurrence date", () => {
+      const { allStamps } = collectStamps([
+        // Given most-recent-first, as fetchAllEntriesForStamps provides.
         entry({
           entry_date: "2026-09-03",
-          stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "dog", stampVariant: null, photoPath: null, createdAt: "" },
-          ],
-        }),
-        entry({
-          entry_date: "2026-09-02",
           stamps: [
             { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
           ],
@@ -164,21 +159,43 @@ describe("collectStamps", () => {
           ],
         }),
       ]);
-      // "cat" repeats but only shows up once — and at the position of its
-      // first (most recent, since entries are given most-recent-first)
-      // occurrence, not its last.
-      expect(distinctKeywordStamps).toEqual(["dog", "cat"]);
+      // "cat" repeats on both days but only shows up once — dated to
+      // 09-01 (its first-ever occurrence), not 09-03 (its most recent).
+      expect(allStamps).toEqual([
+        { stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, entryDate: "2026-09-01", session: 0, createdAt: "2026-09-01" },
+      ]);
     });
 
-    it("doesn't include photo stamps", () => {
-      const { distinctKeywordStamps } = collectStamps([
+    it("merges photo and keyword entries, sorted most-recent-first", () => {
+      const { allStamps } = collectStamps([
         entry({
+          entry_date: "2026-09-01",
           stamps: [
-            { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/p.jpg", createdAt: "" },
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-05",
+          stamps: [
+            { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/p.jpg", createdAt: "t1" },
           ],
         }),
       ]);
-      expect(distinctKeywordStamps).toEqual([]);
+      expect(allStamps.map((s) => s.entryDate)).toEqual(["2026-09-05", "2026-09-01"]);
+      expect(allStamps.map((s) => s.stampKind)).toEqual(["photo", "keyword"]);
+    });
+
+    it("doesn't repeat a photo — every occurrence is its own entry", () => {
+      const { allStamps } = collectStamps([
+        entry({
+          entry_date: "2026-09-01",
+          stamps: [
+            { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/a.jpg", createdAt: "" },
+            { session: 1, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/b.jpg", createdAt: "" },
+          ],
+        }),
+      ]);
+      expect(allStamps).toHaveLength(2);
     });
   });
 

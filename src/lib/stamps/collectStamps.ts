@@ -18,11 +18,12 @@ export interface KeywordCategoryGroup {
   items: KeywordStampCount[];
 }
 
-/** One actual stamp — a specific session's own, keyword or photo — for the
- * day-by-day timeline shown in 우표 모음's "전체"/"사진우표" tabs. Unlike
- * `KeywordStampCount` (one row per distinct keyword, occurrences merged),
- * this is one row per occurrence, since a timeline is about *when* each
- * stamp was collected, not how many of a kind. */
+/** One actual stamp for the day-by-day timeline shown in 우표 모음's
+ * "전체"/"사진우표" tabs — either a specific session's own photo, or (for
+ * `allStamps` only) one distinct keyword's single representative entry.
+ * Unlike `KeywordStampCount` (one row per distinct keyword, occurrences
+ * merged, no date), this always carries an `entryDate` to place it in the
+ * timeline. */
 export interface TimelineStampItem {
   stampKind: StampKind;
   stampKey: StampId | null;
@@ -33,7 +34,8 @@ export interface TimelineStampItem {
   /** Passed straight through to photoPublicUrl's cache-buster — every
    * day's photo is uploaded to the same fixed storage path (see
    * uploadStampPhoto), so without this a re-crop can keep showing the
-   * old cached image at that same URL forever. */
+   * old cached image at that same URL forever. Meaningless for a keyword
+   * entry (no photo to fetch). */
   createdAt: string;
 }
 
@@ -43,16 +45,18 @@ export interface StampCollection {
   keywordCount: number;
   /** Every photo stamp, most-recent-entry-first (see
    * fetchAllEntriesForStamps), multiple photos on the same day keeping
-   * their session order within that day. Used by both the "전체" tab
-   * (its own dated timeline section) and the "사진우표" tab. */
+   * their session order within that day. Used by the "사진우표" tab. */
   photoStamps: TimelineStampItem[];
-  /** Every distinct keyword ever collected, most-recently-collected-first,
-   * each appearing exactly once regardless of how many times it was
-   * actually picked — unlike a photo (always a different picture), the
-   * same keyword's stamp art is identical every time, so the "전체" tab
-   * shows this flat, dateless gallery instead of one entry per
-   * occurrence (which just repeated the same image over and over). */
-  distinctKeywordStamps: StampId[];
+  /** Every photo stamp plus one entry per distinct keyword — unlike a
+   * photo (always a different picture), the same keyword's stamp art is
+   * identical every time it's picked, so a repeat contributes nothing a
+   * single copy doesn't already show. That single copy is anchored to the
+   * keyword's *first-ever* occurrence date, not its most recent — like a
+   * real stamp album, each design appears once, at the point it was first
+   * collected. Merged with the photos and sorted most-recent-first for
+   * the "전체" tab, so the two interleave by date instead of keywords
+   * sitting in their own separate, dateless section. */
+  allStamps: TimelineStampItem[];
   /** Every keyword-stamp category (see KEYWORD_CATEGORIES) that has at
    * least one collected keyword in it, in that same category order —
    * for the "수집우표" tab, which groups by category instead. */
@@ -85,12 +89,13 @@ function sortMostPickedFirst(counts: KeywordStampCount[]): KeywordStampCount[] {
 }
 
 /** `entries` should already be sorted most-recent-first (see
- * fetchAllEntriesForStamps) so `photoStamps`/`distinctKeywordStamps` come
- * out in that same recency order without a separate sort here. */
+ * fetchAllEntriesForStamps) so `photoStamps` comes out in that same
+ * recency order without a separate sort here. */
 export function collectStamps(entries: StampSourceEntry[]): StampCollection {
   const photoStamps: TimelineStampItem[] = [];
   const countByKey = new Map<string, number>();
-  const distinctKeywordStamps: StampId[] = [];
+  const firstSeenOrder: StampId[] = [];
+  const firstDateByKey = new Map<StampId, string>();
 
   for (const entry of entries) {
     for (const s of resolveStamps(entry)) {
@@ -111,8 +116,12 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
       }
 
       const key = (s.stampKey ?? "default") as StampId;
-      if (!countByKey.has(key)) distinctKeywordStamps.push(key);
+      if (!countByKey.has(key)) firstSeenOrder.push(key);
       countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
+      // entries iterate most-recent-first, so the last write below (from
+      // the oldest entry that has this key) is the one that sticks —
+      // ending up as this key's first-ever occurrence date.
+      firstDateByKey.set(key, entry.entry_date);
     }
   }
 
@@ -127,12 +136,31 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
     ),
   })).filter((group) => group.items.length > 0);
 
+  const keywordTimelineItems: TimelineStampItem[] = firstSeenOrder.map((stampKey) => {
+    const entryDate = firstDateByKey.get(stampKey)!;
+    return {
+      stampKind: "keyword",
+      stampKey,
+      stampVariant: null,
+      photoPath: null,
+      entryDate,
+      session: 0,
+      createdAt: entryDate,
+    };
+  });
+
+  // A stable sort keeps same-date items in their existing relative order
+  // (photos before that date's keywords is arbitrary but consistent).
+  const allStamps = [...photoStamps, ...keywordTimelineItems].sort((a, b) =>
+    a.entryDate < b.entryDate ? 1 : a.entryDate > b.entryDate ? -1 : 0
+  );
+
   return {
     totalCount: photoStamps.length + keywordCount,
     photoCount: photoStamps.length,
     keywordCount,
     photoStamps,
-    distinctKeywordStamps,
+    allStamps,
     keywordCategories,
   };
 }

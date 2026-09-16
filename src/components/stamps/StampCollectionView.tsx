@@ -67,28 +67,48 @@ function photoKey(item: TimelineStampItem): string {
 function keywordKey(stampKey: StampId): string {
   return `keyword:${stampKey}`;
 }
+/** Both `photoKey`/`keywordKey` above produce a string that's unique on
+ * its own terms, but `allStamps` can now mix the two kinds within the
+ * same day — a keyword item's `session` is just a placeholder (always 0,
+ * see collectStamps), so keying it as if it were a photo could collide
+ * with an actual photo taken that same day at session 0. */
+function timelineItemKey(item: TimelineStampItem): string {
+  return item.stampKind === "photo" ? photoKey(item) : keywordKey(item.stampKey as StampId);
+}
 
 const TAB_LABELS: Record<Tab, string> = { all: "전체", photo: "사진우표", keyword: "수집우표" };
+
+interface DayGroup {
+  key: string;
+  entryDate: string;
+  items: TimelineStampItem[];
+}
 
 interface MonthGroup {
   key: string;
   year: number;
   month: number;
-  items: TimelineStampItem[];
+  days: DayGroup[];
 }
 
-/** `items` is already most-recent-first (see collectStamps), so grouping
- * consecutive same-year-month runs is enough — no separate sort needed. */
+/** `items` is already most-recent-first (see collectStamps' `photoStamps`
+ * and `allStamps`), so grouping consecutive same-year-month (and, within
+ * that, consecutive same-day) runs is enough — no separate sort needed. */
 function groupByMonth(items: TimelineStampItem[]): MonthGroup[] {
   const groups: MonthGroup[] = [];
   for (const item of items) {
     const [year, month] = item.entryDate.split("-").map(Number);
-    const key = `${year}-${month}`;
-    const last = groups[groups.length - 1];
-    if (last?.key === key) {
-      last.items.push(item);
+    const monthKey = `${year}-${month}`;
+    let monthGroup = groups[groups.length - 1];
+    if (monthGroup?.key !== monthKey) {
+      monthGroup = { key: monthKey, year, month, days: [] };
+      groups.push(monthGroup);
+    }
+    const dayGroup = monthGroup.days[monthGroup.days.length - 1];
+    if (dayGroup?.key === item.entryDate) {
+      dayGroup.items.push(item);
     } else {
-      groups.push({ key, year, month, items: [item] });
+      monthGroup.days.push({ key: item.entryDate, entryDate: item.entryDate, items: [item] });
     }
   }
   return groups;
@@ -341,83 +361,87 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <span className="text-base font-bold text-[var(--ink)]">
                 {group.year} · {String(group.month).padStart(2, "0")}
               </span>
-              <span className="text-sm text-[var(--ink-soft)]">{group.items.length}장</span>
+              <span className="text-sm text-[var(--ink-soft)]">
+                {group.days.reduce((sum, d) => sum + d.items.length, 0)}장
+              </span>
             </div>
             <hr className="border-t border-[var(--ink)]" />
-            <div data-stamp-section className="grid grid-cols-4 gap-3">
-              {group.items.map((item) => {
-                const key = photoKey(item);
-                const stampEl = (
-                  <DiaryStamp
-                    stampKind={item.stampKind}
-                    stampKey={item.stampKey as never}
-                    stampVariant={item.stampVariant}
-                    photoUrl={
-                      item.stampKind === "photo" && item.photoPath
-                        ? photoPublicUrl(item.photoPath, item.createdAt)
-                        : null
-                    }
-                    className="h-full w-full drop-shadow-sm"
-                  />
-                );
-                return (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    {item.stampKind === "photo" ? (
-                      // A photo stamp's own scalloped frame (see StampFrame)
-                      // fills its box edge to edge with no built-in margin,
-                      // unlike the prepared keyword artwork (see
-                      // KeywordIcon), which already has some breathing room
-                      // baked into the image itself — at the same box size
-                      // the photo one reads as noticeably bigger. Scaled
-                      // down to 85% and centered in the same box (so the
-                      // grid cell itself, and the date label under it,
-                      // stay the same size as a keyword stamp's) instead
-                      // of shrinking the box.
-                      <button
-                        data-stamp-key={key}
-                        type="button"
-                        onClick={(e) => {
-                          // While something's already focused, any click
-                          // out here — this stamp included — just closes
-                          // it (see the container's own onClick below);
-                          // it doesn't jump straight to a different stamp.
-                          if (focus) return;
-                          // The hero shows the photo at full size (no 85%
-                          // inset), so the FLIP source rect has to be the
-                          // *inner* div actually holding the visible
-                          // image, not this button's own full box —
-                          // otherwise the hero starts ~15% too big/
-                          // off-center relative to what was really on
-                          // screen, popping visibly at the very first frame.
-                          openLightbox(key, { kind: "photo", item }, e.currentTarget.firstElementChild as HTMLElement);
-                        }}
-                        style={stampButtonStyle(key)}
-                        aria-label="사진 우표 크게 보기"
-                        className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
-                      >
-                        <div className="h-[85%] w-[85%]">{stampEl}</div>
-                      </button>
-                    ) : (
-                      <button
-                        data-stamp-key={key}
-                        type="button"
-                        onClick={(e) => {
-                          if (focus) return;
-                          if (item.stampKey) openLightbox(key, { kind: "keyword", stampKey: item.stampKey }, e.currentTarget);
-                        }}
-                        style={stampButtonStyle(key)}
-                        aria-label="우표 크게 보기"
-                        className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
-                      >
-                        {stampEl}
-                      </button>
-                    )}
-                    <span className="text-xs text-[var(--ink-soft)]">
-                      {shortDate(item.entryDate)}
-                    </span>
+            <div className="flex flex-col gap-4">
+              {group.days.map((day) => (
+                <div key={day.key} className="flex flex-col gap-2">
+                  <span className="text-xs text-[var(--ink-soft)]">{shortDate(day.entryDate)}</span>
+                  <div data-stamp-section className="grid grid-cols-4 gap-3">
+                    {day.items.map((item) => {
+                      const key = timelineItemKey(item);
+                      const stampEl = (
+                        <DiaryStamp
+                          stampKind={item.stampKind}
+                          stampKey={item.stampKey as never}
+                          stampVariant={item.stampVariant}
+                          photoUrl={
+                            item.stampKind === "photo" && item.photoPath
+                              ? photoPublicUrl(item.photoPath, item.createdAt)
+                              : null
+                          }
+                          className="h-full w-full drop-shadow-sm"
+                        />
+                      );
+                      return item.stampKind === "photo" ? (
+                        // A photo stamp's own scalloped frame (see
+                        // StampFrame) fills its box edge to edge with no
+                        // built-in margin, unlike the prepared keyword
+                        // artwork (see KeywordIcon), which already has
+                        // some breathing room baked into the image itself
+                        // — at the same box size the photo one reads as
+                        // noticeably bigger. Scaled down to 85% and
+                        // centered in the same box instead of shrinking
+                        // the box.
+                        <button
+                          key={key}
+                          data-stamp-key={key}
+                          type="button"
+                          onClick={(e) => {
+                            // While something's already focused, any click
+                            // out here — this stamp included — just closes
+                            // it (see the container's own onClick below);
+                            // it doesn't jump straight to a different stamp.
+                            if (focus) return;
+                            // The hero shows the photo at full size (no
+                            // 85% inset), so the FLIP source rect has to
+                            // be the *inner* div actually holding the
+                            // visible image, not this button's own full
+                            // box — otherwise the hero starts ~15% too
+                            // big/off-center relative to what was really
+                            // on screen, popping visibly at the very
+                            // first frame.
+                            openLightbox(key, { kind: "photo", item }, e.currentTarget.firstElementChild as HTMLElement);
+                          }}
+                          style={stampButtonStyle(key)}
+                          aria-label="사진 우표 크게 보기"
+                          className="aspect-[499.78/671.48] flex cursor-pointer appearance-none items-center justify-center border-0 bg-transparent p-0"
+                        >
+                          <div className="h-[85%] w-[85%]">{stampEl}</div>
+                        </button>
+                      ) : (
+                        <button
+                          key={key}
+                          data-stamp-key={key}
+                          type="button"
+                          onClick={(e) => {
+                            if (focus) return;
+                            if (item.stampKey) openLightbox(key, { kind: "keyword", stampKey: item.stampKey }, e.currentTarget);
+                          }}
+                          style={stampButtonStyle(key)}
+                          aria-label="우표 크게 보기"
+                          className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
+                        >
+                          {stampEl}
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         ))}
@@ -485,52 +509,8 @@ export default function StampCollectionView({ userId }: { userId: string }) {
             ))}
           </div>
 
-          {tab === "all" && (
-            <>
-              {collection.photoStamps.length === 0 && collection.distinctKeywordStamps.length === 0 ? (
-                <p className="text-sm text-[var(--ink-soft)]">
-                  아직 받은 우표가 없어요. 일기를 쓰면 여기에 쌓여요.
-                </p>
-              ) : (
-                <>
-                  {collection.photoStamps.length > 0 && renderTimeline(collection.photoStamps, "")}
-                  {/* Flat, dateless gallery — unlike a photo (always a
-                      different picture), the same keyword's stamp art is
-                      identical every time it's picked, so listing one row
-                      per occurrence (the same icon repeated) added nothing
-                      a single copy doesn't already show. One of each kind
-                      instead, most-recently-collected-first. */}
-                  {collection.distinctKeywordStamps.length > 0 && (
-                    <div data-stamp-section className="grid grid-cols-4 gap-3">
-                      {collection.distinctKeywordStamps.map((stampKey) => {
-                        const key = keywordKey(stampKey);
-                        return (
-                          <button
-                            key={stampKey}
-                            data-stamp-key={key}
-                            type="button"
-                            onClick={(e) => {
-                              if (focus) return;
-                              openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget);
-                            }}
-                            style={stampButtonStyle(key)}
-                            aria-label="우표 크게 보기"
-                            className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
-                          >
-                            <DiaryStamp
-                              stampKind="keyword"
-                              stampKey={stampKey}
-                              className="h-full w-full drop-shadow-sm"
-                            />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
+          {tab === "all" &&
+            renderTimeline(collection.allStamps, "아직 받은 우표가 없어요. 일기를 쓰면 여기에 쌓여요.")}
           {tab === "photo" &&
             renderTimeline(collection.photoStamps, "아직 사진으로 찍은 우표가 없어요.")}
           {tab === "keyword" &&
