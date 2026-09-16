@@ -710,8 +710,14 @@ export default function ChatEditor({
             stamps/words screens' own big headline number — the top-right
             label switches from the plain date to a running "N NOTES" count
             the moment this visit's own writing has actually been reviewed
-            at least once, same trigger as the "고칠 곳" card below. */}
-        <div className="flex shrink-0 items-end justify-between">
+            at least once, same trigger as the "고칠 곳" card below. Hidden
+            once the keyboard is actually open: on a real device this is
+            the first thing tapped to start writing, so it was costing
+            real typing room the moment the keyboard appeared rather than
+            once the learner had already scrolled past it. The back link
+            above stays up regardless, so leaving the screen is never
+            blocked on dismissing the keyboard first. */}
+        <div className={`flex shrink-0 items-end justify-between ${keyboardInset > 0 ? "hidden" : ""}`}>
           <p className="font-[family-name:var(--font-heading)] text-6xl font-bold text-[var(--ink)]">
             {parseDateKey(dateKey).getDate()}
           </p>
@@ -790,7 +796,7 @@ export default function ChatEditor({
             replaces the old running feed of one card per "살펴보기"
             click stacked above the box. */}
         {suggestionEntries.length > 0 && (
-          <section className="flex flex-col gap-3 bg-[var(--paper-raised)] p-4">
+          <section className="flex flex-col gap-3 bg-[var(--card-highlight)] p-4">
             <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
               고칠 곳 {suggestionEntries.length}
             </p>
