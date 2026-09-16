@@ -21,9 +21,6 @@ const STAMP_ASPECT = 499.78 / 671.48;
  * date to show alongside it). */
 type FocusTarget = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword"; stampKey: StampId };
 
-/** How far (in px) every *other* visible stamp gets pushed outward, away
- * from screen center, once one is focused. */
-const PUSH_DISTANCE = 56;
 /** How small the pushed-out stamps shrink to, and how much they fade —
  * both just enough to read as "stepped back", not gone. */
 const PUSH_SCALE = 0.65;
@@ -155,71 +152,81 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     const dy = source.top + source.height / 2 - (heroTop + heroHeight / 2);
     const scale = source.width / heroWidth;
 
-    // A fixed push distance isn't enough on its own — a stamp that starts
-    // right where the (much bigger) hero ends up needs to travel a lot
-    // further to actually clear it, or it's left peeking out from behind
-    // one edge. For each stamp, also compute how far it has to go along
-    // its own outward direction before its box stops overlapping the
-    // hero's, and push by whichever is larger — but never further than
-    // its own section (data-stamp-section, one of the small per-month/
-    // per-category grids) can actually fit, or it'd spill past that
-    // section's own edge into a neighboring header or the next section
-    // down. Clearing the hero always loses to staying in bounds: a stamp
-    // that can't fully clear it just ends up partly behind it instead,
-    // which reads fine (it's faded and shrunk already) — visibly getting
-    // cut off at a section edge did not.
+    // Each stamp used to be pushed independently along its own direction
+    // from center — but two stamps that happen to need a similar push
+    // (e.g. same column, different rows) could end up landing on top of
+    // *each other*, not just peeking out from behind the hero. A single
+    // shared scale factor — the same "zoom out from center" ratio applied
+    // to every stamp's own (already-different) position — can't do that:
+    // it's one affine transform from a common origin, so it only ever
+    // preserves relative positions, never crosses two stamps' paths.
+    //
+    // heroScale is the largest ratio any single stamp needs to clear the
+    // hero on its own; using that same ratio for everyone guarantees all
+    // of them clear it. Only then is each stamp individually clamped back
+    // down (never pushed further) if that shared scale would carry it
+    // past its own section's (data-stamp-section) bounds — a reduction
+    // only ever pulls a stamp closer to where it already was, so it can't
+    // introduce a new overlap either.
     const heroHalfW = heroWidth / 2;
     const heroHalfH = heroHeight / 2;
     const CLEAR_MARGIN = 16;
     const SECTION_MARGIN = 4;
-    const MAX_PUSH = 600;
+    const BASE_SCALE = 1.35;
+    const MAX_SCALE = 6;
 
-    const offsets = new Map<string, [number, number]>();
+    interface Candidate {
+      el: HTMLElement;
+      key: string;
+      cx: number;
+      cy: number;
+      halfW: number;
+      halfH: number;
+    }
+    const candidates: Candidate[] = [];
+    let heroScale = BASE_SCALE;
+
     document.querySelectorAll<HTMLElement>("[data-stamp-key]").forEach((otherEl) => {
       const otherKey = otherEl.dataset.stampKey!;
       if (otherKey === key) return;
       const r = otherEl.getBoundingClientRect();
-      const centerX = r.left + r.width / 2;
-      const centerY = r.top + r.height / 2;
-      const cx = centerX - vw / 2;
-      const cy = centerY - vh / 2;
-      const len = Math.hypot(cx, cy) || 1;
-      const ux = cx / len;
-      const uy = cy / len;
+      const cx = r.left + r.width / 2 - vw / 2;
+      const cy = r.top + r.height / 2 - vh / 2;
+      const halfW = r.width / 2;
+      const halfH = r.height / 2;
+      candidates.push({ el: otherEl, key: otherKey, cx, cy, halfW, halfH });
 
-      const txNeeded =
-        ux !== 0 ? Math.max(0, (heroHalfW + r.width / 2 + CLEAR_MARGIN - Math.abs(cx)) / Math.abs(ux)) : Infinity;
-      const tyNeeded =
-        uy !== 0 ? Math.max(0, (heroHalfH + r.height / 2 + CLEAR_MARGIN - Math.abs(cy)) / Math.abs(uy)) : Infinity;
-      const clearDistance = Math.min(txNeeded, tyNeeded, MAX_PUSH);
-      let distance = Math.max(PUSH_DISTANCE, clearDistance);
+      const mx = cx !== 0 ? (heroHalfW + halfW + CLEAR_MARGIN) / Math.abs(cx) : Infinity;
+      const my = cy !== 0 ? (heroHalfH + halfH + CLEAR_MARGIN) / Math.abs(cy) : Infinity;
+      heroScale = Math.max(heroScale, Math.min(mx, my, MAX_SCALE));
+    });
 
-      const section = otherEl.closest<HTMLElement>("[data-stamp-section]");
+    const offsets = new Map<string, [number, number]>();
+    for (const c of candidates) {
+      let scale = heroScale;
+
+      const section = c.el.closest<HTMLElement>("[data-stamp-section]");
       if (section) {
         const s = section.getBoundingClientRect();
-        const halfW = (r.width * PUSH_SCALE) / 2;
-        const halfH = (r.height * PUSH_SCALE) / 2;
-        const maxTx =
-          ux !== 0
-            ? Math.max(
-                0,
-                (ux > 0 ? s.right - SECTION_MARGIN - halfW - centerX : centerX - (s.left + SECTION_MARGIN + halfW)) /
-                  Math.abs(ux)
-              )
-            : Infinity;
-        const maxTy =
-          uy !== 0
-            ? Math.max(
-                0,
-                (uy > 0 ? s.bottom - SECTION_MARGIN - halfH - centerY : centerY - (s.top + SECTION_MARGIN + halfH)) /
-                  Math.abs(uy)
-              )
-            : Infinity;
-        distance = Math.min(distance, maxTx, maxTy);
+        const halfW = c.halfW * PUSH_SCALE;
+        const halfH = c.halfH * PUSH_SCALE;
+        const maxScaleX =
+          c.cx > 0
+            ? (s.right - SECTION_MARGIN - halfW - vw / 2) / c.cx
+            : c.cx < 0
+              ? (s.left + SECTION_MARGIN + halfW - vw / 2) / c.cx
+              : Infinity;
+        const maxScaleY =
+          c.cy > 0
+            ? (s.bottom - SECTION_MARGIN - halfH - vh / 2) / c.cy
+            : c.cy < 0
+              ? (s.top + SECTION_MARGIN + halfH - vh / 2) / c.cy
+              : Infinity;
+        scale = Math.min(scale, Math.max(1, maxScaleX), Math.max(1, maxScaleY));
       }
 
-      offsets.set(otherKey, [ux * distance, uy * distance]);
-    });
+      offsets.set(c.key, [(scale - 1) * c.cx, (scale - 1) * c.cy]);
+    }
     setPushOffsets(offsets);
 
     setFocus({
