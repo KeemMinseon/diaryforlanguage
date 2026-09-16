@@ -179,7 +179,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
   return (
     <div
       key={key}
-      className="flex flex-col gap-3 bg-[var(--paper-raised)] p-4"
+      className="flex flex-col gap-3 bg-[var(--paper-raised)] p-4 shadow-[var(--elevation)]"
     >
       <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)]">
         {buildHighlightSegments(r.text, r.suggestions).map((seg, si) =>
@@ -796,7 +796,7 @@ export default function ChatEditor({
             replaces the old running feed of one card per "살펴보기"
             click stacked above the box. */}
         {suggestionEntries.length > 0 && (
-          <section className="flex flex-col gap-3 bg-[var(--card-highlight)] p-4">
+          <section className="flex flex-col gap-3 bg-[var(--card-highlight)] p-4 shadow-[var(--elevation)]">
             <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">
               고칠 곳 {suggestionEntries.length}
             </p>

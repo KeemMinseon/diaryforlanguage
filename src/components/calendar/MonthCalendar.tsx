@@ -273,7 +273,7 @@ export default function MonthCalendar() {
       {isCurrentMonthShown && (
         <Link
           href={`/entry/${today}`}
-          className="flex flex-col gap-2 bg-[var(--card-highlight)] px-5 py-4"
+          className="flex flex-col gap-2 bg-[var(--card-highlight)] px-5 py-4 shadow-[var(--elevation)]"
         >
           <p className="text-xs text-[var(--ink-soft)]">
             TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}

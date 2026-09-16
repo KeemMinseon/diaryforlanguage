@@ -51,6 +51,17 @@
    * there — same as this card looked before this token existed — rather
    * than guessing a value that might read as a stray light patch. */
   --card-highlight: #f5f3f1;
+  /* A raised card (settings' profile/section/logout blocks, the TODAY
+   * card, quiz results, the delete sheet, etc.) needs *some* depth cue in
+   * light mode — --paper-raised (#ffffff) sits only a few hex points off
+   * --paper (#fdfcfc), too subtle a color gap alone to read as "lifted
+   * off the page" (settings, with three of these stacked in a row, is
+   * where that was most visible). Dark mode doesn't need this: its own
+   * raised surfaces are already meaningfully lighter than the page (see
+   * --paper-raised's dark override below), so a shadow there would just
+   * be redundant on top of a color contrast that already does the job —
+   * turned off via `none` rather than tuned to a dark-appropriate shadow. */
+  --elevation: 0 1px 2px rgba(41, 35, 31, 0.05), 0 4px 10px rgba(41, 35, 31, 0.06);
 
   /* The device's own font, not a loaded webfont — one stack for every
    * role (body/heading/diary) rather than each specifying its own. */
@@ -84,6 +95,7 @@
     --success: #34d399;
     --success-soft: #064e3b;
     --card-highlight: var(--paper-raised);
+    --elevation: none;
   }
 }
 :root[data-theme="dark"] {
@@ -98,6 +110,7 @@
   --success: #34d399;
   --success-soft: #064e3b;
   --card-highlight: var(--paper-raised);
+  --elevation: none;
 }
 
 @theme inline {
