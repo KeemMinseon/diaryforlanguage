@@ -372,7 +372,20 @@ export default function ReviewView({
                     type="button"
                     onClick={handleConfirmDelete}
                     disabled={deleting}
-                    className="flex-1 bg-[var(--cta)] py-3 text-sm font-medium text-white disabled:opacity-60"
+                    // `border-[var(--ink)]` on top of the fill, not just
+                    // `bg-[var(--cta)]` alone — --cta is deliberately fixed
+                    // across light/dark (see its own doc comment in
+                    // globals.css), but that fixed dark gray (#2c2c2c) is
+                    // only a couple of hex steps off dark mode's own
+                    // --paper-raised (#2c2c2e), the sheet's own background
+                    // here — with no border, the button had no visible
+                    // edge against the sheet in dark mode, just its label
+                    // floating with nothing under it. --ink flips to
+                    // near-white in dark mode and near-black in light mode,
+                    // so this border reads clearly in dark mode and simply
+                    // sits (harmlessly) unnoticed in light mode, where the
+                    // fill already contrasts against the sheet on its own.
+                    className="flex-1 border border-[var(--ink)] bg-[var(--cta)] py-3 text-sm font-medium text-white disabled:opacity-60"
                   >
                     {deleting ? "지우는 중…" : "지우기"}
                   </button>
