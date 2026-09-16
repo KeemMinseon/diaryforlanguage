@@ -9,6 +9,7 @@ import { fetchAllEntriesForStamps, photoPublicUrl } from "@/lib/diary/client";
 import { collectStamps, type StampCollection, type TimelineStampItem } from "@/lib/stamps/collectStamps";
 import type { StampId } from "@/lib/stamps/keywordMap";
 import { STAMP_LABELS } from "@/lib/stamps/stampLabels";
+import { formatDateStamp } from "@/lib/utils/date";
 
 type Tab = "all" | "photo" | "keyword";
 
@@ -458,16 +459,24 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     );
   }
 
-  // The category + how-many-times-received line shown under a keyword
-  // stamp once it's enlarged (see the hero section below) — not shown in
-  // the grid itself any more, only here.
-  let keywordMeta: { category: string; count: number } | null = null;
-  if (collection && focus?.target.kind === "keyword") {
+  // The name + one line of context shown under a stamp once it's
+  // enlarged (see the hero section below) — not shown in the grid
+  // itself any more, only here. A keyword gets its own name, category,
+  // and how many times it's been received; a photo (always a different
+  // picture, no "kind" of its own to name) just gets the date it was
+  // recorded and that it's a photo stamp.
+  let heroCaption: { title: string; subtitle: string } | null = null;
+  if (focus?.target.kind === "photo") {
+    heroCaption = { title: formatDateStamp(focus.target.item.entryDate), subtitle: "사진우표" };
+  } else if (collection && focus?.target.kind === "keyword") {
     const stampKey = focus.target.stampKey;
     for (const group of collection.keywordCategories) {
       const item = group.items.find((i) => i.stampKey === stampKey);
       if (item) {
-        keywordMeta = { category: group.label, count: item.count };
+        heroCaption = {
+          title: STAMP_LABELS[stampKey],
+          subtitle: `수집우표 · ${group.label} · ${item.count}번 받음`,
+        };
         break;
       }
     }
@@ -628,7 +637,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <DiaryStamp stampKind="keyword" stampKey={focus.target.stampKey} className="h-full w-full" />
             )}
           </div>
-          {focus.target.kind === "keyword" && (
+          {heroCaption && (
             <div
               className="fixed z-50 flex flex-col items-center gap-1 px-4 text-center"
               onClick={(e) => e.stopPropagation()}
@@ -643,12 +652,8 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                 transition: `opacity ${prefersReducedMotion() ? 0 : 180}ms ease`,
               }}
             >
-              <p className="text-xl font-bold text-[var(--ink)]">{STAMP_LABELS[focus.target.stampKey]}</p>
-              {keywordMeta && (
-                <p className="text-sm text-[var(--ink-soft)]">
-                  수집우표 · {keywordMeta.category} · {keywordMeta.count}번 받음
-                </p>
-              )}
+              <p className="text-xl font-bold text-[var(--ink)]">{heroCaption.title}</p>
+              <p className="text-sm text-[var(--ink-soft)]">{heroCaption.subtitle}</p>
             </div>
           )}
         </>
