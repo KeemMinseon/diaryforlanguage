@@ -458,6 +458,21 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     );
   }
 
+  // The category + how-many-times-received line shown under a keyword
+  // stamp once it's enlarged (see the hero section below) — not shown in
+  // the grid itself any more, only here.
+  let keywordMeta: { category: string; count: number } | null = null;
+  if (collection && focus?.target.kind === "keyword") {
+    const stampKey = focus.target.stampKey;
+    for (const group of collection.keywordCategories) {
+      const item = group.items.find((i) => i.stampKey === stampKey);
+      if (item) {
+        keywordMeta = { category: group.label, count: item.count };
+        break;
+      }
+    }
+  }
+
   return (
     <div
       className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-6"
@@ -537,28 +552,24 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       {group.items.map(({ stampKey }) => {
                         const key = keywordKey(stampKey);
                         return (
-                          <div key={stampKey} className="flex flex-col items-center gap-1">
-                            <button
-                              data-stamp-key={key}
-                              type="button"
-                              onClick={(e) => {
+                          <button
+                            key={stampKey}
+                            data-stamp-key={key}
+                            type="button"
+                            onClick={(e) => {
                               if (focus) return;
                               openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget);
                             }}
-                              style={stampButtonStyle(key)}
-                              aria-label="우표 크게 보기"
-                              className="aspect-[499.78/671.48] w-full cursor-pointer appearance-none border-0 bg-transparent p-0"
-                            >
-                              <DiaryStamp
-                                stampKind="keyword"
-                                stampKey={stampKey}
-                                className="h-full w-full drop-shadow-sm"
-                              />
-                            </button>
-                            <span className="w-full truncate text-center text-xs text-[var(--ink-soft)]">
-                              {STAMP_LABELS[stampKey]}
-                            </span>
-                          </div>
+                            style={stampButtonStyle(key)}
+                            aria-label="우표 크게 보기"
+                            className="aspect-[499.78/671.48] cursor-pointer appearance-none border-0 bg-transparent p-0"
+                          >
+                            <DiaryStamp
+                              stampKind="keyword"
+                              stampKey={stampKey}
+                              className="h-full w-full drop-shadow-sm"
+                            />
+                          </button>
                         );
                       })}
                     </div>
@@ -617,6 +628,29 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <DiaryStamp stampKind="keyword" stampKey={focus.target.stampKey} className="h-full w-full" />
             )}
           </div>
+          {focus.target.kind === "keyword" && (
+            <div
+              className="fixed z-50 flex flex-col items-center gap-1 px-4 text-center"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                left: focus.hero.left,
+                top: focus.hero.top + focus.hero.height + 20,
+                width: focus.hero.width,
+                // Only once the hero's actually finished growing — fading
+                // in any earlier would have it competing with the grow
+                // animation right next to it.
+                opacity: phase === "open" ? 1 : 0,
+                transition: `opacity ${prefersReducedMotion() ? 0 : 180}ms ease`,
+              }}
+            >
+              <p className="text-xl font-bold text-[var(--ink)]">{STAMP_LABELS[focus.target.stampKey]}</p>
+              {keywordMeta && (
+                <p className="text-sm text-[var(--ink-soft)]">
+                  수집우표 · {keywordMeta.category} · {keywordMeta.count}번 받음
+                </p>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
