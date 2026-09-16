@@ -94,13 +94,13 @@ export default function ThemeToggle() {
   return (
     <div className="flex items-center justify-between px-5 py-4">
       <span className="text-sm text-[var(--ink)]">테마</span>
-      <div className="flex gap-1 rounded-full bg-[var(--paper)] p-0.5">
+      <div className="flex gap-1 bg-[var(--paper)] p-0.5">
         {OPTIONS.map((o) => (
           <button
             key={o.value}
             type="button"
             onClick={() => choose(o.value)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+            className={`px-3 py-1 text-xs font-medium transition ${
               pref === o.value
                 ? "bg-[var(--paper-raised)] text-[var(--ink)]"
                 : "text-[var(--ink-soft)]"
