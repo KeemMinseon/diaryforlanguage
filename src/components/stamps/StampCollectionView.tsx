@@ -27,6 +27,18 @@ type FocusTarget = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword
 const PUSH_SCALE = 0.65;
 const PUSH_OPACITY = 0.35;
 
+/** Vertical space between the enlarged stamp and its caption below —
+ * used both when sizing the hero (so the two, together, still fit a
+ * short screen) and when positioning the caption itself. */
+const HERO_CAPTION_GAP = 10;
+/** Rough height of the caption block (title line + subtitle line + the
+ * small gap between them) — reserved when sizing the hero so a small
+ * screen's caption never gets pushed off past the bottom edge. */
+const HERO_CAPTION_HEIGHT = 60;
+/** Left free above/below the hero+caption block as a whole, even on the
+ * shortest screen this has to fit. */
+const HERO_VERTICAL_MARGIN = 24;
+
 /** Must match the hero's own transition-duration below — closeLightbox
  * delays actually dropping `focus` until the shrink-back animation (and
  * the other stamps' own return-to-place animation, which shares this same
@@ -155,10 +167,19 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     const voffsetLeft = vv?.offsetLeft ?? 0;
     const voffsetTop = vv?.offsetTop ?? 0;
 
-    const heroWidth = Math.min(320, vw * 0.72);
+    // Capped by width (as before) *and* by whatever height is actually
+    // left once the caption block and some breathing room are accounted
+    // for — on a short screen the width cap alone could size a hero
+    // (plus its caption underneath) taller than the viewport itself.
+    const maxHeightForHero = vh - HERO_VERTICAL_MARGIN * 2 - HERO_CAPTION_GAP - HERO_CAPTION_HEIGHT;
+    const heroWidth = Math.min(320, vw * 0.72, Math.max(0, maxHeightForHero) * STAMP_ASPECT);
     const heroHeight = heroWidth / STAMP_ASPECT;
     const heroLeft = voffsetLeft + (vw - heroWidth) / 2;
-    const heroTop = voffsetTop + (vh - heroHeight) / 2;
+    // Centers the hero+caption block as a whole, not just the hero on
+    // its own — otherwise the pair reads as sitting low, the caption
+    // pushing the *visual* center of the group below the screen's own.
+    const totalHeight = heroHeight + HERO_CAPTION_GAP + HERO_CAPTION_HEIGHT;
+    const heroTop = voffsetTop + (vh - totalHeight) / 2;
 
     const dx = source.left + source.width / 2 - (heroLeft + heroWidth / 2);
     const dy = source.top + source.height / 2 - (heroTop + heroHeight / 2);
@@ -570,8 +591,13 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               <div className="flex flex-col gap-8">
                 {collection.keywordCategories.map((group) => (
                   <section key={group.label} className="flex flex-col gap-3">
-                    <h2 className="text-sm font-medium text-[var(--ink)]">{group.label}</h2>
-                    <hr className="border-t border-[var(--paper-line)]" />
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-base font-bold text-[var(--ink)]">{group.label}</span>
+                      <span className="text-sm text-[var(--ink-soft)]">
+                        {group.items.reduce((sum, item) => sum + item.count, 0)}장
+                      </span>
+                    </div>
+                    <hr className="border-t border-[var(--ink)]" />
                     <div data-stamp-section className="grid grid-cols-4 gap-3">
                       {group.items.map(({ stampKey }) => {
                         const key = keywordKey(stampKey);
@@ -614,16 +640,6 @@ export default function StampCollectionView({ userId }: { userId: string }) {
           Closing just plays the same transform back on, then unmounts. */}
       {focus && (
         <>
-          <button
-            type="button"
-            onClick={closeLightbox}
-            aria-label="닫기"
-            className="fixed right-5 top-5 z-50 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] text-[var(--ink)] shadow-md"
-          >
-            <UiIcon name="close-line" className="h-4 w-4" alt="">
-              ✕
-            </UiIcon>
-          </button>
           <div
             className="fixed z-50 drop-shadow-xl"
             onClick={(e) => e.stopPropagation()}
@@ -658,7 +674,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
               onClick={(e) => e.stopPropagation()}
               style={{
                 left: focus.hero.left,
-                top: focus.hero.top + focus.hero.height + 20,
+                top: focus.hero.top + focus.hero.height + HERO_CAPTION_GAP,
                 width: focus.hero.width,
                 // Only once the hero's actually finished growing — fading
                 // in any earlier would have it competing with the grow
