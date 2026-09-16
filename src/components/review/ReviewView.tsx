@@ -344,7 +344,7 @@ export default function ReviewView({
               onClick={() => !deleting && setConfirmingDelete(false)}
             >
               <div
-                className="mx-auto flex w-full max-w-md flex-col gap-5 bg-[var(--paper-raised)] px-5 pt-3 pb-6 shadow-[var(--elevation)]"
+                className="mx-auto flex w-full max-w-md flex-col gap-5 bg-[var(--paper-raised)] px-5 pt-3 pb-6 border border-[var(--paper-line)]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mx-auto h-1 w-10 rounded-full bg-[var(--paper-line)]" />

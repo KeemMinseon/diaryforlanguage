@@ -160,7 +160,7 @@ export default function WordQuiz({
 
   if (done) {
     return (
-      <div className="flex flex-col items-center gap-4 bg-[var(--paper-raised)] px-6 py-10 text-center shadow-[var(--elevation)]">
+      <div className="flex flex-col items-center gap-4 bg-[var(--paper-raised)] px-6 py-10 text-center border border-[var(--paper-line)]">
         <p className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
           {total}개 다 맞췄어요! 📮
         </p>

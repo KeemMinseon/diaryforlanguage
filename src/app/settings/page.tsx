@@ -37,7 +37,7 @@ export default async function SettingsPage() {
         캘린더
       </Link>
 
-      <div className="flex items-center gap-4 bg-[var(--paper-raised)] px-5 py-4 shadow-[var(--elevation)]">
+      <div className="flex items-center gap-4 bg-[var(--paper-raised)] px-5 py-4 border border-[var(--paper-line)]">
         <div
           className="flex h-14 w-14 shrink-0 items-center justify-center bg-[var(--paper-line)] font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink-soft)]"
           aria-hidden="true"
@@ -52,7 +52,7 @@ export default async function SettingsPage() {
 
       <div className="flex flex-col gap-2">
         <p className="px-1 text-xs font-medium text-[var(--ink-soft)]">일반</p>
-        <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] shadow-[var(--elevation)]">
+        <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] border border-[var(--paper-line)]">
           {/* Both fixed for now — no picker yet, just the two rows they'll
               live in. Split apart since they're not the same thing: this
               app's own screens/copy (서비스 언어) versus the language the
@@ -75,7 +75,7 @@ export default async function SettingsPage() {
       <form action="/auth/signout" method="post">
         <button
           type="submit"
-          className="w-full bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] shadow-[var(--elevation)] transition hover:bg-black/[0.02]"
+          className="w-full bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] border border-[var(--paper-line)] transition hover:bg-black/[0.02]"
         >
           로그아웃
         </button>
