@@ -694,7 +694,13 @@ export default function ChatEditor({
             receives scroll input. No bordered box around it any more —
             it now reads as one continuous page, not an input pinned
             inside its own card. */}
-        <div className="relative min-h-[35vh] flex-1">
+        {/* `dvh`, not `vh` — `vh` stays pinned to the large/keyboard-hidden
+            viewport even with `interactiveWidget: resizes-content` (see
+            layout.tsx's own comment on that setting), so a plain-`vh`
+            minimum here would keep demanding the same height after the
+            keyboard opens and shrinks the real usable space, undermining
+            the exact thing that setting exists for. */}
+        <div className="relative min-h-[35dvh] flex-1">
           <div
             ref={backdropRef}
             aria-hidden="true"

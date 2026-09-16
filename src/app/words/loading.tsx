@@ -8,22 +8,22 @@ export default function WordsLoading() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 animate-pulse flex-col gap-5 px-4 py-6">
       <div className="flex items-center justify-between">
-        <div className="h-4 w-16 bg-[var(--paper-line)]" />
-        <div className="h-5 w-14 bg-[var(--paper-line)]" />
-        <div className="h-4 w-[52px] bg-transparent" />
+        <div className="h-4 w-16 rounded-sm bg-[var(--paper-line)]" />
+        <div className="h-5 w-14 rounded-sm bg-[var(--paper-line)]" />
+        <div className="h-4 w-[52px] rounded-sm bg-transparent" />
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="h-3 w-28 bg-[var(--paper-line)]" />
-        <div className="h-7 w-40 bg-[var(--paper-line)]" />
+        <div className="h-3 w-28 rounded-sm bg-[var(--paper-line)]" />
+        <div className="h-7 w-40 rounded-sm bg-[var(--paper-line)]" />
       </div>
 
       {/* "단어 테스트" entry card — see WordListView/WordQuiz. */}
-      <div className="h-16 w-full bg-[var(--paper-raised)]" />
+      <div className="h-16 w-full rounded-sm bg-[var(--paper-raised)]" />
 
       <div className="flex flex-col gap-2">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-16 w-full bg-[var(--paper-raised)]" />
+          <div key={i} className="h-16 w-full rounded-sm bg-[var(--paper-raised)]" />
         ))}
       </div>
     </div>

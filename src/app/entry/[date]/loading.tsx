@@ -17,9 +17,9 @@ export default function EntryLoading() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
       <div className="flex animate-pulse items-center justify-between">
-        <div className="h-4 w-16 bg-[var(--paper-line)]" />
-        <div className="h-4 w-32 bg-[var(--paper-line)]" />
-        <div className="h-4 w-16 bg-[var(--paper-line)]" />
+        <div className="h-4 w-16 rounded-sm bg-[var(--paper-line)]" />
+        <div className="h-4 w-32 rounded-sm bg-[var(--paper-line)]" />
+        <div className="h-4 w-16 rounded-sm bg-[var(--paper-line)]" />
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-3">
