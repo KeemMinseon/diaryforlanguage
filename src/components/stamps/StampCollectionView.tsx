@@ -161,13 +161,17 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     // it's one affine transform from a common origin, so it only ever
     // preserves relative positions, never crosses two stamps' paths.
     //
-    // heroScale is the largest ratio any single stamp needs to clear the
-    // hero on its own; using that same ratio for everyone guarantees all
-    // of them clear it. Only then is each stamp individually clamped back
-    // down (never pushed further) if that shared scale would carry it
-    // past its own section's (data-stamp-section) bounds — a reduction
-    // only ever pulls a stamp closer to where it already was, so it can't
-    // introduce a new overlap either.
+    // That guarantee only holds as long as *every* stamp gets the exact
+    // same scale — clamping each one individually down to its own
+    // section's bounds (an earlier version of this) breaks it: a stamp
+    // sitting right at its section's edge gets clamped hard while its
+    // neighbor barely moves at all, and those two different amounts of
+    // movement can land them right on top of each other (made obvious by
+    // both being faded to the same low opacity). So instead: find the
+    // single scale every stamp can use at once — the largest any one of
+    // them needs to clear the hero, capped down to the smallest any one
+    // of them can afford before spilling past its own section — and
+    // apply that one number to all of them, no per-stamp exceptions.
     const heroHalfW = heroWidth / 2;
     const heroHalfH = heroHeight / 2;
     const CLEAR_MARGIN = 16;
@@ -176,15 +180,13 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     const MAX_SCALE = 6;
 
     interface Candidate {
-      el: HTMLElement;
       key: string;
       cx: number;
       cy: number;
-      halfW: number;
-      halfH: number;
     }
     const candidates: Candidate[] = [];
     let heroScale = BASE_SCALE;
+    let sectionMaxScale = Infinity;
 
     document.querySelectorAll<HTMLElement>("[data-stamp-key]").forEach((otherEl) => {
       const otherKey = otherEl.dataset.stampKey!;
@@ -194,38 +196,36 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       const cy = r.top + r.height / 2 - vh / 2;
       const halfW = r.width / 2;
       const halfH = r.height / 2;
-      candidates.push({ el: otherEl, key: otherKey, cx, cy, halfW, halfH });
+      candidates.push({ key: otherKey, cx, cy });
 
       const mx = cx !== 0 ? (heroHalfW + halfW + CLEAR_MARGIN) / Math.abs(cx) : Infinity;
       const my = cy !== 0 ? (heroHalfH + halfH + CLEAR_MARGIN) / Math.abs(cy) : Infinity;
       heroScale = Math.max(heroScale, Math.min(mx, my, MAX_SCALE));
+
+      const section = otherEl.closest<HTMLElement>("[data-stamp-section]");
+      if (!section) return;
+      const s = section.getBoundingClientRect();
+      const scaledHalfW = halfW * PUSH_SCALE;
+      const scaledHalfH = halfH * PUSH_SCALE;
+      const maxScaleX =
+        cx > 0
+          ? (s.right - SECTION_MARGIN - scaledHalfW - vw / 2) / cx
+          : cx < 0
+            ? (s.left + SECTION_MARGIN + scaledHalfW - vw / 2) / cx
+            : Infinity;
+      const maxScaleY =
+        cy > 0
+          ? (s.bottom - SECTION_MARGIN - scaledHalfH - vh / 2) / cy
+          : cy < 0
+            ? (s.top + SECTION_MARGIN + scaledHalfH - vh / 2) / cy
+            : Infinity;
+      sectionMaxScale = Math.min(sectionMaxScale, Math.max(1, maxScaleX), Math.max(1, maxScaleY));
     });
 
+    const pushScale = Math.min(heroScale, sectionMaxScale);
     const offsets = new Map<string, [number, number]>();
     for (const c of candidates) {
-      let scale = heroScale;
-
-      const section = c.el.closest<HTMLElement>("[data-stamp-section]");
-      if (section) {
-        const s = section.getBoundingClientRect();
-        const halfW = c.halfW * PUSH_SCALE;
-        const halfH = c.halfH * PUSH_SCALE;
-        const maxScaleX =
-          c.cx > 0
-            ? (s.right - SECTION_MARGIN - halfW - vw / 2) / c.cx
-            : c.cx < 0
-              ? (s.left + SECTION_MARGIN + halfW - vw / 2) / c.cx
-              : Infinity;
-        const maxScaleY =
-          c.cy > 0
-            ? (s.bottom - SECTION_MARGIN - halfH - vh / 2) / c.cy
-            : c.cy < 0
-              ? (s.top + SECTION_MARGIN + halfH - vh / 2) / c.cy
-              : Infinity;
-        scale = Math.min(scale, Math.max(1, maxScaleX), Math.max(1, maxScaleY));
-      }
-
-      offsets.set(c.key, [(scale - 1) * c.cx, (scale - 1) * c.cy]);
+      offsets.set(c.key, [(pushScale - 1) * c.cx, (pushScale - 1) * c.cy]);
     }
     setPushOffsets(offsets);
 
