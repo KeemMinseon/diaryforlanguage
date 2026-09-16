@@ -9,6 +9,15 @@ export const runtime = "nodejs";
 export const maxDuration = 45;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
+// The missing-readings follow-up (`fetchMissingReadings` below) only ever
+// asks for a reading + short meaning for an already-known, already-typed-
+// correctly list of words — a narrow, mechanical task with none of the
+// nuance the main review call needs a stronger model for. Whenever it
+// fires, it used to run on the same `MODEL` as the main call, making the
+// worst case (this route calling Claude twice, back to back) take about
+// twice as long as it needed to. A fast model answers this well and cuts
+// that worst case down substantially.
+const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || "claude-haiku-4-5-20251001";
 
 const TOOL_NAME = "submit_paragraph_feedback";
 
@@ -235,7 +244,7 @@ async function fetchMissingReadings(
 ): Promise<Reading[]> {
   const list = missing.map((m) => `- ${m.text} (${m.kind === "kanji" ? "한자" : "가타카나"})`).join("\n");
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model: FAST_MODEL,
     max_tokens: 500,
     system:
       "당신은 일본어 첨삭 선생님입니다. 주어진 목록에 있는 한자/가타카나 표기 전부에 대해 정확한 읽기와 한국어 뜻을 답하세요. 한자는 히라가나, 가타카나는 로마자로 읽기를 답하세요. 뜻은 짧게 (1~3단어), 문맥에 맞는 뜻 하나만 — 사전 뜻풀이처럼 담백하게 적고, 불확실성/메타 코멘트('추정' 등)는 절대 넣지 마세요. 목록에 없는 항목은 만들지 말고, 목록에 있는 건 하나도 빠짐없이 포함하세요. \"text\"는 입력받은 표기를 절대 바꾸지 말고 그대로 돌려주세요.",
