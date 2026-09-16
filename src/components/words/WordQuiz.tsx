@@ -176,7 +176,12 @@ export default function WordQuiz({
           <button
             type="button"
             onClick={restart}
-            className="bg-[var(--cta)] px-6 py-2.5 text-sm font-medium text-white"
+            // border-[var(--ink)] on top of the fill — same fix as the
+            // 삭제 바텀시트's 지우기 button (see ReviewView.tsx): --cta is
+            // a fixed dark gray in both modes, only a couple of hex steps
+            // off dark mode's own --paper-raised (this card's background),
+            // so without a border the button had no visible edge there.
+            className="border border-[var(--ink)] bg-[var(--cta)] px-6 py-2.5 text-sm font-medium text-white"
           >
             다시하기
           </button>
