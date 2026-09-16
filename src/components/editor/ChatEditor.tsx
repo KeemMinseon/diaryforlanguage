@@ -643,16 +643,18 @@ export default function ChatEditor({
 
   const busy = sending || finishing;
 
-  // This visit's own suggestions/readings, flattened across every round
-  // reviewed so far — `feedHistory` (unlike `rounds`) never rolls back
-  // when the learner fixes a flagged spot, so a fix already applied still
-  // shows up here as a record of what was caught, instead of vanishing
-  // from the "고칠 곳" list the moment its own cause is gone.
-  const suggestionEntries = feedHistory.flatMap((r) =>
-    r.suggestions.map((s) => ({ suggestion: s, readings: r.readings }))
-  );
-  const allReadingsSoFar = feedHistory.flatMap((r) => r.readings);
-  const latestComment = feedHistory.length > 0 ? feedHistory[feedHistory.length - 1].comment : "";
+  // The "고칠 곳" card mirrors just the *latest* 첨삭 click, same as
+  // `latestComment` below — not every round since this visit started.
+  // Suggestions from an earlier round don't linger here once a newer one
+  // lands; the inline underline in the text itself (see
+  // `renderBoxHighlight`, driven by `rounds` instead of `feedHistory`)
+  // still marks any of them that are still sitting there unfixed, so
+  // nothing is silently lost, it just isn't repeated in this card.
+  const latestRound = feedHistory.length > 0 ? feedHistory[feedHistory.length - 1] : null;
+  const suggestionEntries =
+    latestRound?.suggestions.map((s) => ({ suggestion: s, readings: latestRound.readings })) ?? [];
+  const allReadingsSoFar = latestRound?.readings ?? [];
+  const latestComment = latestRound?.comment ?? "";
   const hasReviewed = feedHistory.length > 0;
 
   const charCount = content.trim().length;
