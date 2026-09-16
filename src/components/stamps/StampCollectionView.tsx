@@ -244,15 +244,32 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   // inside that function and finishClosing, never during render, so a
   // plain ref (not state) is fine here.
   const closeTimeoutRef = useRef<number | null>(null);
+  // The stamp that just got its `focus` cleared — for exactly one frame,
+  // so stampButtonStyle can reveal it with no transition (see there). Not
+  // read during render *by anything else*, so it doesn't need to be part
+  // of the FLIP/push math above, but it does drive this component's own
+  // render (must be state, not a ref).
+  const [justClosedKey, setJustClosedKey] = useState<string | null>(null);
 
   function finishClosing() {
     if (closeTimeoutRef.current !== null) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
     }
+    setJustClosedKey(focus?.key ?? null);
     setFocus(null);
     setPhase("enter");
   }
+
+  // Clears `justClosedKey` a frame after it's set — one paint with no
+  // transition is all the reveal needs; leaving it set any longer would
+  // mean this same stamp loses its own push/pop transition the *next*
+  // time something else gets focused.
+  useEffect(() => {
+    if (!justClosedKey) return;
+    const id = requestAnimationFrame(() => setJustClosedKey(null));
+    return () => cancelAnimationFrame(id);
+  }, [justClosedKey]);
 
   function closeLightbox() {
     if (!focus || phase === "closing") return;
@@ -333,6 +350,15 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       // a fade either way would show both at once, reading as two
       // separate objects instead of one continuous stamp.
       return { opacity: 0 };
+    }
+    if (justClosedKey === key) {
+      // The one frame right after `focus` clears: the hero has already
+      // vanished outright (no fade of its own), so this has to reappear
+      // in that same instant too — the transition below, if applied on
+      // this exact frame, would fade opacity 0→1 over `duration` while
+      // nothing else does, which read as the page's own background
+      // bleeding through a half-transparent stamp for a moment.
+      return { opacity: 1 };
     }
     const active = focus !== null && phase !== "closing";
     const offset = active ? pushOffsets.get(key) : undefined;

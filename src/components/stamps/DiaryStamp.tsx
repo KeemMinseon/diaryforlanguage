@@ -5,6 +5,17 @@ import StampFrame from "@/components/stamps/StampFrame";
 import KeywordIcon from "@/components/stamps/KeywordIcon";
 import type { StampId } from "@/lib/stamps/keywordMap";
 
+/** In-memory, for the life of the tab — a photo already shown once (in
+ * the grid, say) shouldn't have to re-earn its "loaded" state just
+ * because a *different* DiaryStamp instance now renders the same URL
+ * (the stamp lightbox's hero, a fresh mount with its own `loaded` state
+ * starting at false): without this, that fresh instance shows the
+ * pulse placeholder — a near-background color, see StampFrame's
+ * --paper-line fill — over a photo that was already sitting fully
+ * loaded on screen a moment earlier, reading as the background itself
+ * flickering. */
+const loadedPhotoUrls = new Set<string>();
+
 interface DiaryStampProps {
   stampKind: "photo" | "keyword";
   stampKey: StampId | null;
@@ -34,7 +45,7 @@ export default function DiaryStamp({
   // there's a real gap between the cell appearing and the photo actually
   // painting in. Track it per stamp so that gap gets a pulse placeholder
   // instead of sitting blank.
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => !!photoUrl && loadedPhotoUrls.has(photoUrl));
   // Resetting `loaded` when `photoUrl` changes (a new photo picked over an
   // already-loaded preview, say) during render rather than in an effect —
   // the "adjust state while rendering" pattern — so it takes effect before
@@ -42,11 +53,11 @@ export default function DiaryStamp({
   const [trackedUrl, setTrackedUrl] = useState(photoUrl);
   if (photoUrl !== trackedUrl) {
     setTrackedUrl(photoUrl);
-    setLoaded(false);
+    setLoaded(!!photoUrl && loadedPhotoUrls.has(photoUrl));
   }
 
   useEffect(() => {
-    if (!photoUrl) return;
+    if (!photoUrl || loaded) return;
     // SVG's <image> has no `.complete` property to check for the
     // SSR/hydration race (unlike HTML's <img>) — a server-rendered page
     // that already embeds the photo URL can have it finish loading before
@@ -56,7 +67,11 @@ export default function DiaryStamp({
     // enough that the rare miss doesn't leave the pulse showing for long.
     const timer = setTimeout(() => setLoaded(true), 2000);
     return () => clearTimeout(timer);
-  }, [photoUrl]);
+  }, [photoUrl, loaded]);
+
+  useEffect(() => {
+    if (loaded && photoUrl) loadedPhotoUrls.add(photoUrl);
+  }, [loaded, photoUrl]);
 
   if (stampKind === "photo" && photoUrl) {
     return (
