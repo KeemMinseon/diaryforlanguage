@@ -143,14 +143,14 @@ export default function WordQuiz({
 
   function cardClass(side: "word" | "meaning", key: string, isSelected: boolean): string {
     if (celebrating.has(key)) {
-      return "border-emerald-400 bg-emerald-50 match-pop";
+      return "border-[var(--success)] bg-[var(--success-soft)] match-pop";
     }
     if (matched.has(key)) {
       return "border-[var(--paper-line)] bg-[var(--paper-raised)] opacity-40";
     }
     const isWrong = side === "word" ? wrongPair?.wordKey === key : wrongPair?.meaningKey === key;
     if (isWrong) {
-      return "border-red-400 bg-red-50";
+      return "border-[var(--shu)] bg-[var(--shu-soft)]/40";
     }
     if (isSelected) {
       return "border-[var(--ink)] bg-black/5";
