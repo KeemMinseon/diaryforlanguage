@@ -141,13 +141,24 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   // entirely for this one read avoids that false positive.
   function openLightbox(key: string, target: FocusTarget, sourceEl: HTMLElement) {
     const source = sourceEl.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // window.innerWidth/innerHeight can be stale right after a scroll on
+    // a mobile browser — the address bar collapsing/expanding changes how
+    // much is actually visible, and innerHeight doesn't always catch up
+    // in sync, so centering against it could land the hero well off from
+    // the real current center (confirmed: it opened pinned near the top
+    // after scrolling down a long list). The Visual Viewport API tracks
+    // the real visible area live; offsetLeft/offsetTop cover the (normal,
+    // no-zoom) case where they're still just 0.
+    const vv = window.visualViewport;
+    const vw = vv?.width ?? window.innerWidth;
+    const vh = vv?.height ?? window.innerHeight;
+    const voffsetLeft = vv?.offsetLeft ?? 0;
+    const voffsetTop = vv?.offsetTop ?? 0;
 
     const heroWidth = Math.min(320, vw * 0.72);
     const heroHeight = heroWidth / STAMP_ASPECT;
-    const heroLeft = (vw - heroWidth) / 2;
-    const heroTop = (vh - heroHeight) / 2;
+    const heroLeft = voffsetLeft + (vw - heroWidth) / 2;
+    const heroTop = voffsetTop + (vh - heroHeight) / 2;
 
     const dx = source.left + source.width / 2 - (heroLeft + heroWidth / 2);
     const dy = source.top + source.height / 2 - (heroTop + heroHeight / 2);
@@ -179,6 +190,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     const SECTION_MARGIN = 4;
     const BASE_SCALE = 1.35;
     const MAX_SCALE = 6;
+    // Same center every other stamp's own push direction is measured
+    // from — must match the hero's own centering above.
+    const centerX = voffsetLeft + vw / 2;
+    const centerY = voffsetTop + vh / 2;
 
     interface Candidate {
       key: string;
@@ -193,8 +208,8 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       const otherKey = otherEl.dataset.stampKey!;
       if (otherKey === key) return;
       const r = otherEl.getBoundingClientRect();
-      const cx = r.left + r.width / 2 - vw / 2;
-      const cy = r.top + r.height / 2 - vh / 2;
+      const cx = r.left + r.width / 2 - centerX;
+      const cy = r.top + r.height / 2 - centerY;
       const halfW = r.width / 2;
       const halfH = r.height / 2;
       candidates.push({ key: otherKey, cx, cy });
@@ -210,15 +225,15 @@ export default function StampCollectionView({ userId }: { userId: string }) {
       const scaledHalfH = halfH * PUSH_SCALE;
       const maxScaleX =
         cx > 0
-          ? (s.right - SECTION_MARGIN - scaledHalfW - vw / 2) / cx
+          ? (s.right - SECTION_MARGIN - scaledHalfW - centerX) / cx
           : cx < 0
-            ? (s.left + SECTION_MARGIN + scaledHalfW - vw / 2) / cx
+            ? (s.left + SECTION_MARGIN + scaledHalfW - centerX) / cx
             : Infinity;
       const maxScaleY =
         cy > 0
-          ? (s.bottom - SECTION_MARGIN - scaledHalfH - vh / 2) / cy
+          ? (s.bottom - SECTION_MARGIN - scaledHalfH - centerY) / cy
           : cy < 0
-            ? (s.top + SECTION_MARGIN + scaledHalfH - vh / 2) / cy
+            ? (s.top + SECTION_MARGIN + scaledHalfH - centerY) / cy
             : Infinity;
       sectionMaxScale = Math.min(sectionMaxScale, Math.max(1, maxScaleX), Math.max(1, maxScaleY));
     });
