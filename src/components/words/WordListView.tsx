@@ -75,21 +75,18 @@ export default function WordListView({ userId }: { userId: string }) {
 
   const memorizedCount = useMemo(() => words?.filter((w) => w.memorized).length ?? 0, [words]);
 
-  // "오늘 복습할 단어" — no real spaced-repetition schedule behind this
-  // (there's no per-word "next due" data at all), so it's approximated as
-  // every not-yet-memorized word seen recently (today or yesterday):
-  // freshly-learned words are exactly the ones worth reinforcing, and this
-  // needs nothing beyond what collectWords already returns.
+  // Scopes 단어 테스트 to recently-learned, not-yet-memorized words when
+  // there are enough of them — no real spaced-repetition schedule behind
+  // this (there's no per-word "next due" data at all), just an
+  // approximation from what collectWords already returns. The "오늘
+  // 복습할 단어" card that used to surface this same set on its own has
+  // been hidden; this quiet scoping is what's left of it.
   const reviewQueue = useMemo(() => {
     if (!words) return [];
     const today = todayKey();
     const yesterday = yesterdayKey();
     return words.filter((w) => !w.memorized && (w.lastSeen === today || w.lastSeen === yesterday));
   }, [words]);
-  const addedYesterdayCount = useMemo(
-    () => reviewQueue.filter((w) => w.lastSeen === yesterdayKey()).length,
-    [reviewQueue]
-  );
 
   const visible = useMemo(() => {
     if (!words) return [];
@@ -220,39 +217,6 @@ export default function WordListView({ userId }: { userId: string }) {
             </p>
           ) : (
             <>
-              {!quizzing && reviewQueue.length > 0 && (
-                <div className="flex items-center justify-between rounded-2xl bg-[var(--paper-raised)] px-5 py-4">
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-sm font-bold text-[var(--ink)]">오늘 복습할 단어</p>
-                    {addedYesterdayCount > 0 && (
-                      <p className="text-xs text-[var(--ink-soft)]">
-                        어제 담은 {addedYesterdayCount}개 포함
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-3xl font-bold text-[var(--ink)]">{reviewQueue.length}</p>
-                </div>
-              )}
-
-              {!quizzing && (
-                <div className="flex gap-2">
-                  {FILTERS.map((f) => (
-                    <button
-                      key={f.value}
-                      type="button"
-                      onClick={() => setFilter(f.value)}
-                      className={`px-4 py-2 text-sm font-medium transition ${
-                        filter === f.value
-                          ? "bg-[var(--ink)] text-[var(--paper)]"
-                          : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
-                      }`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {/* Below the min, a round would either be too short to bother
                   with or not really be the "10" the feature is about —
                   quietly hidden rather than offered half-empty. */}
@@ -260,7 +224,7 @@ export default function WordListView({ userId }: { userId: string }) {
                 <button
                   type="button"
                   onClick={() => setQuizzing(true)}
-                  className="flex items-center gap-3 rounded-2xl bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
+                  className="flex items-center gap-3 bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
                     <UiIcon name="cards-line" className="h-5 w-5" alt="">
@@ -299,6 +263,25 @@ export default function WordListView({ userId }: { userId: string }) {
                     </UiIcon>
                   </span>
                 </button>
+              )}
+
+              {!quizzing && (
+                <div className="flex gap-2">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setFilter(f.value)}
+                      className={`px-4 py-2 text-sm font-medium transition ${
+                        filter === f.value
+                          ? "bg-[var(--ink)] text-[var(--paper)]"
+                          : "border border-[var(--paper-line)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               )}
 
               {quizzing ? (
