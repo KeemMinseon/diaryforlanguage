@@ -8,7 +8,7 @@ import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { deleteEntry, fetchEntry, photoPublicUrl } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { applyCorrections } from "@/lib/review/highlight";
-import { formatDateStamp } from "@/lib/utils/date";
+import { formatDateStamp, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 export default function ReviewView({
@@ -314,47 +314,70 @@ export default function ReviewView({
             </section>
           )}
 
-          {confirmingDelete ? (
-            <div className="flex items-center justify-between bg-[var(--paper-raised)] px-4 py-3">
-              <p className="text-sm text-[var(--ink)]">
-                이 날짜의 일기를 정말 삭제할까요? 되돌릴 수 없어요.
-                {deleteError && <span className="ml-2 font-medium">{deleteError}</span>}
-              </p>
-              <div className="flex shrink-0 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(false)}
-                  disabled={deleting}
-                  className="border border-[var(--paper-line)] px-4 py-1.5 text-xs text-[var(--ink-soft)] disabled:opacity-60"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmDelete}
-                  disabled={deleting}
-                  className="bg-[var(--cta)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
-                >
-                  {deleting ? "삭제 중…" : "삭제"}
-                </button>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+            >
+              수정
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+            >
+              삭제
+            </button>
+          </div>
+
+          {/* A bottom sheet, not the old inline confirm bar — deleting a
+              whole day (and every stamp it earned) is a heavier action
+              than this screen's other buttons, so it gets its own
+              overlay with room to actually explain the consequences
+              instead of a one-line "정말요?". Backdrop tap cancels, same
+              as 유지 — but not while a delete is actually in flight, so a
+              stray tap can't abandon the request mid-way. */}
+          {confirmingDelete && (
+            <div
+              className="fixed inset-0 z-50 flex items-end bg-black/40"
+              onClick={() => !deleting && setConfirmingDelete(false)}
+            >
+              <div
+                className="mx-auto flex w-full max-w-md flex-col gap-5 bg-[var(--paper-raised)] px-5 pt-3 pb-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mx-auto h-1 w-10 rounded-full bg-[var(--paper-line)]" />
+                <div className="flex flex-col gap-2">
+                  <h2 className="font-[family-name:var(--font-heading)] text-xl font-bold text-[var(--ink)]">
+                    {parseDateKey(entry.entry_date).getMonth() + 1}월 {parseDateKey(entry.entry_date).getDate()}일
+                    일기를 지울까요?
+                  </h2>
+                  <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
+                    지우면 그날 칸은 빈 날로 돌아가고, 이 날 받은 우표 {stamps.length}장도 앨범에서
+                    사라집니다. 쓴 날은 소급해서 다시 채울 수 없어 연속 기록이 끝납니다.
+                  </p>
+                  {deleteError && <p className="text-sm font-medium text-[var(--ink)]">{deleteError}</p>}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDelete(false)}
+                    disabled={deleting}
+                    className="flex-1 border border-[var(--paper-line)] py-3 text-sm text-[var(--ink)] disabled:opacity-60"
+                  >
+                    유지
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={deleting}
+                    className="flex-1 bg-[var(--cta)] py-3 text-sm font-medium text-white disabled:opacity-60"
+                  >
+                    {deleting ? "지우는 중…" : "지우기"}
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
-              >
-                수정
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingDelete(true)}
-                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
-              >
-                삭제
-              </button>
             </div>
           )}
 
