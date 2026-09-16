@@ -100,10 +100,10 @@ export default function ThemeToggle() {
             key={o.value}
             type="button"
             onClick={() => choose(o.value)}
-            className={`px-3 py-1 text-xs font-medium transition ${
+            className={`border px-3 py-1 text-xs font-medium transition ${
               pref === o.value
-                ? "bg-[var(--paper-raised)] text-[var(--ink)]"
-                : "text-[var(--ink-soft)]"
+                ? "border-[var(--paper-line)] bg-[var(--paper-raised)] text-[var(--ink)]"
+                : "border-transparent text-[var(--ink-soft)]"
             }`}
           >
             {o.label}
