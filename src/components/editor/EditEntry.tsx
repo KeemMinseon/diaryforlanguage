@@ -394,7 +394,7 @@ export default function EditEntry({
                 value={p.text}
                 onChange={(e) => updateParagraphText(i, e.target.value)}
                 disabled={saving}
-                className="min-h-[16vh] w-full resize-none rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
+                className="min-h-[16vh] w-full resize-none border border-[var(--paper-line)] bg-[var(--paper-raised)] p-5 font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--ink)] disabled:opacity-60"
               />
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
@@ -410,7 +410,7 @@ export default function EditEntry({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
+                        className="flex items-center gap-1 border border-[var(--paper-line)] bg-[var(--paper-raised)] px-3 py-2 text-xs text-[var(--ink)]"
                       >
                         <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
                           📷
@@ -452,7 +452,7 @@ export default function EditEntry({
           type="button"
           onClick={onCancel}
           disabled={saving}
-          className="rounded-full border border-[var(--paper-line)] px-6 py-2.5 text-sm text-[var(--ink-soft)] disabled:opacity-60"
+          className="border border-[var(--paper-line)] px-6 py-2.5 text-sm text-[var(--ink-soft)] disabled:opacity-60"
         >
           취소
         </button>
@@ -460,7 +460,7 @@ export default function EditEntry({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="rounded-full bg-[var(--cta)] px-7 py-2.5 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-60"
+          className="bg-[var(--cta)] px-7 py-2.5 text-sm font-medium text-white shadow-lg transition hover:opacity-90 disabled:opacity-60"
         >
           {saving ? "다시 첨삭하는 중…" : "수정 완료"}
         </button>

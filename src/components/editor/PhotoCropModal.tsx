@@ -43,7 +43,7 @@ export default function PhotoCropModal({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black/70 p-4">
-      <div className="relative mx-auto w-full max-w-md flex-1 overflow-hidden rounded-2xl bg-black">
+      <div className="relative mx-auto w-full max-w-md flex-1 overflow-hidden bg-black">
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -72,7 +72,7 @@ export default function PhotoCropModal({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-lg border border-white/30 py-2.5 text-sm text-white"
+            className="flex-1 border border-white/30 py-2.5 text-sm text-white"
           >
             취소
           </button>
@@ -80,7 +80,7 @@ export default function PhotoCropModal({
             type="button"
             onClick={handleConfirm}
             disabled={working}
-            className="flex-1 rounded-lg bg-[var(--cta)] py-2.5 text-sm font-medium text-white disabled:opacity-60"
+            className="flex-1 bg-[var(--cta)] py-2.5 text-sm font-medium text-white disabled:opacity-60"
           >
             {working ? "적용 중…" : "이 부분으로 우표 만들기"}
           </button>

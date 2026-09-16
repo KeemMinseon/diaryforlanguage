@@ -126,13 +126,13 @@ export default function LoginPage() {
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]"
+              className="border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]"
             />
             {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+              className="bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
               {loading ? "보내는 중…" : "이메일로 인증 코드 받기"}
             </button>
@@ -163,13 +163,13 @@ export default function LoginPage() {
               // stop it. Stripped to digits and capped at 8 here instead of
               // just `maxLength` alone, which caps length but not content.
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-              className="rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-center text-lg tracking-[0.3em] text-[var(--ink)] outline-none focus:border-[var(--ink)]"
+              className="border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-center text-lg tracking-[0.3em] text-[var(--ink)] outline-none focus:border-[var(--ink)]"
             />
             {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
             <button
               type="submit"
               disabled={loading || code.length === 0}
-              className="rounded-lg bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+              className="bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
               {loading ? "확인하는 중…" : "로그인"}
             </button>

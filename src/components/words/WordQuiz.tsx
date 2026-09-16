@@ -160,7 +160,7 @@ export default function WordQuiz({
 
   if (done) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-2xl bg-[var(--paper-raised)] px-6 py-10 text-center">
+      <div className="flex flex-col items-center gap-4 bg-[var(--paper-raised)] px-6 py-10 text-center">
         <p className="font-[family-name:var(--font-heading)] text-lg font-bold text-[var(--ink)]">
           {total}개 다 맞췄어요! 📮
         </p>
@@ -176,14 +176,14 @@ export default function WordQuiz({
           <button
             type="button"
             onClick={restart}
-            className="rounded-full bg-[var(--cta)] px-6 py-2.5 text-sm font-medium text-white"
+            className="bg-[var(--cta)] px-6 py-2.5 text-sm font-medium text-white"
           >
             다시하기
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-[var(--paper-line)] px-6 py-2.5 text-sm text-[var(--ink-soft)]"
+            className="border border-[var(--paper-line)] px-6 py-2.5 text-sm text-[var(--ink-soft)]"
           >
             닫기
           </button>
@@ -217,7 +217,7 @@ export default function WordQuiz({
                 type="button"
                 onClick={() => tap("word", key)}
                 disabled={matched.has(key) || celebrating.has(key)}
-                className={`flex h-16 items-center rounded-xl border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass("word", key, selected?.side === "word" && selected.key === key)}`}
+                className={`flex h-16 items-center border px-3 text-left font-[family-name:var(--font-diary)] text-base font-medium text-[var(--ink)] transition ${cardClass("word", key, selected?.side === "word" && selected.key === key)}`}
               >
                 {/* Single-line truncation, not line-clamp-2: WebKit's line
                     box counting for `-webkit-line-clamp` doesn't reckon
@@ -243,7 +243,7 @@ export default function WordQuiz({
                 type="button"
                 onClick={() => tap("meaning", key)}
                 disabled={matched.has(key) || celebrating.has(key)}
-                className={`flex h-16 items-center rounded-xl border px-3 text-left text-sm text-[var(--ink)] transition ${cardClass("meaning", key, selected?.side === "meaning" && selected.key === key)}`}
+                className={`flex h-16 items-center border px-3 text-left text-sm text-[var(--ink)] transition ${cardClass("meaning", key, selected?.side === "meaning" && selected.key === key)}`}
               >
                 <span className="line-clamp-2">{w.meaning}</span>
               </button>

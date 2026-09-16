@@ -116,7 +116,7 @@ function renderBoxHighlight(rounds: FeedbackRound[], pendingText: string) {
               // element, its real text ghosts through underneath the
               // textarea's own text despite this whole backdrop's
               // wrapping div being transparent.
-              className="rounded bg-black/[0.06] text-transparent underline decoration-[var(--ink)] decoration-2 underline-offset-4"
+              className="bg-black/[0.06] text-transparent underline decoration-[var(--ink)] decoration-2 underline-offset-4"
             >
               {seg.text}
             </mark>
@@ -141,7 +141,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
   return (
     <div
       key={key}
-      className="flex flex-col gap-3 rounded-2xl bg-[var(--paper-raised)] p-4"
+      className="flex flex-col gap-3 bg-[var(--paper-raised)] p-4"
     >
       <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-[15px] leading-relaxed text-[var(--ink)]">
         {buildHighlightSegments(r.text, r.suggestions).map((seg, si) =>
@@ -150,7 +150,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
           ) : (
             <mark
               key={si}
-              className="rounded bg-black/[0.06] px-0.5 text-[var(--ink)] underline decoration-[var(--ink)] decoration-2 underline-offset-4"
+              className="bg-black/[0.06] px-0.5 text-[var(--ink)] underline decoration-[var(--ink)] decoration-2 underline-offset-4"
             >
               {seg.text}
             </mark>
@@ -165,7 +165,7 @@ function renderLockedRound(r: FeedbackRound, dateKey: string, key: string) {
           {r.suggestions.map((s, j) => (
             <span
               key={j}
-              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
+              className="inline-flex w-fit items-center gap-1.5 border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
             >
               <span className="text-[13px] text-[var(--ink-soft)] line-through">
                 <FuriganaText text={s.original} readings={r.readings} />
@@ -682,8 +682,8 @@ export default function ChatEditor({
           </div>
         )}
         {feedHistory.map((r, i) => (
-          <div key={i} className="flex items-start gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ink-soft)]" />
+          <div key={i} className="flex items-start gap-2 bg-black/[0.035] px-3 py-2.5">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 bg-[var(--ink-soft)]" />
             <div className="flex flex-col gap-1.5">
               <p className="text-[10px] text-[var(--ink-tertiary)]">{formatSavedAt(r.savedAt, dateKey)}</p>
               <p className="text-[12.5px] leading-relaxed text-[var(--ink-soft)]">{r.comment}</p>
@@ -691,7 +691,7 @@ export default function ChatEditor({
               {r.suggestions.map((s, j) => (
                 <span
                   key={j}
-                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
+                  className="inline-flex w-fit items-center gap-1.5 border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1"
                 >
                   <span className="text-[13px] text-[var(--ink-soft)] line-through">
                     <FuriganaText text={s.original} readings={r.readings} />
@@ -708,18 +708,18 @@ export default function ChatEditor({
           </div>
         ))}
         {sending && (
-          <div className="flex items-center gap-2 rounded-lg bg-black/[0.035] px-3 py-2.5">
+          <div className="flex items-center gap-2 bg-black/[0.035] px-3 py-2.5">
             <span className="flex items-center gap-1">
               <span
-                className="h-1.5 w-1.5 rounded-full bg-[var(--ink-soft)]"
+                className="h-1.5 w-1.5 bg-[var(--ink-soft)]"
                 style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "0ms" }}
               />
               <span
-                className="h-1.5 w-1.5 rounded-full bg-[var(--ink-soft)]"
+                className="h-1.5 w-1.5 bg-[var(--ink-soft)]"
                 style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "150ms" }}
               />
               <span
-                className="h-1.5 w-1.5 rounded-full bg-[var(--ink-soft)]"
+                className="h-1.5 w-1.5 bg-[var(--ink-soft)]"
                 style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "300ms" }}
               />
             </span>
@@ -735,7 +735,7 @@ export default function ChatEditor({
           flex-1 as the feed left the actual textarea box visibly smaller
           than the feed area even though the two halves were equal height. */}
       <div className="flex min-h-0 flex-[1.4] flex-col gap-2 border-t border-[var(--paper-line)] pt-3">
-        <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-2xl border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 border border-[var(--paper-line)] bg-[var(--paper-raised)] p-3">
           {/* This backdrop is decoration only — every character in it is
               invisible, it just paints a highlight behind where a matched
               suggestion sits. The textarea on top keeps its own text fully
@@ -770,7 +770,7 @@ export default function ChatEditor({
               type="button"
               onClick={handleSend}
               disabled={!pendingText.trim() || busy}
-              className="rounded-full border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+              className="border border-[var(--ink)] px-4 py-1.5 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
             >
               {sending ? "살펴보는 중…" : "살펴보기"}
             </button>
@@ -783,7 +783,7 @@ export default function ChatEditor({
             not guessed live here while the text is still being typed —
             that guess used to visibly disagree with what actually got
             saved. */}
-        <div className="flex shrink-0 items-center gap-2.5 rounded-xl bg-[var(--paper-raised)] px-2.5 py-2">
+        <div className="flex shrink-0 items-center gap-2.5 bg-[var(--paper-raised)] px-2.5 py-2">
           <p className="flex-1 text-[11px] leading-snug text-[var(--ink-soft)]">
             {hasPhoto ? "사진이 첨부됐어요." : "사진을 추가하고, 오늘의 우표로 붙여보세요."}
           </p>
@@ -797,7 +797,7 @@ export default function ChatEditor({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
+            className="flex shrink-0 items-center gap-1 border border-[var(--paper-line)] bg-[var(--paper-raised)] px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
           >
             <UiIcon name="camera-line" className="h-3.5 w-3.5" alt="">
               📷
@@ -821,7 +821,7 @@ export default function ChatEditor({
           type="button"
           onClick={handleFinish}
           disabled={!content.trim() || busy}
-          className="shrink-0 w-full rounded-full bg-[var(--cta)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
+          className="shrink-0 w-full bg-[var(--cta)] px-7 py-4 text-base font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-40"
         >
           {finishing ? "마무리하는 중…" : initialEntry ? "이어서 쓴 일기 마치기" : "오늘 일기 마치기"}
         </button>

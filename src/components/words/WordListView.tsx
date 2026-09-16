@@ -226,7 +226,7 @@ export default function WordListView({ userId }: { userId: string }) {
                   onClick={() => setQuizzing(true)}
                   className="flex items-center gap-3 bg-[var(--shu)] px-4 py-3.5 text-left text-white shadow-sm transition hover:opacity-90"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-white/20">
                     <UiIcon name="cards-line" className="h-5 w-5" alt="">
                       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
                         <rect x="3" y="7.5" width="12" height="13" rx="2" stroke="currentColor" strokeWidth={1.6} />
@@ -335,7 +335,7 @@ export default function WordListView({ userId }: { userId: string }) {
                                   <span
                                     key={i2}
                                     aria-hidden="true"
-                                    className={`h-2 w-2 rounded-[2px] ${
+                                    className={`h-2 w-2 ${
                                       i2 < filled
                                         ? "bg-[var(--ink)]"
                                         : "border border-[var(--paper-line)]"

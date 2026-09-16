@@ -215,8 +215,8 @@ export default function ReviewView({
           </div>
 
           {isPending && (
-            <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--ink-soft)]" />
+            <p className="inline-flex w-fit items-center gap-2 bg-[var(--paper-line)]/50 px-3 py-1 text-xs text-[var(--ink-soft)]">
+              <span className="h-1.5 w-1.5 animate-pulse bg-[var(--ink-soft)]" />
               검토 중이에요…
             </p>
           )}
@@ -297,7 +297,7 @@ export default function ReviewView({
                 {wordChips.map((r, i) => (
                   <span
                     key={i}
-                    className="rounded-xl border border-[var(--paper-line)] px-4 py-2 font-[family-name:var(--font-diary)] text-sm font-medium text-[var(--ink)]"
+                    className="border border-[var(--paper-line)] px-4 py-2 font-[family-name:var(--font-diary)] text-sm font-medium text-[var(--ink)]"
                   >
                     {r.text} <span className="text-[var(--ink-soft)]">{r.meaning}</span>
                   </span>
@@ -315,7 +315,7 @@ export default function ReviewView({
           )}
 
           {confirmingDelete ? (
-            <div className="flex items-center justify-between rounded-xl bg-[var(--paper-raised)] px-4 py-3">
+            <div className="flex items-center justify-between bg-[var(--paper-raised)] px-4 py-3">
               <p className="text-sm text-[var(--ink)]">
                 이 날짜의 일기를 정말 삭제할까요? 되돌릴 수 없어요.
                 {deleteError && <span className="ml-2 font-medium">{deleteError}</span>}
@@ -325,7 +325,7 @@ export default function ReviewView({
                   type="button"
                   onClick={() => setConfirmingDelete(false)}
                   disabled={deleting}
-                  className="rounded-full border border-[var(--paper-line)] px-4 py-1.5 text-xs text-[var(--ink-soft)] disabled:opacity-60"
+                  className="border border-[var(--paper-line)] px-4 py-1.5 text-xs text-[var(--ink-soft)] disabled:opacity-60"
                 >
                   취소
                 </button>
@@ -333,7 +333,7 @@ export default function ReviewView({
                   type="button"
                   onClick={handleConfirmDelete}
                   disabled={deleting}
-                  className="rounded-full bg-[var(--cta)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
+                  className="bg-[var(--cta)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-60"
                 >
                   {deleting ? "삭제 중…" : "삭제"}
                 </button>
@@ -367,7 +367,7 @@ export default function ReviewView({
                   router.push(`/entry/${entry.entry_date}?continue=1`);
                 })
               }
-              className="w-full rounded-xl border border-[var(--paper-line)] py-4 text-center text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--paper-line)]/30 disabled:opacity-60"
+              className="w-full border border-[var(--paper-line)] py-4 text-center text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--paper-line)]/30 disabled:opacity-60"
             >
               {continuePending ? "불러오는 중…" : isFailed ? "다시 시도" : "이어 쓰기"}
             </button>

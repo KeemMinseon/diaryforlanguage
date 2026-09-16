@@ -17,23 +17,23 @@ export default function EntryLoading() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
       <div className="flex animate-pulse items-center justify-between">
-        <div className="h-4 w-16 rounded-full bg-[var(--paper-line)]" />
-        <div className="h-4 w-32 rounded-full bg-[var(--paper-line)]" />
-        <div className="h-4 w-16 rounded-full bg-[var(--paper-line)]" />
+        <div className="h-4 w-16 bg-[var(--paper-line)]" />
+        <div className="h-4 w-32 bg-[var(--paper-line)]" />
+        <div className="h-4 w-16 bg-[var(--paper-line)]" />
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-3">
         <span className="flex items-center gap-1.5">
           <span
-            className="h-2 w-2 rounded-full bg-[var(--ink-soft)]"
+            className="h-2 w-2 bg-[var(--ink-soft)]"
             style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "0ms" }}
           />
           <span
-            className="h-2 w-2 rounded-full bg-[var(--ink-soft)]"
+            className="h-2 w-2 bg-[var(--ink-soft)]"
             style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "150ms" }}
           />
           <span
-            className="h-2 w-2 rounded-full bg-[var(--ink-soft)]"
+            className="h-2 w-2 bg-[var(--ink-soft)]"
             style={{ animation: "typing-bounce 1.1s ease-in-out infinite", animationDelay: "300ms" }}
           />
         </span>

@@ -35,7 +35,7 @@ export default function ToastProvider({ children }: { children: React.ReactNode 
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="pointer-events-auto flex items-center gap-2 rounded-full border border-[var(--ink-soft)] bg-[var(--paper-raised)] px-5 py-3 text-sm text-[var(--ink)] shadow-lg animate-[toast-in_0.25s_ease-out]"
+            className="pointer-events-auto flex items-center gap-2 border border-[var(--ink-soft)] bg-[var(--paper-raised)] px-5 py-3 text-sm text-[var(--ink)] shadow-lg animate-[toast-in_0.25s_ease-out]"
           >
             <span aria-hidden="true">📮</span>
             {t.message}

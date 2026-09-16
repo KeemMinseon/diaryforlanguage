@@ -113,12 +113,12 @@ export default function MonthCalendar() {
             swapped for the app's own icon instead of repeating that info
             a third time. */}
         {/* eslint-disable-next-line @next/next/no-img-element -- app icon, not a next/image-worthy photo */}
-        <img src="/icon.png" alt="우표일기" className="h-8 w-8 rounded-lg" />
+        <img src="/icon.png" alt="우표일기" className="h-8 w-8" />
         <div className="flex items-center gap-1">
           <Link
             href="/words"
             aria-label="단어장"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
+            className="flex h-8 w-8 items-center justify-center text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
           >
             <UiIcon name="book-open-line" className="h-5 w-5" alt="단어장">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -140,7 +140,7 @@ export default function MonthCalendar() {
           <Link
             href="/stamps"
             aria-label="우표 모음"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
+            className="flex h-8 w-8 items-center justify-center text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
           >
             <UiIcon name="stamp-grid-line" className="h-5 w-5" alt="우표 모음">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -154,7 +154,7 @@ export default function MonthCalendar() {
           <Link
             href="/settings"
             aria-label="설정"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
+            className="flex h-8 w-8 items-center justify-center text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink)]"
           >
             <UiIcon name="settings-line" className="h-5 w-5" alt="설정">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
@@ -197,7 +197,7 @@ export default function MonthCalendar() {
           <button
             type="button"
             onClick={() => goToMonth(year, month - 1)}
-            className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+            className="flex items-center justify-center px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
             aria-label="이전 달"
           >
             <UiIcon name="bracket-left-line" className="h-4 w-4" alt="">
@@ -207,24 +207,24 @@ export default function MonthCalendar() {
           <button
             type="button"
             onClick={() => goToMonth(year, month - 1)}
-            className="rounded-full px-2 py-1 text-sm text-[var(--ink-tertiary)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+            className="px-2 py-1 text-sm text-[var(--ink-tertiary)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
           >
             {String(((month - 1 + 12) % 12) + 1).padStart(2, "0")}
           </button>
-          <p className="rounded-full px-2 py-1 text-lg font-bold text-[var(--ink)]">
+          <p className="px-2 py-1 text-lg font-bold text-[var(--ink)]">
             {String(month + 1).padStart(2, "0")}
           </p>
           <button
             type="button"
             onClick={() => goToMonth(year, month + 1)}
-            className="rounded-full px-2 py-1 text-sm text-[var(--ink-tertiary)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
+            className="px-2 py-1 text-sm text-[var(--ink-tertiary)] hover:bg-[var(--paper-line)]/40 hover:text-[var(--ink-soft)]"
           >
             {String(((month + 1) % 12) + 1).padStart(2, "0")}
           </button>
           <button
             type="button"
             onClick={() => goToMonth(year, month + 1)}
-            className="flex items-center justify-center rounded-full px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
+            className="flex items-center justify-center px-2 py-1 text-[var(--ink-soft)] hover:bg-[var(--paper-line)]/40"
             aria-label="다음 달"
           >
             <UiIcon name="bracket-right-line" className="h-4 w-4" alt="">
@@ -273,7 +273,7 @@ export default function MonthCalendar() {
       {isCurrentMonthShown && (
         <Link
           href={`/entry/${today}`}
-          className="flex flex-col gap-2 rounded-2xl bg-[var(--paper-raised)] px-5 py-4"
+          className="flex flex-col gap-2 bg-[var(--paper-raised)] px-5 py-4"
         >
           <p className="text-xs text-[var(--ink-soft)]">
             TODAY · {parseDateKey(today).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}
