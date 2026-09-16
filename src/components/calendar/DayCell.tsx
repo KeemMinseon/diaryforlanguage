@@ -75,6 +75,7 @@ export default function DayCell({
             stampKey={entry.stamp_key as never}
             stampVariant={entry.stamp_variant}
             photoUrl={photoUrl}
+            pending={entry.status === "pending"}
             className="absolute top-[8%] left-[8%] h-[84%] w-[84%]"
           />
         ) : (
@@ -88,6 +89,7 @@ export default function DayCell({
             stampKey={entry.stamp_key as never}
             stampVariant={entry.stamp_variant}
             photoUrl={photoUrl}
+            pending={entry.status === "pending"}
             className="absolute inset-0 h-full w-full"
           />
         )

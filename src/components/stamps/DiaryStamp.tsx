@@ -23,6 +23,11 @@ interface DiaryStampProps {
   stampVariant?: number | null;
   photoUrl?: string | null;
   className?: string;
+  /** True while this sitting's own first-language review is still in
+   * flight — shows a pulsing placeholder in the stamp's own scalloped
+   * shape instead of the actual (already-picked) artwork, for either
+   * stamp kind, so a day doesn't look "done" before its feedback has. */
+  pending?: boolean;
 }
 
 /** Renders the day's stamp: a cropped photo, or the auto-picked keyword
@@ -36,6 +41,7 @@ export default function DiaryStamp({
   stampVariant,
   photoUrl,
   className,
+  pending = false,
 }: DiaryStampProps) {
   const id = (stampKey ?? "default") as StampId;
 
@@ -72,6 +78,15 @@ export default function DiaryStamp({
   useEffect(() => {
     if (loaded && photoUrl) loadedPhotoUrls.add(photoUrl);
   }, [loaded, photoUrl]);
+
+  // Same scalloped shape either kind ends up with, so nothing shifts once
+  // the real artwork takes its place — a bare keyword icon (see below)
+  // doesn't otherwise go through this frame at all (see StampFrame's own
+  // doc comment on why), but the placeholder needs *a* stamp-shaped mask
+  // to sit in regardless of which kind this sitting will turn out to be.
+  if (pending) {
+    return <StampFrame className={className} pending />;
+  }
 
   if (stampKind === "photo" && photoUrl) {
     return (

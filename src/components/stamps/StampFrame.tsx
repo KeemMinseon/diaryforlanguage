@@ -30,6 +30,7 @@ export default function StampFrame({
   photoUrl,
   photoLoaded = true,
   onPhotoLoad,
+  pending = false,
 }: {
   /** Keyword-icon content, rendered via foreignObject. Ignored when `photoUrl` is set. */
   children?: React.ReactNode;
@@ -41,6 +42,13 @@ export default function StampFrame({
   /** Shows a pulse placeholder over the photo while false. */
   photoLoaded?: boolean;
   onPhotoLoad?: () => void;
+  /** Shows the same pulsing placeholder as an unloaded photo, but ignoring
+   * `photoUrl`/`children` entirely — for a day whose first-language review
+   * hasn't landed yet. The actual stamp (keyword or photo) is already
+   * decided at save time (see ChatEditor's own `pickStamp` call), but
+   * showing it immediately made a still-pending day look finished before
+   * the AI feedback that's the whole point of writing had even come back. */
+  pending?: boolean;
 }) {
   const clipId = `stamp-mask-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
 
@@ -53,7 +61,17 @@ export default function StampFrame({
       </defs>
       <g clipPath={`url(#${clipId})`}>
         <rect x={0} y={0} width={STAMP_MASK_WIDTH} height={STAMP_MASK_HEIGHT} fill={tint} />
-        {photoUrl ? (
+        {pending ? (
+          <rect
+            aria-hidden="true"
+            className="animate-pulse"
+            x={0}
+            y={0}
+            width={STAMP_MASK_WIDTH}
+            height={STAMP_MASK_HEIGHT}
+            fill="var(--paper-line)"
+          />
+        ) : photoUrl ? (
           <>
             <image
               href={photoUrl}
