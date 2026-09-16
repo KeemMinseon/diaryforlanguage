@@ -30,7 +30,7 @@ const PUSH_OPACITY = 0.35;
 /** Vertical space between the enlarged stamp and its caption below —
  * used both when sizing the hero (so the two, together, still fit a
  * short screen) and when positioning the caption itself. */
-const HERO_CAPTION_GAP = 10;
+const HERO_CAPTION_GAP = 6;
 /** Rough height of the caption block (title line + subtitle line + the
  * small gap between them) — reserved when sizing the hero so a small
  * screen's caption never gets pushed off past the bottom edge. */
@@ -172,7 +172,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     // for — on a short screen the width cap alone could size a hero
     // (plus its caption underneath) taller than the viewport itself.
     const maxHeightForHero = vh - HERO_VERTICAL_MARGIN * 2 - HERO_CAPTION_GAP - HERO_CAPTION_HEIGHT;
-    const heroWidth = Math.min(320, vw * 0.72, Math.max(0, maxHeightForHero) * STAMP_ASPECT);
+    const heroWidth = Math.min(280, vw * 0.64, Math.max(0, maxHeightForHero) * STAMP_ASPECT);
     const heroHeight = heroWidth / STAMP_ASPECT;
     const heroLeft = voffsetLeft + (vw - heroWidth) / 2;
     // Centers the hero+caption block as a whole, not just the hero on
