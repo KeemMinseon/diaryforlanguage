@@ -354,8 +354,10 @@ export default function ReviewView({
                     일기를 지울까요?
                   </h2>
                   <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-                    지우면 그날 칸은 빈 날로 돌아가고, 이 날 받은 우표 {stamps.length}장도 앨범에서
-                    사라집니다. 쓴 날은 소급해서 다시 채울 수 없어 연속 기록이 끝납니다.
+                    일기를 삭제하면 해당 날짜가 빈 날로 바뀌고, 그날 받은 우표 {stamps.length}장도 앨범에서
+                    사라져요.
+                    <br />
+                    삭제한 일기는 복원할 수 없으니, 삭제하기 전에 한 번 더 확인해 주세요.
                   </p>
                   {deleteError && <p className="text-sm font-medium text-[var(--ink)]">{deleteError}</p>}
                 </div>
