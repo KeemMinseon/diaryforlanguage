@@ -537,7 +537,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                       {group.items.map(({ stampKey }) => {
                         const key = keywordKey(stampKey);
                         return (
-                          <div key={stampKey} className="flex flex-col items-center gap-1.5">
+                          <div key={stampKey} className="flex flex-col items-center gap-1">
                             <button
                               data-stamp-key={key}
                               type="button"
@@ -555,7 +555,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                                 className="h-full w-full drop-shadow-sm"
                               />
                             </button>
-                            <span className="text-xs font-medium text-[var(--ink)]">
+                            <span className="w-full truncate text-center text-xs text-[var(--ink-soft)]">
                               {STAMP_LABELS[stampKey]}
                             </span>
                           </div>
