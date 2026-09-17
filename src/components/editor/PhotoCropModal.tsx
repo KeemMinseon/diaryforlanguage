@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { createPortal } from "react-dom";
 import Cropper from "react-easy-crop";
 import type { Area, Point } from "react-easy-crop";
 import { getCroppedImageBlob } from "@/lib/utils/cropImage";
@@ -41,7 +42,17 @@ export default function PhotoCropModal({
     }
   }
 
-  return (
+  // Portaled to `document.body` — see the identical comment on the stamp
+  // lightbox in StampCollectionView.tsx: PageTransition (an ancestor of
+  // every page) leaves a lingering non-`none` transform on its wrapper
+  // after its entrance animation finishes, which makes that wrapper (not
+  // the viewport) the containing block for this modal's `position: fixed`
+  // if it's rendered inline. `inset-0` alone would still visually cover
+  // the current screen either way, but the modal's actual box would
+  // stretch to that wrapper's full (page-length, not one-screen) height
+  // on a page with enough content to scroll — this sidesteps that
+  // regardless of what any ancestor does.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex flex-col bg-black/70 p-4">
       <div className="relative mx-auto w-full max-w-md flex-1 overflow-hidden bg-black">
         <Cropper
@@ -86,6 +97,7 @@ export default function PhotoCropModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

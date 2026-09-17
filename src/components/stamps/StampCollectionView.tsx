@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
@@ -637,58 +638,76 @@ export default function StampCollectionView({ userId }: { userId: string }) {
           open already sitting exactly over the clicked stamp
           (flipTransform, "enter" phase, no transition), then "open" drops
           that transform with a transition — the grow-to-center animation.
-          Closing just plays the same transform back on, then unmounts. */}
-      {focus && (
-        <>
-          <div
-            className="fixed z-50 drop-shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-            // The real "closing is done" signal — see closeLightbox's own
-            // comment on why a timer alone isn't enough.
-            onTransitionEnd={(e) => {
-              if (e.propertyName === "transform" && phase === "closing") finishClosing();
-            }}
-            style={{
-              left: focus.hero.left,
-              top: focus.hero.top,
-              width: focus.hero.width,
-              height: focus.hero.height,
-              transform: phase === "open" ? "translate(0, 0) scale(1)" : focus.flipTransform,
-              transition: `transform ${prefersReducedMotion() ? 0 : FLIP_DURATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
-            }}
-          >
-            {focus.target.kind === "photo" ? (
-              <DiaryStamp
-                stampKind="photo"
-                stampKey={null}
-                photoUrl={photoPublicUrl(focus.target.item.photoPath!, focus.target.item.createdAt)}
-                className="h-full w-full"
-              />
-            ) : (
-              <DiaryStamp stampKind="keyword" stampKey={focus.target.stampKey} className="h-full w-full" />
-            )}
-          </div>
-          {heroCaption && (
+          Closing just plays the same transform back on, then unmounts.
+
+          Portaled straight to `document.body` rather than rendered inline
+          here — `left`/`top` are computed to center this fixed-position
+          element in the real viewport (see openLightbox), but PageTransition
+          (an ancestor of every page, including this one) applies a CSS
+          animation with `animation-fill-mode: both`, which leaves a
+          non-`none` `transform` sitting on that wrapper indefinitely after
+          it finishes. Per spec, any ancestor with a `transform` set becomes
+          the containing block for a `position: fixed` descendant instead of
+          the viewport — so without the portal, this hero was actually
+          positioned relative to that wrapper's full (scrollable, page-length)
+          box, not the visible viewport, landing it up near the top of the
+          page instead of centered on screen once the page had been scrolled
+          down any amount. Rendering directly under <body> — which has no
+          such transform — sidesteps that regardless of what any ancestor
+          does. */}
+      {focus &&
+        createPortal(
+          <>
             <div
-              className="fixed z-50 flex flex-col items-center gap-1 px-4 text-center"
+              className="fixed z-50 drop-shadow-xl"
               onClick={(e) => e.stopPropagation()}
+              // The real "closing is done" signal — see closeLightbox's own
+              // comment on why a timer alone isn't enough.
+              onTransitionEnd={(e) => {
+                if (e.propertyName === "transform" && phase === "closing") finishClosing();
+              }}
               style={{
                 left: focus.hero.left,
-                top: focus.hero.top + focus.hero.height + HERO_CAPTION_GAP,
+                top: focus.hero.top,
                 width: focus.hero.width,
-                // Only once the hero's actually finished growing — fading
-                // in any earlier would have it competing with the grow
-                // animation right next to it.
-                opacity: phase === "open" ? 1 : 0,
-                transition: `opacity ${prefersReducedMotion() ? 0 : 180}ms ease`,
+                height: focus.hero.height,
+                transform: phase === "open" ? "translate(0, 0) scale(1)" : focus.flipTransform,
+                transition: `transform ${prefersReducedMotion() ? 0 : FLIP_DURATION_MS}ms cubic-bezier(0.16, 1, 0.3, 1)`,
               }}
             >
-              <p className="text-xl font-bold text-[var(--ink)]">{heroCaption.title}</p>
-              <p className="text-sm text-[var(--ink-soft)]">{heroCaption.subtitle}</p>
+              {focus.target.kind === "photo" ? (
+                <DiaryStamp
+                  stampKind="photo"
+                  stampKey={null}
+                  photoUrl={photoPublicUrl(focus.target.item.photoPath!, focus.target.item.createdAt)}
+                  className="h-full w-full"
+                />
+              ) : (
+                <DiaryStamp stampKind="keyword" stampKey={focus.target.stampKey} className="h-full w-full" />
+              )}
             </div>
-          )}
-        </>
-      )}
+            {heroCaption && (
+              <div
+                className="fixed z-50 flex flex-col items-center gap-1 px-4 text-center"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  left: focus.hero.left,
+                  top: focus.hero.top + focus.hero.height + HERO_CAPTION_GAP,
+                  width: focus.hero.width,
+                  // Only once the hero's actually finished growing — fading
+                  // in any earlier would have it competing with the grow
+                  // animation right next to it.
+                  opacity: phase === "open" ? 1 : 0,
+                  transition: `opacity ${prefersReducedMotion() ? 0 : 180}ms ease`,
+                }}
+              >
+                <p className="text-xl font-bold text-[var(--ink)]">{heroCaption.title}</p>
+                <p className="text-sm text-[var(--ink-soft)]">{heroCaption.subtitle}</p>
+              </div>
+            )}
+          </>,
+          document.body
+        )}
     </div>
   );
 }
