@@ -35,7 +35,7 @@ function dedupeReadings(readings: Reading[]): Reading[] {
 }
 
 /**
- * The "전체 수정" screen — every paragraph (sitting) in the day, each
+ * The "수정하기" screen — every paragraph (sitting) in the day, each
  * editable in place: tapping "수정" on a row swaps just that row into a
  * textarea (with a fresh 첨삭 required before it can save), while every
  * other row stays exactly as it was, giving natural "이전/다음" context
@@ -100,6 +100,18 @@ export default function ParagraphListEditor({
   const editingTarget = editingIndex !== -1 ? paragraphs[editingIndex] : null;
   const editingStamp = stamps.find((s) => s.session === editingSession);
   const editingHasPhoto = editingStamp?.stampKind === "photo";
+  // A brand-new photo can only be *added* here if no other session already
+  // owns the day's photo — every session's photo shares one fixed storage
+  // path keyed by day (see uploadStampPhoto's own doc comment), so adding
+  // one here while another session already has one would silently
+  // overwrite that other session's photo file with this one's, even
+  // though both stamps would still show their own (now identical, wrong)
+  // `photoPath`. Replacing *this* session's own existing photo is always
+  // fine — it already owns that one path.
+  const otherSessionHasPhoto = stamps.some(
+    (s) => s.session !== editingSession && s.stampKind === "photo"
+  );
+  const canTouchPhoto = editingHasPhoto || !otherSessionHasPhoto;
 
   const textChanged = editingTarget !== null && text.trim() !== editingTarget.text.trim();
   const hasFreshReview = reviewResult !== null && reviewedForText === text;
@@ -383,20 +395,29 @@ export default function ParagraphListEditor({
                     autoFocus
                     className="min-h-[14vh] w-full resize-none bg-transparent font-[family-name:var(--font-diary)] text-lg leading-relaxed text-[var(--ink)] outline-none disabled:opacity-60"
                   />
-                  {editingHasPhoto && (
+                  {canTouchPhoto && (editingHasPhoto || croppedBlob) && (
                     <div className="flex items-center gap-3">
                       <div className="aspect-[4/5] w-16 shrink-0 overflow-hidden bg-[var(--paper-line)]">
                         {/* eslint-disable-next-line @next/next/no-img-element -- external Supabase Storage URL, dimensions unknown ahead of time */}
                         <img
-                          src={croppedPreviewUrl ?? stampPhotoUrl(stamp!) ?? undefined}
+                          src={croppedPreviewUrl ?? (stamp ? (stampPhotoUrl(stamp) ?? undefined) : undefined)}
                           alt=""
                           className="h-full w-full object-cover"
                         />
                       </div>
-                      {keepExistingPhoto && !croppedBlob && (
-                        <span className="text-xs text-[var(--ink-soft)]">사진 1 · 이 대목의 사진우표</span>
+                      {croppedBlob ? (
+                        <span className="text-xs text-[var(--ink-soft)]">사진 1 · 새로 넣은 사진</span>
+                      ) : (
+                        keepExistingPhoto && (
+                          <span className="text-xs text-[var(--ink-soft)]">사진 1 · 이 대목의 사진우표</span>
+                        )
                       )}
                     </div>
+                  )}
+                  {!canTouchPhoto && (
+                    <p className="text-xs text-[var(--ink-soft)]">
+                      이미 다른 대목에 이 날의 사진우표가 있어서, 여기서는 사진을 넣을 수 없어요.
+                    </p>
                   )}
                 </div>
 
@@ -430,7 +451,7 @@ export default function ParagraphListEditor({
                 {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
 
                 <div className="flex shrink-0 items-center gap-2.5">
-                  {editingHasPhoto && (
+                  {canTouchPhoto && (
                     <>
                       <input
                         ref={fileInputRef}
@@ -443,7 +464,7 @@ export default function ParagraphListEditor({
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={saving}
-                        aria-label="사진 다시 선택"
+                        aria-label={keepExistingPhoto || croppedBlob ? "사진 다시 선택" : "사진 추가"}
                         className="flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--ink)] text-[var(--ink)] disabled:opacity-60"
                       >
                         <UiIcon name="camera-line" className="h-4 w-4" alt="">

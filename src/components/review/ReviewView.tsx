@@ -21,7 +21,7 @@ export default function ReviewView({
   photoUrl: string | null;
 }) {
   const router = useRouter();
-  // "전체 수정" opens the paragraph-list editor (see ParagraphListEditor) —
+  // "수정하기" opens the paragraph-list editor (see ParagraphListEditor) —
   // every sitting in one list, each editable/deletable in place.
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -316,7 +316,7 @@ export default function ReviewView({
               onClick={() => setEditing(true)}
               className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
             >
-              전체 수정
+              수정하기
             </button>
             <button
               type="button"
