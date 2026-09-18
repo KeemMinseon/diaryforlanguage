@@ -236,3 +236,26 @@ create trigger trg_word_progress_updated_at
 -- if you want instant hanko-stamp toasts instead of the client's polling
 -- fallback. Uncomment if your project doesn't already publish it:
 -- alter publication supabase_realtime add table public.diary_entries;
+
+-- Free-text feedback sent from the app's own "의견 보내기" screen — see
+-- /api/feedback, the only writer. `email` is denormalized from the auth
+-- user at submit time (not re-derived via a join) so a row still shows who
+-- sent it even after that account is later deleted (auth.users row gone,
+-- user_id set null by the FK below) — otherwise a deleted account's own
+-- feedback would go anonymous right when it might matter most to keep.
+create table if not exists public.feedback (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  email text not null,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.feedback enable row level security;
+
+-- Insert-only from the client — nobody (including the sender) reads these
+-- back through the app itself; the developer reviews them directly in the
+-- Supabase dashboard's Table Editor (service role bypasses RLS entirely).
+drop policy if exists "insert own feedback" on public.feedback;
+create policy "insert own feedback" on public.feedback
+  for insert with check (auth.uid() = user_id);

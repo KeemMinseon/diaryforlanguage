@@ -83,6 +83,18 @@ export default async function SettingsPage() {
       </form>
 
       <div className="flex flex-col gap-2">
+        <p className="px-1 text-xs font-medium text-[var(--ink-soft)]">지원</p>
+        <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] border border-[var(--paper-line)]">
+          <Link
+            href="/feedback"
+            className="px-5 py-4 text-sm text-[var(--ink)] transition hover:bg-black/[0.02]"
+          >
+            의견 보내기
+          </Link>
+        </section>
+      </div>
+
+      <div className="flex flex-col gap-2">
         <p className="px-1 text-xs font-medium text-[var(--ink-soft)]">약관 및 정책</p>
         <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] border border-[var(--paper-line)]">
           <Link
