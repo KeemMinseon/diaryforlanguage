@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import UiIcon from "@/components/icons/UiIcon";
+import DeleteAccountButton from "@/components/settings/DeleteAccountButton";
 import ThemeToggle from "@/components/settings/ThemeToggle";
 import { createClient } from "@/lib/supabase/server";
 
@@ -80,6 +81,31 @@ export default async function SettingsPage() {
           로그아웃
         </button>
       </form>
+
+      <div className="flex flex-col gap-2">
+        <p className="px-1 text-xs font-medium text-[var(--ink-soft)]">약관 및 정책</p>
+        <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] border border-[var(--paper-line)]">
+          <Link
+            href="/terms"
+            className="px-5 py-4 text-sm text-[var(--ink)] transition hover:bg-black/[0.02]"
+          >
+            이용약관
+          </Link>
+          <Link
+            href="/privacy"
+            className="px-5 py-4 text-sm text-[var(--ink)] transition hover:bg-black/[0.02]"
+          >
+            개인정보처리방침
+          </Link>
+        </section>
+      </div>
+
+      {/* Deliberately not inside a card/section like everything else above
+          — a quieter, lower-emphasis text button so it doesn't visually
+          compete with 로그아웃, without hiding it away on some separate
+          screen (an irreversible, account-wide action still needs to stay
+          reachable from here, not just discoverable). */}
+      <DeleteAccountButton />
     </div>
   );
 }

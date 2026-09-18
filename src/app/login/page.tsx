@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -187,6 +188,18 @@ export default function LoginPage() {
           </form>
         )}
       </div>
+
+      <p className="w-full max-w-sm text-center text-xs text-[var(--ink-soft)]">
+        계속 진행하면{" "}
+        <Link href="/terms" className="underline underline-offset-2">
+          이용약관
+        </Link>{" "}
+        및{" "}
+        <Link href="/privacy" className="underline underline-offset-2">
+          개인정보처리방침
+        </Link>
+        에 동의하는 것으로 간주됩니다.
+      </p>
     </main>
   );
 }
