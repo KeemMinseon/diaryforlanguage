@@ -9,13 +9,15 @@ import type { Reading, Suggestion } from "@/types/diary";
 export const runtime = "nodejs";
 export const maxDuration = 45;
 
-// Fires once per paragraph while writing (or once per sitting on a re-
-// review) — a normal writing session sends single digits of these. 30 in
-// 10 minutes leaves room for a burst of real edits while still bounding
-// the worst case (a script hammering this route) to a fixed number of
-// paid Anthropic calls instead of an unbounded one.
-const RATE_LIMIT = 30;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+// A free-tier cost cap, not just burst protection — 10 첨삭 calls per
+// rolling 24 hours per user. A real day's writing rarely needs more than
+// a handful of these; this bounds the worst case (heavy use, a retried
+// script, or outright abuse) to a fixed, predictable number of paid
+// Anthropic calls per user per day rather than an unbounded one. A
+// rolling window (not a calendar-day reset) so it can't be gamed by
+// timing 10 requests right before midnight and 10 more right after.
+const RATE_LIMIT = 10;
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Generous enough that no real diary paragraph (or the accumulated prior
 // text of one sitting) would ever hit it, but still a hard cap on the
@@ -338,7 +340,7 @@ export async function POST(request: Request) {
   const { allowed, retryAfterMs } = checkRateLimit(`review-paragraph:${user.id}`, RATE_LIMIT, RATE_LIMIT_WINDOW_MS);
   if (!allowed) {
     return NextResponse.json(
-      { error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." },
+      { error: `오늘 받을 수 있는 첨삭 횟수(${RATE_LIMIT}회)를 모두 사용했어요. 내일 다시 시도해 주세요.` },
       { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } }
     );
   }
