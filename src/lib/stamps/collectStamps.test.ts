@@ -166,6 +166,31 @@ describe("collectStamps", () => {
       ]);
     });
 
+    it("carries the first-ever occurrence's own stampVariant, not variant 0", () => {
+      // pickStampVariant is random per-sitting, not fixed per keyword — a
+      // later occurrence can pick a different variant than the first one.
+      // The tile shown here has to match what that first day's own entry
+      // detail actually shows, or the same stamp reads as two different
+      // pictures depending on which screen you look at it from.
+      const { allStamps } = collectStamps([
+        entry({
+          entry_date: "2026-09-03",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 3, photoPath: null, createdAt: "" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-01",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "" },
+          ],
+        }),
+      ]);
+      expect(allStamps).toEqual([
+        { stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, entryDate: "2026-09-01", session: 0, createdAt: "2026-09-01" },
+      ]);
+    });
+
     it("merges photo and keyword entries, sorted most-recent-first", () => {
       const { allStamps } = collectStamps([
         entry({

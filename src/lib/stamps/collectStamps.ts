@@ -47,12 +47,14 @@ export interface StampCollection {
    * fetchAllEntriesForStamps), multiple photos on the same day keeping
    * their session order within that day. Used by the "사진우표" tab. */
   photoStamps: TimelineStampItem[];
-  /** Every photo stamp plus one entry per distinct keyword — unlike a
-   * photo (always a different picture), the same keyword's stamp art is
-   * identical every time it's picked, so a repeat contributes nothing a
-   * single copy doesn't already show. That single copy is anchored to the
-   * keyword's *first-ever* occurrence date, not its most recent — like a
-   * real stamp album, each design appears once, at the point it was first
+  /** Every photo stamp plus one entry per distinct keyword — a repeat of
+   * the same keyword only adds to its count (see `keywordCategories`), not
+   * a second tile here. That single tile is anchored to the keyword's
+   * *first-ever* occurrence — both its date and its `stampVariant` (which
+   * variant of that keyword's art was randomly picked for that specific
+   * sitting, see pickStampVariant — not fixed per keyword, so this must
+   * carry the real value through instead of defaulting it) — like a real
+   * stamp album, each design appears once, at the point it was first
    * collected. Merged with the photos and sorted most-recent-first for
    * the "전체" tab, so the two interleave by date instead of keywords
    * sitting in their own separate, dateless section. */
@@ -96,6 +98,7 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
   const countByKey = new Map<string, number>();
   const firstSeenOrder: StampId[] = [];
   const firstDateByKey = new Map<StampId, string>();
+  const firstVariantByKey = new Map<StampId, number | null>();
 
   for (const entry of entries) {
     for (const s of resolveStamps(entry)) {
@@ -120,8 +123,13 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
       countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
       // entries iterate most-recent-first, so the last write below (from
       // the oldest entry that has this key) is the one that sticks —
-      // ending up as this key's first-ever occurrence date.
+      // ending up as this key's first-ever occurrence date (and that same
+      // sitting's own randomly-picked variant, see pickStampVariant — a
+      // keyword's art isn't actually fixed across occurrences, so reusing
+      // this specific sitting's variant is what keeps this tile matching
+      // what the entry itself shows for that day).
       firstDateByKey.set(key, entry.entry_date);
+      firstVariantByKey.set(key, s.stampVariant);
     }
   }
 
@@ -141,7 +149,7 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
     return {
       stampKind: "keyword",
       stampKey,
-      stampVariant: null,
+      stampVariant: firstVariantByKey.get(stampKey) ?? null,
       photoPath: null,
       entryDate,
       session: 0,
