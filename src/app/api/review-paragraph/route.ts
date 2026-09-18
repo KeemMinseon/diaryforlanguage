@@ -320,7 +320,7 @@ export async function POST(request: Request) {
   // — getUser() re-verifies the token against Supabase's Auth server on
   // every call, which was real, measurable latency here given how often
   // this route fires (once per paragraph while writing, or once per
-  // sitting when re-reviewing an edit — see EditEntry). This route isn't
+  // sitting when re-reviewing an edit — see ParagraphListEditor). This route isn't
   // covered by the middleware's own network-verified getUser() check the
   // way a page route is (see HomePage) — it's deliberately excluded from
   // that middleware (see proxy.ts) so an expired/missing session gets a

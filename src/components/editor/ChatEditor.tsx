@@ -232,11 +232,10 @@ export default function ChatEditor({
   //
   // Takes whichever of `paragraphs` or `stamps` implies *more* prior
   // sessions, rather than trusting `paragraphs` (via `lockedRounds`)
-  // alone — the two normally agree, but EditEntry's "수정" flattens
-  // `paragraphs` back to one untagged block on a direct text edit while
-  // deliberately leaving `stamps` alone (see its own comment on why), so
-  // right after an edit `lockedRounds` alone would undercount and hand
-  // out a session number that's already taken in `stamps`.
+  // alone — the two normally stay in lockstep (ParagraphListEditor's
+  // "수정"/"삭제" always keep one paragraph per stamp), but this guards
+  // against ever undercounting and handing out a session number that's
+  // already taken in `stamps` if the two ever fell out of sync.
   const currentSession = Math.max(
     lockedRounds.length > 0 ? Math.max(...lockedRounds.map((r) => r.session)) + 1 : 0,
     initialEntry?.stamps.length ?? 0
@@ -519,10 +518,9 @@ export default function ChatEditor({
 
     // The text + stamp are already safely saved — leave this screen right
     // away instead of making the learner wait through a full Claude round
-    // trip just to get back to the calendar (same pattern as EditEntry's
-    // own 수정 완료). Word-level feedback + 총평 finish in the background
-    // below and land a moment later via a second save; nothing from here
-    // on needs to block returning to the calendar.
+    // trip just to get back to the calendar. Word-level feedback + 총평
+    // finish in the background below and land a moment later via a second
+    // save; nothing from here on needs to block returning to the calendar.
     toast("일기를 저장했어요. 더 나은 첨삭을 잠시 후 보여드릴게요.");
     const month = dateKey.slice(0, 7);
     router.push(`/?month=${month}`);

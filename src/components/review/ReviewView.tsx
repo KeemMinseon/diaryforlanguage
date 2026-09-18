@@ -2,14 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
-import EditParagraph from "@/components/review/EditParagraph";
+import ParagraphListEditor from "@/components/review/ParagraphListEditor";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { deleteEntry, fetchEntry, photoPublicUrl } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { applyCorrections } from "@/lib/review/highlight";
-import { formatDateStamp, formatSavedAt, parseDateKey } from "@/lib/utils/date";
+import { formatDateStamp, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 export default function ReviewView({
@@ -22,12 +21,9 @@ export default function ReviewView({
   photoUrl: string | null;
 }) {
   const router = useRouter();
+  // "전체 수정" opens the paragraph-list editor (see ParagraphListEditor) —
+  // every sitting in one list, each editable/deletable in place.
   const [editing, setEditing] = useState(false);
-  // Which session's paragraph is open in the single-paragraph edit screen
-  // (EditParagraph) — separate from `editing` above, which still opens the
-  // old whole-entry EditEntry screen (kept as "전체 수정" for bulk edits and
-  // whole-paragraph deletion; see that button below).
-  const [editingSession, setEditingSession] = useState<number | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -47,7 +43,7 @@ export default function ReviewView({
   const isFailed = entry.status === "failed";
 
   // Server-rendered page: nothing re-fetches this screen on its own once
-  // the background review (see ChatEditor/EditEntry) finishes elsewhere —
+  // the background review (see ChatEditor) finishes elsewhere —
   // without this, a learner just sitting here watching "검토 중이에요…"
   // would see it frozen forever even after the review actually landed.
   // `onDiaryStamped` covers the common case (this exact tab, still open,
@@ -106,8 +102,8 @@ export default function ReviewView({
 
   // Paragraph history normalized to one shape regardless of whether this
   // entry has real per-paragraph data — a legacy flat entry becomes one
-  // "paragraph" covering everything, same fallback ChatEditor/EditEntry
-  // already use elsewhere.
+  // "paragraph" covering everything, same fallback ChatEditor/
+  // ParagraphListEditor already use elsewhere.
   const paragraphs: DiaryParagraph[] = hasParagraphHistory
     ? entry.paragraphs
     : entry.content.trim()
@@ -155,36 +151,14 @@ export default function ReviewView({
       </header>
 
       {editing ? (
-        <EditEntry
-          userId={userId}
-          entry={entry}
-          existingPhotoUrl={photoUrl}
-          onCancel={() => setEditing(false)}
-          onSaved={() => {
-            setEditing(false);
-            router.refresh();
-          }}
-          // The real suggestions/readings/총평/제목 land a few seconds
-          // later, in the background, well after this screen already
-          // closed (see EditEntry's own header comment) — refresh again
-          // to pick that up once it's actually ready, rather than only
-          // ever showing whatever was still true the instant "수정 완료"
-          // was clicked.
-          onBackgroundSaveDone={() => router.refresh()}
-        />
-      ) : editingSession !== null ? (
-        <EditParagraph
+        <ParagraphListEditor
           userId={userId}
           entry={entry}
           paragraphs={paragraphs}
           stamps={stamps}
-          targetSession={editingSession}
-          existingPhotoUrl={stampPhotoUrl(
-            stamps.find((s) => s.session === editingSession) ?? stamps[0]
-          )}
-          onCancel={() => setEditingSession(null)}
-          onSaved={() => {
-            setEditingSession(null);
+          stampPhotoUrl={stampPhotoUrl}
+          onExit={() => {
+            setEditing(false);
             router.refresh();
           }}
         />
@@ -265,35 +239,15 @@ export default function ReviewView({
             <div className="flex flex-col gap-3">
               <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">일기 내용</p>
               <hr className="border-t border-[var(--paper-line)]" />
-              <div className="flex flex-col">
-                {paragraphs.map((p, pi) => {
-                  const session = p.session ?? 0;
-                  const stamp = stamps.find((s) => s.session === session);
-                  const hasPhoto = stamp?.stampKind === "photo";
-                  return (
-                    <div key={pi} className="flex flex-col gap-2 py-4 first:pt-0">
-                      <p className="font-mono text-[11px] tracking-wide text-[var(--ink-tertiary)]">
-                        {formatSavedAt(p.savedAt, entry.entry_date)}
-                      </p>
-                      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
-                        {applyCorrections(p.text, p.suggestions)}
-                      </p>
-                      <div className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
-                        {p.suggestions.length > 0 && <span>고침 {p.suggestions.length}</span>}
-                        {p.suggestions.length > 0 && hasPhoto && <span>·</span>}
-                        {hasPhoto && <span>사진 1</span>}
-                        <button
-                          type="button"
-                          onClick={() => setEditingSession(session)}
-                          className="ml-auto underline underline-offset-2 hover:text-[var(--ink)]"
-                        >
-                          수정
-                        </button>
-                      </div>
-                      {pi < paragraphs.length - 1 && <hr className="border-t border-[var(--paper-line)]" />}
-                    </div>
-                  );
-                })}
+              <div className="flex flex-col gap-1">
+                {paragraphs.map((p, pi) => (
+                  <p
+                    key={pi}
+                    className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]"
+                  >
+                    {applyCorrections(p.text, p.suggestions)}
+                  </p>
+                ))}
               </div>
               {paragraphs.some((p) => p.translation) && (
                 <div className="mt-3 flex flex-col gap-1">
