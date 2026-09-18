@@ -259,3 +259,47 @@ alter table public.feedback enable row level security;
 drop policy if exists "insert own feedback" on public.feedback;
 create policy "insert own feedback" on public.feedback
   for insert with check (auth.uid() = user_id);
+
+-- Mirrors auth.users' row count into a table PostgREST can actually see —
+-- `auth.users` itself isn't exposed over the REST API even to the service
+-- role, so /api/signup-check counts this instead to decide whether a new
+-- signup is under the waitlist cap (see SIGNUP_CAP). Row is removed
+-- automatically on account deletion (cascade), so a freed-up slot from a
+-- 회원 탈퇴 correctly counts as capacity again. No RLS policies at all —
+-- only ever read via the admin client (service role bypasses RLS
+-- regardless), never exposed to a signed-in user's own session.
+create table if not exists public.user_signups (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.user_signups enable row level security;
+
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.user_signups (user_id) values (new.id);
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- Emails collected once the waitlist cap is hit — see /api/waitlist/join,
+-- the only writer (via the admin client; there's no anon/authenticated
+-- RLS policy since this is written before the visitor has an account at
+-- all). `email` is unique so the same address can't pile up multiple rows
+-- — the route itself lowercases before insert, so a plain column
+-- constraint is enough (no need for a lower(email) expression index) and
+-- matches what PostgREST's upsert onConflict target expects: an actual
+-- column, not an arbitrary expression.
+create table if not exists public.waitlist (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique,
+  created_at timestamptz not null default now()
+);
+
+alter table public.waitlist enable row level security;

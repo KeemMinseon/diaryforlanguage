@@ -35,10 +35,11 @@ const STAMP_PREVIEW_TONES: (string | null)[] = [
  */
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"email" | "confirmSignup" | "code">("email");
+  const [step, setStep] = useState<"email" | "confirmSignup" | "waitlisted" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -46,12 +47,11 @@ export default function LoginPage() {
   // the code step) for an email that's already signed up, with no extra
   // round trip — but for one that hasn't, it sends nothing and just
   // errors, which is exactly the "is this a new signup?" check the age/
-  // terms consent below needs: a returning learner re-verifying their
-  // email should never see that screen again, only a first-time one.
-  // Not string-matching Supabase's specific error message here (fragile
-  // across versions) — *any* failure on this attempt is treated as "not
-  // an existing account yet," falling through to the consent step, which
-  // sends the real signup OTP once agreed is confirmed.
+  // terms consent below (and the waitlist cap below that) needs: a
+  // returning learner re-verifying their email should never see either
+  // screen, only a first-time one. Not string-matching Supabase's specific
+  // error message here (fragile across versions) — *any* failure on this
+  // attempt is treated as "not an existing account yet."
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -61,12 +61,44 @@ export default function LoginPage() {
       email,
       options: { shouldCreateUser: false },
     });
-    setLoading(false);
     if (!error) {
+      setLoading(false);
       setStep("code");
       return;
     }
-    setStep("confirmSignup");
+    // A genuinely new email — check the signup cap before offering to
+    // create an account at all. Any failure here (network hiccup, the
+    // route itself erroring) fails open to the normal signup flow rather
+    // than blocking a real new learner over a transient problem.
+    try {
+      const res = await fetch("/api/signup-check");
+      const data = await res.json();
+      setStep(data.waitlisted ? "waitlisted" : "confirmSignup");
+    } catch {
+      setStep("confirmSignup");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleJoinWaitlist(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/waitlist/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "등록하지 못했어요.");
+      setWaitlistJoined(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "등록하지 못했어요.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleConfirmSignup(e: React.FormEvent) {
@@ -208,6 +240,7 @@ export default function LoginPage() {
               onClick={() => {
                 setStep("email");
                 setAgreed(false);
+                setWaitlistJoined(false);
                 setError(null);
               }}
               className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
@@ -215,6 +248,42 @@ export default function LoginPage() {
               다른 이메일로 다시 받기
             </button>
           </form>
+        ) : step === "waitlisted" ? (
+          waitlistJoined ? (
+            <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
+              대기 명단에 등록했어요.
+              <br />
+              자리가 나면 <strong>{email}</strong>로 알려드릴게요. 조금만 기다려 주세요!
+            </p>
+          ) : (
+            <form onSubmit={handleJoinWaitlist} className="flex flex-col gap-3">
+              <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
+                지금은 가입 정원이 다 찼어요.
+                <br />
+                <strong>{email}</strong>을 대기 명단에 등록해드릴게요.
+                <br />
+                <span className="text-[var(--ink-soft)]">자리가 나면 이메일로 알려드릴게요.</span>
+              </p>
+              {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                {loading ? "등록하는 중…" : "대기 명단에 등록하기"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("email");
+                  setError(null);
+                }}
+                className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+              >
+                다른 이메일로 다시 받기
+              </button>
+            </form>
+          )
         ) : (
           <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
             <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
@@ -257,6 +326,7 @@ export default function LoginPage() {
                 setStep("email");
                 setCode("");
                 setAgreed(false);
+                setWaitlistJoined(false);
                 setError(null);
               }}
               className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
