@@ -4,11 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import EditEntry from "@/components/editor/EditEntry";
 import UiIcon from "@/components/icons/UiIcon";
+import EditParagraph from "@/components/review/EditParagraph";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { deleteEntry, fetchEntry, photoPublicUrl } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { applyCorrections } from "@/lib/review/highlight";
-import { formatDateStamp, parseDateKey } from "@/lib/utils/date";
+import { formatDateStamp, formatSavedAt, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
 export default function ReviewView({
@@ -22,6 +23,11 @@ export default function ReviewView({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  // Which session's paragraph is open in the single-paragraph edit screen
+  // (EditParagraph) — separate from `editing` above, which still opens the
+  // old whole-entry EditEntry screen (kept as "전체 수정" for bulk edits and
+  // whole-paragraph deletion; see that button below).
+  const [editingSession, setEditingSession] = useState<number | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -166,6 +172,22 @@ export default function ReviewView({
           // was clicked.
           onBackgroundSaveDone={() => router.refresh()}
         />
+      ) : editingSession !== null ? (
+        <EditParagraph
+          userId={userId}
+          entry={entry}
+          paragraphs={paragraphs}
+          stamps={stamps}
+          targetSession={editingSession}
+          existingPhotoUrl={stampPhotoUrl(
+            stamps.find((s) => s.session === editingSession) ?? stamps[0]
+          )}
+          onCancel={() => setEditingSession(null)}
+          onSaved={() => {
+            setEditingSession(null);
+            router.refresh();
+          }}
+        />
       ) : (
         <>
           {/* Every session's own stamp, in a plain wrapping row, then the
@@ -243,15 +265,35 @@ export default function ReviewView({
             <div className="flex flex-col gap-3">
               <p className="font-mono text-xs tracking-wide text-[var(--ink-soft)]">일기 내용</p>
               <hr className="border-t border-[var(--paper-line)]" />
-              <div className="flex flex-col gap-1">
-                {paragraphs.map((p, pi) => (
-                  <p
-                    key={pi}
-                    className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]"
-                  >
-                    {applyCorrections(p.text, p.suggestions)}
-                  </p>
-                ))}
+              <div className="flex flex-col">
+                {paragraphs.map((p, pi) => {
+                  const session = p.session ?? 0;
+                  const stamp = stamps.find((s) => s.session === session);
+                  const hasPhoto = stamp?.stampKind === "photo";
+                  return (
+                    <div key={pi} className="flex flex-col gap-2 py-4 first:pt-0">
+                      <p className="font-mono text-[11px] tracking-wide text-[var(--ink-tertiary)]">
+                        {formatSavedAt(p.savedAt, entry.entry_date)}
+                      </p>
+                      <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
+                        {applyCorrections(p.text, p.suggestions)}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
+                        {p.suggestions.length > 0 && <span>고침 {p.suggestions.length}</span>}
+                        {p.suggestions.length > 0 && hasPhoto && <span>·</span>}
+                        {hasPhoto && <span>사진 1</span>}
+                        <button
+                          type="button"
+                          onClick={() => setEditingSession(session)}
+                          className="ml-auto underline underline-offset-2 hover:text-[var(--ink)]"
+                        >
+                          수정
+                        </button>
+                      </div>
+                      {pi < paragraphs.length - 1 && <hr className="border-t border-[var(--paper-line)]" />}
+                    </div>
+                  );
+                })}
               </div>
               {paragraphs.some((p) => p.translation) && (
                 <div className="mt-3 flex flex-col gap-1">
@@ -320,7 +362,7 @@ export default function ReviewView({
               onClick={() => setEditing(true)}
               className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
             >
-              수정
+              전체 수정
             </button>
             <button
               type="button"
