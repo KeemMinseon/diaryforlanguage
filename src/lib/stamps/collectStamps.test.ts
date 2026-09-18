@@ -339,7 +339,7 @@ describe("collectStamps", () => {
     });
   });
 
-  it("counts a keyword stamp with no stampKey as the default bucket, under 기타", () => {
+  it("counts a keyword stamp with no stampKey as the default bucket, under 그 밖의 하루", () => {
     const { keywordCategories } = collectStamps([
       entry({
         stamps: [
@@ -348,7 +348,7 @@ describe("collectStamps", () => {
       }),
     ]);
     expect(keywordCategories).toEqual([
-      { label: "기타", items: [{ stampKey: "default", count: 1, stampVariant: null }] },
+      { label: "그 밖의 하루", items: [{ stampKey: "default", count: 1, stampVariant: null }] },
     ]);
   });
 

@@ -214,8 +214,9 @@ export const FOOD_STAMP_IDS: StampId[] = [
  * structure, since those are just comments in an array literal. Keep this
  * in sync with KEYWORD_RULES if a tier's boundary ever moves — an id added,
  * renamed, or moved between tiers there needs the same change here.
- * "default" (그 밖의 하루, pickStamp's own fallback) isn't part of any real
- * tier, so it gets its own single-id "기타" category instead. */
+ * "default" (pickStamp's own fallback) isn't part of any real tier, so it
+ * gets its own single-id "그 밖의 하루" category instead — same name as the
+ * stamp itself (see STAMP_LABELS.default). */
 export interface KeywordCategory {
   label: string;
   ids: StampId[];
@@ -274,7 +275,7 @@ export const KEYWORD_CATEGORIES: KeywordCategory[] = [
   },
   { label: "음식", ids: FOOD_STAMP_IDS },
   { label: "동물", ids: ["cat", "dog", "bird", "rabbit", "butterfly"] },
-  { label: "기타", ids: ["default"] },
+  { label: "그 밖의 하루", ids: ["default"] },
 ];
 
 type Locale = "ja";
