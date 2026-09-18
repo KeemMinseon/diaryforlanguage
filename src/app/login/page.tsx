@@ -35,19 +35,49 @@ const STAMP_PREVIEW_TONES: (string | null)[] = [
  */
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"email" | "code">("email");
+  const [step, setStep] = useState<"email" | "confirmSignup" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // `shouldCreateUser: false` sends the real code (and moves straight to
+  // the code step) for an email that's already signed up, with no extra
+  // round trip — but for one that hasn't, it sends nothing and just
+  // errors, which is exactly the "is this a new signup?" check the age/
+  // terms consent below needs: a returning learner re-verifying their
+  // email should never see that screen again, only a first-time one.
+  // Not string-matching Supabase's specific error message here (fragile
+  // across versions) — *any* failure on this attempt is treated as "not
+  // an existing account yet," falling through to the consent step, which
+  // sends the real signup OTP once agreed is confirmed.
   async function handleSendCode(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    setLoading(false);
+    if (!error) {
+      setStep("code");
+      return;
+    }
+    setStep("confirmSignup");
+  }
+
+  async function handleConfirmSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true },
+    });
     setLoading(false);
     if (error) {
       setError(error.message);
@@ -131,6 +161,21 @@ export default function LoginPage() {
               className="border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]"
             />
             {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+              {loading ? "보내는 중…" : "이메일로 인증 코드 받기"}
+            </button>
+          </form>
+        ) : step === "confirmSignup" ? (
+          <form onSubmit={handleConfirmSignup} className="flex flex-col gap-3">
+            <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
+              <strong>{email}</strong>은 처음 오신 주소네요.
+              <br />
+              가입 전에 아래 내용을 확인해 주세요.
+            </p>
             <label className="flex items-start gap-2 text-xs leading-relaxed text-[var(--ink-soft)]">
               <input
                 type="checkbox"
@@ -150,12 +195,24 @@ export default function LoginPage() {
                 에 동의합니다.
               </span>
             </label>
+            {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
             <button
               type="submit"
               disabled={loading || !agreed}
               className="bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              {loading ? "보내는 중…" : "이메일로 인증 코드 받기"}
+              {loading ? "보내는 중…" : "동의하고 인증 코드 받기"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep("email");
+                setAgreed(false);
+                setError(null);
+              }}
+              className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+            >
+              다른 이메일로 다시 받기
             </button>
           </form>
         ) : (
@@ -199,6 +256,7 @@ export default function LoginPage() {
               onClick={() => {
                 setStep("email");
                 setCode("");
+                setAgreed(false);
                 setError(null);
               }}
               className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
