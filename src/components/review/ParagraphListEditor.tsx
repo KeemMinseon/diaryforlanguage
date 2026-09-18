@@ -483,14 +483,6 @@ export default function ParagraphListEditor({
                       )}
                     </>
                   )}
-                  <button
-                    type="button"
-                    onClick={stopEditingSafely}
-                    disabled={saving}
-                    className="shrink-0 text-[12.5px] text-[var(--ink-soft)] hover:text-[var(--ink)] disabled:opacity-60"
-                  >
-                    취소
-                  </button>
                   <p className="flex-1 text-right font-mono text-[11px] text-[var(--ink-soft)]">이 대목 {text.length}자</p>
                   <button
                     type="button"
@@ -499,6 +491,14 @@ export default function ParagraphListEditor({
                     className="shrink-0 border border-[var(--ink)] px-4 py-2 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
                   >
                     {reviewing ? "확인 중…" : "첨삭"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopEditingSafely}
+                    disabled={saving}
+                    className="shrink-0 border border-[var(--ink)] px-4 py-2 text-[12.5px] font-medium text-[var(--ink)] disabled:opacity-40"
+                  >
+                    취소
                   </button>
                   <button
                     type="button"
