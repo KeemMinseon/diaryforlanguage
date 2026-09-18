@@ -6,7 +6,15 @@ import { deleteAccount } from "@/lib/account/deleteAccount";
 
 /** Same bottom-sheet confirmation pattern as ReviewView's 일기 삭제 — this
  * is a heavier, irreversible action than a single day's entry, so it gets
- * the same room to explain the consequences instead of a one-line confirm. */
+ * the same room to explain the consequences instead of a one-line confirm.
+ *
+ * Renders inside the settings page's "계정" list alongside 로그아웃 — a
+ * single wrapping <div> (not a bare Fragment) so the confirmation overlay
+ * is a child of *that* div, not a direct sibling of 로그아웃's own <form>
+ * inside the shared `divide-y` section; a Fragment would otherwise leave
+ * the overlay exposed to that divider CSS as if it were just another row,
+ * putting a stray top border across the full-screen backdrop while it's
+ * open. */
 export default function DeleteAccountButton() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -27,11 +35,11 @@ export default function DeleteAccountButton() {
   }
 
   return (
-    <>
+    <div>
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="w-full px-1 py-3 text-left text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)]"
+        className="w-full px-5 py-4 text-left text-sm text-[var(--ink-soft)] transition hover:bg-black/[0.02] hover:text-[var(--ink)]"
       >
         회원 탈퇴
       </button>
@@ -82,6 +90,6 @@ export default function DeleteAccountButton() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

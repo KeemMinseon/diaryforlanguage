@@ -73,15 +73,6 @@ export default async function SettingsPage() {
         </section>
       </div>
 
-      <form action="/auth/signout" method="post">
-        <button
-          type="submit"
-          className="w-full bg-[var(--paper-raised)] px-5 py-4 text-left text-sm font-medium text-[var(--ink)] border border-[var(--paper-line)] transition hover:bg-black/[0.02]"
-        >
-          로그아웃
-        </button>
-      </form>
-
       <div className="flex flex-col gap-2">
         <p className="px-1 text-xs font-medium text-[var(--ink-soft)]">지원</p>
         <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] border border-[var(--paper-line)]">
@@ -112,12 +103,20 @@ export default async function SettingsPage() {
         </section>
       </div>
 
-      {/* Deliberately not inside a card/section like everything else above
-          — a quieter, lower-emphasis text button so it doesn't visually
-          compete with 로그아웃, without hiding it away on some separate
-          screen (an irreversible, account-wide action still needs to stay
-          reachable from here, not just discoverable). */}
-      <DeleteAccountButton />
+      <div className="flex flex-col gap-2">
+        <p className="px-1 text-xs font-medium text-[var(--ink-soft)]">계정</p>
+        <section className="flex flex-col divide-y divide-[var(--paper-line)] overflow-hidden bg-[var(--paper-raised)] border border-[var(--paper-line)]">
+          <form action="/auth/signout" method="post">
+            <button
+              type="submit"
+              className="w-full px-5 py-4 text-left text-sm font-medium text-[var(--ink)] transition hover:bg-black/[0.02]"
+            >
+              로그아웃
+            </button>
+          </form>
+          <DeleteAccountButton />
+        </section>
+      </div>
     </div>
   );
 }
