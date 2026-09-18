@@ -260,7 +260,7 @@ export default function LoginPage() {
               <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
                 지금 베타테스트 중이라 가입 인원이 많지 않아요.
                 <br />
-                <strong>{email}</strong>을 대기 명단에 등록해주시면,
+                대기 명단에 등록하시길 원하시면 아래 버튼을 눌러주세요.
                 <br />
                 나중에 이메일로 알려드릴게요.
               </p>
