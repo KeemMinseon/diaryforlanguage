@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { FINALIZE_SYSTEM_PROMPT, buildFinalizeUserMessage } from "@/lib/review/paragraphPrompt";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
+
+// Fires once per day per entry (the "오늘 일기 마치기" tap) under normal
+// use, unlike /api/review-paragraph's per-paragraph cadence — same reason
+// for a limit (bounding paid Anthropic calls), just a tighter one since
+// legitimate use never needs many of these in a short window.
+const RATE_LIMIT = 10;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+// Same reasoning as /api/review-paragraph's own caps — a hard ceiling on
+// the token cost (and therefore price) of a single request.
+const MAX_FULL_TEXT_LENGTH = 20000;
 
 const TOOL_NAME = "submit_overall_comment";
 
@@ -52,6 +64,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
+  const { allowed, retryAfterMs } = checkRateLimit(`review-finalize:${user.id}`, RATE_LIMIT, RATE_LIMIT_WINDOW_MS);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } }
+    );
+  }
+
   let body: { fullText?: string };
   try {
     body = await request.json();
@@ -62,6 +82,9 @@ export async function POST(request: Request) {
   const fullText = (body.fullText ?? "").trim();
   if (!fullText) {
     return NextResponse.json({ error: "일기 내용이 비어 있습니다." }, { status: 400 });
+  }
+  if (fullText.length > MAX_FULL_TEXT_LENGTH) {
+    return NextResponse.json({ error: "일기 내용이 너무 길어요." }, { status: 400 });
   }
 
   try {

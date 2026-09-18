@@ -1,12 +1,27 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { PARAGRAPH_REVIEW_SYSTEM_PROMPT, buildParagraphUserMessage } from "@/lib/review/paragraphPrompt";
 import { isUncertainMeaning } from "@/lib/review/readingMeaning";
 import type { Reading, Suggestion } from "@/types/diary";
 
 export const runtime = "nodejs";
 export const maxDuration = 45;
+
+// Fires once per paragraph while writing (or once per sitting on a re-
+// review) — a normal writing session sends single digits of these. 30 in
+// 10 minutes leaves room for a burst of real edits while still bounding
+// the worst case (a script hammering this route) to a fixed number of
+// paid Anthropic calls instead of an unbounded one.
+const RATE_LIMIT = 30;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+
+// Generous enough that no real diary paragraph (or the accumulated prior
+// text of one sitting) would ever hit it, but still a hard cap on the
+// token cost — and therefore cost — a single request can rack up.
+const MAX_PARAGRAPH_LENGTH = 4000;
+const MAX_PRIOR_TEXT_LENGTH = 20000;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
 // The missing-readings follow-up (`fetchMissingReadings` below) only ever
@@ -320,6 +335,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
+  const { allowed, retryAfterMs } = checkRateLimit(`review-paragraph:${user.id}`, RATE_LIMIT, RATE_LIMIT_WINDOW_MS);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } }
+    );
+  }
+
   let body: { paragraph?: string; priorText?: string };
   try {
     body = await request.json();
@@ -331,7 +354,13 @@ export async function POST(request: Request) {
   if (!paragraph) {
     return NextResponse.json({ error: "문단 내용이 비어 있습니다." }, { status: 400 });
   }
+  if (paragraph.length > MAX_PARAGRAPH_LENGTH) {
+    return NextResponse.json({ error: "문단 내용이 너무 길어요." }, { status: 400 });
+  }
   const priorText = typeof body.priorText === "string" ? body.priorText : "";
+  if (priorText.length > MAX_PRIOR_TEXT_LENGTH) {
+    return NextResponse.json({ error: "일기 내용이 너무 길어요." }, { status: 400 });
+  }
 
   try {
     const anthropic = new Anthropic({
