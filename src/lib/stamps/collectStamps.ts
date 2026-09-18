@@ -99,6 +99,7 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
   const firstSeenOrder: StampId[] = [];
   const firstDateByKey = new Map<StampId, string>();
   const firstVariantByKey = new Map<StampId, number | null>();
+  const firstCreatedAtByKey = new Map<StampId, string>();
 
   for (const entry of entries) {
     for (const s of resolveStamps(entry)) {
@@ -130,6 +131,7 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
       // what the entry itself shows for that day).
       firstDateByKey.set(key, entry.entry_date);
       firstVariantByKey.set(key, s.stampVariant);
+      firstCreatedAtByKey.set(key, s.createdAt);
     }
   }
 
@@ -153,15 +155,21 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
       photoPath: null,
       entryDate,
       session: 0,
-      createdAt: entryDate,
+      createdAt: firstCreatedAtByKey.get(stampKey) ?? entryDate,
     };
   });
 
-  // A stable sort keeps same-date items in their existing relative order
-  // (photos before that date's keywords is arbitrary but consistent).
-  const allStamps = [...photoStamps, ...keywordTimelineItems].sort((a, b) =>
-    a.entryDate < b.entryDate ? 1 : a.entryDate > b.entryDate ? -1 : 0
-  );
+  // Same-day items (e.g. a photo from the day's first sitting and a
+  // keyword stamp added later that day via "이어서 쓰기") break ties by
+  // `createdAt` — otherwise a stable sort would just keep photos before
+  // that date's keywords regardless of which one was actually collected
+  // more recently, contradicting the newest-first order every other day
+  // in this list follows.
+  const allStamps = [...photoStamps, ...keywordTimelineItems].sort((a, b) => {
+    if (a.entryDate !== b.entryDate) return a.entryDate < b.entryDate ? 1 : -1;
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+    return 0;
+  });
 
   return {
     totalCount: photoStamps.length + keywordCount,

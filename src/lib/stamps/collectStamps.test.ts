@@ -162,7 +162,7 @@ describe("collectStamps", () => {
       // "cat" repeats on both days but only shows up once — dated to
       // 09-01 (its first-ever occurrence), not 09-03 (its most recent).
       expect(allStamps).toEqual([
-        { stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, entryDate: "2026-09-01", session: 0, createdAt: "2026-09-01" },
+        { stampKind: "keyword", stampKey: "cat", stampVariant: null, photoPath: null, entryDate: "2026-09-01", session: 0, createdAt: "" },
       ]);
     });
 
@@ -176,19 +176,44 @@ describe("collectStamps", () => {
         entry({
           entry_date: "2026-09-03",
           stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 3, photoPath: null, createdAt: "" },
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 3, photoPath: null, createdAt: "2026-09-03T09:00:00" },
           ],
         }),
         entry({
           entry_date: "2026-09-01",
           stamps: [
-            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "" },
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "2026-09-01T09:00:00" },
           ],
         }),
       ]);
       expect(allStamps).toEqual([
-        { stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, entryDate: "2026-09-01", session: 0, createdAt: "2026-09-01" },
+        {
+          stampKind: "keyword",
+          stampKey: "cat",
+          stampVariant: 1,
+          photoPath: null,
+          entryDate: "2026-09-01",
+          session: 0,
+          createdAt: "2026-09-01T09:00:00",
+        },
       ]);
+    });
+
+    it("orders a same-day photo and keyword by which was actually collected more recently", () => {
+      // A photo from the day's first sitting, then a keyword stamp added
+      // later that same day via "이어서 쓰기" — the keyword came second in
+      // real time, so it should lead (this list is newest-first), not
+      // trail just because photos happen to be collected first internally.
+      const { allStamps } = collectStamps([
+        entry({
+          entry_date: "2026-09-18",
+          stamps: [
+            { session: 0, stampKind: "photo", stampKey: null, stampVariant: null, photoPath: "u1/p.jpg", createdAt: "2026-09-18T09:00:00" },
+            { session: 1, stampKind: "keyword", stampKey: "hope", stampVariant: 0, photoPath: null, createdAt: "2026-09-18T20:00:00" },
+          ],
+        }),
+      ]);
+      expect(allStamps.map((s) => s.stampKind)).toEqual(["keyword", "photo"]);
     });
 
     it("merges photo and keyword entries, sorted most-recent-first", () => {
