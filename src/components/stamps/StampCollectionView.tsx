@@ -626,9 +626,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                   <section key={group.label} className="flex flex-col gap-3">
                     <div className="flex items-baseline gap-2">
                       <span className="text-base font-bold text-[var(--ink)]">{group.label}</span>
-                      <span className="text-sm text-[var(--ink-soft)]">
-                        {group.items.reduce((sum, item) => sum + item.count, 0)}장
-                      </span>
+                      <span className="text-sm text-[var(--ink-soft)]">{group.items.length}장</span>
                     </div>
                     <hr className="border-t border-[var(--ink)]" />
                     <div data-stamp-section className="grid grid-cols-4 gap-3">
