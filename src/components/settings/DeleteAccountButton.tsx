@@ -51,10 +51,11 @@ export default function DeleteAccountButton() {
                 정말 탈퇴하시겠어요?
               </h2>
               <p className="text-sm leading-relaxed text-[var(--ink-soft)]">
-                지금까지 쓴 모든 일기, 사진, 모은 우표, 단어 학습 기록이 계정과 함께 영구히
-                삭제돼요.
+                계정을 탈퇴하면 지금까지 작성한 일기와 사진, 수집한 우표, 단어 학습 기록이 계정과
+                함께 영구적으로 삭제됩니다.
                 <br />
-                탈퇴한 계정과 데이터는 복구할 수 없으니, 신중하게 결정해 주세요.
+                삭제된 계정과 데이터는 다시 복구할 수 없어요. 소중한 기록을 잃지 않도록 신중하게
+                결정해 주세요.
               </p>
               {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
             </div>
@@ -65,7 +66,7 @@ export default function DeleteAccountButton() {
                 disabled={deleting}
                 className="flex-1 border border-[var(--paper-line)] py-3 text-sm text-[var(--ink)] disabled:opacity-60"
               >
-                유지
+                돌아가기
               </button>
               <button
                 type="button"
