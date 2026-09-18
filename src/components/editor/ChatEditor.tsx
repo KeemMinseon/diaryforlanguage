@@ -301,6 +301,17 @@ export default function ChatEditor({
       : priorContentForBlock
     : content;
   const hasPhoto = Boolean(croppedPreviewUrl);
+  // Every session's photo shares one fixed storage path keyed by day, not
+  // by session (see uploadStampPhoto's own doc comment: `${userId}/
+  // ${dateKey}.jpg`, always the same file) — if an earlier sitting today
+  // already attached its own photo, letting *this* sitting attach a new
+  // one too would silently overwrite that earlier file (and both
+  // sessions' `photoPath` would then point at the same, now-wrong,
+  // upload). This new sitting doesn't have a stamp yet (see
+  // `currentSession`), so the only thing to check is whether any
+  // already-saved session this day is a photo.
+  const otherSessionHasPhoto = (initialEntry?.stamps ?? []).some((s) => s.stampKind === "photo");
+  const canTouchPhoto = !otherSessionHasPhoto;
 
   function handleContentChange(next: string) {
     setContent(next);
@@ -789,6 +800,12 @@ export default function ChatEditor({
 
         {error && <p className="shrink-0 text-sm font-medium text-[var(--ink)]">{error}</p>}
 
+        {!canTouchPhoto && (
+          <p className="shrink-0 text-[11px] text-[var(--ink-soft)]">
+            이미 다른 대목에 이 날의 사진우표가 있어서, 여기서는 사진을 넣을 수 없어요.
+          </p>
+        )}
+
         {/* One slim action bar: photo attach, a live char/sentence count,
             then 첨삭(review) and 저장(save) side by side. Sits in normal
             document flow, right after everything above — not
@@ -806,27 +823,39 @@ export default function ChatEditor({
             only decided at save time (see handleFinish's own `pickStamp`
             call below), not guessed live here. */}
         <div className="flex shrink-0 items-center gap-2.5 border-t border-[var(--paper-line)] pt-3">
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label={hasPhoto ? "사진 다시 선택" : "사진 추가"}
-            className={`flex h-9 w-9 shrink-0 items-center justify-center border ${
-              hasPhoto ? "border-[var(--ink)] text-[var(--ink)]" : "border-[var(--paper-line)] text-[var(--ink-soft)]"
-            }`}
-          >
-            <UiIcon name="camera-line" className="h-4 w-4" alt="">
-              📷
-            </UiIcon>
-          </button>
-          {hasPhoto && (
-            <button
-              type="button"
-              onClick={handleRemovePhoto}
-              className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
-            >
-              지우기
-            </button>
+          {canTouchPhoto && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label={hasPhoto ? "사진 다시 선택" : "사진 추가"}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center border ${
+                  hasPhoto
+                    ? "border-[var(--ink)] text-[var(--ink)]"
+                    : "border-[var(--paper-line)] text-[var(--ink-soft)]"
+                }`}
+              >
+                <UiIcon name="camera-line" className="h-4 w-4" alt="">
+                  📷
+                </UiIcon>
+              </button>
+              {hasPhoto && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="shrink-0 text-[11px] text-[var(--ink-soft)] underline underline-offset-2"
+                >
+                  지우기
+                </button>
+              )}
+            </>
           )}
           <p className="flex-1 text-right font-mono text-[11px] text-[var(--ink-soft)]">
             {charCount} CHARS · {sentenceCount} SENT
