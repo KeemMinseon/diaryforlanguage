@@ -139,7 +139,7 @@ export default function LoginPage() {
           instead of being just one more equal share of the leftover
           space. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- a fixed local asset, not next/image-worthy (no remote source, no responsive sizing needed) */}
-      <img src="/login-stamp.png" alt="" className="w-36" />
+      <img src="/login-stamp.png" alt="" className="w-[101px]" />
       <div className="w-full max-w-sm">
         <h1 className="mb-3 font-[family-name:var(--font-heading)] text-3xl font-bold leading-tight text-[var(--ink)]">
           매일 쓰는 일기,
