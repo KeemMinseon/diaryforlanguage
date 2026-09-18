@@ -80,15 +80,43 @@ describe("collectStamps", () => {
     ]);
   });
 
-  it("carries the first-ever occurrence's own stampVariant into keywordCategories too", () => {
-    // The "수집우표" tab renders straight off `keywordCategories`, not off
-    // `allStamps` — this needs the same fix as allStamps's own tile, or
-    // that tab still shows variant 0 no matter what was actually picked.
+  it("keeps two different variants of the same keyword as two separate entries in keywordCategories", () => {
+    // pickStampVariant is random per-sitting — the same keyword picked
+    // twice can turn out to be two genuinely different pictures, and each
+    // one deserves its own tile/count rather than being merged into one
+    // (which would silently drop whichever variant wasn't the first-ever
+    // occurrence). The "수집우표" tab renders straight off this list, not
+    // off `allStamps`, so it needs the same per-variant split.
     const { keywordCategories } = collectStamps([
       entry({
         entry_date: "2026-09-03",
         stamps: [
           { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 3, photoPath: null, createdAt: "2026-09-03T09:00:00" },
+        ],
+      }),
+      entry({
+        entry_date: "2026-09-01",
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "2026-09-01T09:00:00" },
+        ],
+      }),
+    ]);
+    const animals = keywordCategories.find((g) => g.label === "동물")!;
+    expect(animals.items).toEqual(
+      expect.arrayContaining([
+        { stampKey: "cat", count: 1, stampVariant: 3 },
+        { stampKey: "cat", count: 1, stampVariant: 1 },
+      ])
+    );
+    expect(animals.items).toHaveLength(2);
+  });
+
+  it("merges a repeat of the *same* keyword+variant into one entry, not two", () => {
+    const { keywordCategories } = collectStamps([
+      entry({
+        entry_date: "2026-09-03",
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "2026-09-03T09:00:00" },
         ],
       }),
       entry({
@@ -192,17 +220,53 @@ describe("collectStamps", () => {
       ]);
     });
 
-    it("carries the first-ever occurrence's own stampVariant, not variant 0", () => {
-      // pickStampVariant is random per-sitting, not fixed per keyword — a
-      // later occurrence can pick a different variant than the first one.
-      // The tile shown here has to match what that first day's own entry
-      // detail actually shows, or the same stamp reads as two different
-      // pictures depending on which screen you look at it from.
+    it("lists two different variants of the same keyword as two separate tiles", () => {
+      // Same reasoning as the keywordCategories version of this test:
+      // "cat"-variant-3 and "cat"-variant-1 are two different pictures, so
+      // both get their own tile, each anchored to its own first-ever date
+      // — not silently collapsed down to whichever came first overall.
       const { allStamps } = collectStamps([
         entry({
           entry_date: "2026-09-03",
           stamps: [
             { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 3, photoPath: null, createdAt: "2026-09-03T09:00:00" },
+          ],
+        }),
+        entry({
+          entry_date: "2026-09-01",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "2026-09-01T09:00:00" },
+          ],
+        }),
+      ]);
+      expect(allStamps).toEqual([
+        {
+          stampKind: "keyword",
+          stampKey: "cat",
+          stampVariant: 3,
+          photoPath: null,
+          entryDate: "2026-09-03",
+          session: 0,
+          createdAt: "2026-09-03T09:00:00",
+        },
+        {
+          stampKind: "keyword",
+          stampKey: "cat",
+          stampVariant: 1,
+          photoPath: null,
+          entryDate: "2026-09-01",
+          session: 0,
+          createdAt: "2026-09-01T09:00:00",
+        },
+      ]);
+    });
+
+    it("merges a repeat of the *same* keyword+variant into one tile, anchored to its first occurrence", () => {
+      const { allStamps } = collectStamps([
+        entry({
+          entry_date: "2026-09-03",
+          stamps: [
+            { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "2026-09-03T09:00:00" },
           ],
         }),
         entry({

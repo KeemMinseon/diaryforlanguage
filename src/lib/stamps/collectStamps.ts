@@ -2,12 +2,14 @@ import type { StampSourceEntry } from "@/lib/diary/client";
 import { KEYWORD_CATEGORIES, type StampId } from "@/lib/stamps/keywordMap";
 import type { SessionStamp, StampKind } from "@/types/diary";
 
-/** One keyword stamp id and how many sessions (across every entry) it was
- * actually picked for. Only ids that appeared at least once. `stampVariant`
- * is the same first-ever-occurrence variant `allStamps`' own tile for this
- * keyword carries (see collectStamps's own doc comment) — kept here too so
- * the "수집우표" tab's grid (which renders straight off this list, not off
- * `allStamps`) shows the same art as everywhere else this keyword appears. */
+/** One *distinct picture* — a keyword plus which of its uploaded variants —
+ * and how many sessions (across every entry) actually picked exactly that
+ * combination. Two sessions that both picked "hope" but got different
+ * variants (see pickStampVariant) are two separate entries here, each with
+ * its own count; only a repeat of the *same* keyword+variant merges into
+ * one. `stampVariant` is that combination's own variant, always the one
+ * actually rendered — needed here (not just derivable from `allStamps`)
+ * because the "수집우표" tab's grid renders straight off this list. */
 export interface KeywordStampCount {
   stampKey: StampId;
   count: number;
@@ -52,17 +54,16 @@ export interface StampCollection {
    * fetchAllEntriesForStamps), multiple photos on the same day keeping
    * their session order within that day. Used by the "사진우표" tab. */
   photoStamps: TimelineStampItem[];
-  /** Every photo stamp plus one entry per distinct keyword — a repeat of
-   * the same keyword only adds to its count (see `keywordCategories`), not
-   * a second tile here. That single tile is anchored to the keyword's
-   * *first-ever* occurrence — both its date and its `stampVariant` (which
-   * variant of that keyword's art was randomly picked for that specific
-   * sitting, see pickStampVariant — not fixed per keyword, so this must
-   * carry the real value through instead of defaulting it) — like a real
-   * stamp album, each design appears once, at the point it was first
-   * collected. Merged with the photos and sorted most-recent-first for
-   * the "전체" tab, so the two interleave by date instead of keywords
-   * sitting in their own separate, dateless section. */
+  /** Every photo stamp plus one entry per distinct keyword+variant *picture*
+   * — a repeat of the exact same picture only adds to its count (see
+   * `keywordCategories`), not a second tile here, but the same keyword
+   * picked with a *different* variant (see pickStampVariant) is a genuinely
+   * different picture and gets its own tile. Each tile is anchored to that
+   * picture's *first-ever* occurrence date — like a real stamp album, each
+   * design appears once, at the point it was first collected. Merged with
+   * the photos and sorted most-recent-first for the "전체" tab, so the two
+   * interleave by date instead of keywords sitting in their own separate,
+   * dateless section. */
   allStamps: TimelineStampItem[];
   /** Every keyword-stamp category (see KEYWORD_CATEGORIES) that has at
    * least one collected keyword in it, in that same category order —
@@ -95,16 +96,26 @@ function sortMostPickedFirst(counts: KeywordStampCount[]): KeywordStampCount[] {
   return counts.sort((a, b) => b.count - a.count);
 }
 
+/** Identifies one distinct *picture* — a keyword id plus which variant —
+ * so two different variants of the same keyword are tracked as separate
+ * pictures throughout this function, not merged into one. `null` and `0`
+ * are the same picture (KeywordIcon's own `variant ?? 0` fallback), so
+ * both normalize to the same key here. */
+function pictureKeyOf(stampKey: StampId, stampVariant: number | null): string {
+  return `${stampKey}:${stampVariant ?? 0}`;
+}
+
 /** `entries` should already be sorted most-recent-first (see
  * fetchAllEntriesForStamps) so `photoStamps` comes out in that same
  * recency order without a separate sort here. */
 export function collectStamps(entries: StampSourceEntry[]): StampCollection {
   const photoStamps: TimelineStampItem[] = [];
-  const countByKey = new Map<string, number>();
-  const firstSeenOrder: StampId[] = [];
-  const firstDateByKey = new Map<StampId, string>();
-  const firstVariantByKey = new Map<StampId, number | null>();
-  const firstCreatedAtByKey = new Map<StampId, string>();
+  const countByPictureKey = new Map<string, number>();
+  const firstSeenOrder: string[] = [];
+  const firstOccurrenceByPictureKey = new Map<
+    string,
+    { stampKey: StampId; stampVariant: number | null; entryDate: string; createdAt: string }
+  >();
 
   for (const entry of entries) {
     for (const s of resolveStamps(entry)) {
@@ -124,43 +135,47 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
         continue;
       }
 
-      const key = (s.stampKey ?? "default") as StampId;
-      if (!countByKey.has(key)) firstSeenOrder.push(key);
-      countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
+      const stampKey = (s.stampKey ?? "default") as StampId;
+      const pictureKey = pictureKeyOf(stampKey, s.stampVariant);
+      if (!countByPictureKey.has(pictureKey)) firstSeenOrder.push(pictureKey);
+      countByPictureKey.set(pictureKey, (countByPictureKey.get(pictureKey) ?? 0) + 1);
       // entries iterate most-recent-first, so the last write below (from
-      // the oldest entry that has this key) is the one that sticks —
-      // ending up as this key's first-ever occurrence date (and that same
-      // sitting's own randomly-picked variant, see pickStampVariant — a
-      // keyword's art isn't actually fixed across occurrences, so reusing
-      // this specific sitting's variant is what keeps this tile matching
-      // what the entry itself shows for that day).
-      firstDateByKey.set(key, entry.entry_date);
-      firstVariantByKey.set(key, s.stampVariant);
-      firstCreatedAtByKey.set(key, s.createdAt);
+      // the oldest entry with this exact keyword+variant) is the one that
+      // sticks — ending up as this picture's first-ever occurrence date.
+      firstOccurrenceByPictureKey.set(pictureKey, {
+        stampKey,
+        stampVariant: s.stampVariant,
+        entryDate: entry.entry_date,
+        createdAt: s.createdAt,
+      });
     }
   }
 
-  const keywordCount = [...countByKey.values()].reduce((sum, n) => sum + n, 0);
+  const keywordCount = [...countByPictureKey.values()].reduce((sum, n) => sum + n, 0);
 
   const keywordCategories: KeywordCategoryGroup[] = KEYWORD_CATEGORIES.map((category) => ({
     label: category.label,
     items: sortMostPickedFirst(
-      category.ids
-        .filter((id) => countByKey.has(id))
-        .map((id) => ({ stampKey: id, count: countByKey.get(id)!, stampVariant: firstVariantByKey.get(id) ?? null }))
+      [...firstOccurrenceByPictureKey.entries()]
+        .filter(([, occ]) => category.ids.includes(occ.stampKey))
+        .map(([pictureKey, occ]) => ({
+          stampKey: occ.stampKey,
+          count: countByPictureKey.get(pictureKey)!,
+          stampVariant: occ.stampVariant,
+        }))
     ),
   })).filter((group) => group.items.length > 0);
 
-  const keywordTimelineItems: TimelineStampItem[] = firstSeenOrder.map((stampKey) => {
-    const entryDate = firstDateByKey.get(stampKey)!;
+  const keywordTimelineItems: TimelineStampItem[] = firstSeenOrder.map((pictureKey) => {
+    const occ = firstOccurrenceByPictureKey.get(pictureKey)!;
     return {
       stampKind: "keyword",
-      stampKey,
-      stampVariant: firstVariantByKey.get(stampKey) ?? null,
+      stampKey: occ.stampKey,
+      stampVariant: occ.stampVariant,
       photoPath: null,
-      entryDate,
+      entryDate: occ.entryDate,
       session: 0,
-      createdAt: firstCreatedAtByKey.get(stampKey) ?? entryDate,
+      createdAt: occ.createdAt,
     };
   });
 

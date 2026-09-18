@@ -78,8 +78,11 @@ function prefersReducedMotion(): boolean {
 function photoKey(item: TimelineStampItem): string {
   return `photo:${item.entryDate}:${item.session}`;
 }
-function keywordKey(stampKey: StampId): string {
-  return `keyword:${stampKey}`;
+/** Includes the variant, not just the keyword — two different variants of
+ * the same keyword are two distinct tiles now (see collectStamps), so the
+ * keyword id alone is no longer unique. */
+function keywordKey(stampKey: StampId, stampVariant: number | null): string {
+  return `keyword:${stampKey}:${stampVariant ?? 0}`;
 }
 /** Both `photoKey`/`keywordKey` above produce a string that's unique on
  * its own terms, but `allStamps` can now mix the two kinds within the
@@ -87,7 +90,7 @@ function keywordKey(stampKey: StampId): string {
  * see collectStamps), so keying it as if it were a photo could collide
  * with an actual photo taken that same day at session 0. */
 function timelineItemKey(item: TimelineStampItem): string {
-  return item.stampKind === "photo" ? photoKey(item) : keywordKey(item.stampKey as StampId);
+  return item.stampKind === "photo" ? photoKey(item) : keywordKey(item.stampKey as StampId, item.stampVariant);
 }
 
 const TAB_LABELS: Record<Tab, string> = { all: "전체", photo: "사진우표", keyword: "수집우표" };
@@ -532,9 +535,12 @@ export default function StampCollectionView({ userId }: { userId: string }) {
   if (focus?.target.kind === "photo") {
     heroCaption = { title: formatDateStamp(focus.target.item.entryDate), subtitle: "사진우표" };
   } else if (collection && focus?.target.kind === "keyword") {
-    const stampKey = focus.target.stampKey;
+    const { stampKey, stampVariant } = focus.target;
     for (const group of collection.keywordCategories) {
-      const item = group.items.find((i) => i.stampKey === stampKey);
+      // A keyword can now have more than one entry here (a different
+      // variant is a different picture, see collectStamps) — match on
+      // both, or this could pick the wrong one's count/category.
+      const item = group.items.find((i) => i.stampKey === stampKey && i.stampVariant === stampVariant);
       if (item) {
         heroCaption = {
           title: STAMP_LABELS[stampKey],
@@ -627,10 +633,10 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     <hr className="border-t border-[var(--ink)]" />
                     <div data-stamp-section className="grid grid-cols-4 gap-3">
                       {group.items.map(({ stampKey, stampVariant }) => {
-                        const key = keywordKey(stampKey);
+                        const key = keywordKey(stampKey, stampVariant);
                         return (
                           <button
-                            key={stampKey}
+                            key={key}
                             data-stamp-key={key}
                             type="button"
                             onClick={(e) => {
