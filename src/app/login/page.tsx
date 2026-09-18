@@ -251,18 +251,18 @@ export default function LoginPage() {
         ) : step === "waitlisted" ? (
           waitlistJoined ? (
             <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
-              대기 명단에 등록했어요.
+              대기 명단에 등록해두었어요!
               <br />
-              자리가 나면 <strong>{email}</strong>로 알려드릴게요. 조금만 기다려 주세요!
+              관심 가져주셔서 감사합니다.
             </p>
           ) : (
             <form onSubmit={handleJoinWaitlist} className="flex flex-col gap-3">
               <p className="text-center text-sm leading-relaxed text-[var(--ink)]">
-                지금은 가입 정원이 다 찼어요.
+                지금 베타테스트 중이라 가입 인원이 많지 않아요.
                 <br />
-                <strong>{email}</strong>을 대기 명단에 등록해드릴게요.
+                <strong>{email}</strong>을 대기 명단에 등록해주시면,
                 <br />
-                <span className="text-[var(--ink-soft)]">자리가 나면 이메일로 알려드릴게요.</span>
+                나중에 이메일로 알려드릴게요.
               </p>
               {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
               <button
