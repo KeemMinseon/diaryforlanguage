@@ -9,12 +9,12 @@ export const maxDuration = 30;
 
 const MODEL = process.env.ANTHROPIC_REVIEW_MODEL || "claude-sonnet-5";
 
-// Fires once per day per entry (the "오늘 일기 마치기" tap) under normal
-// use, unlike /api/review-paragraph's per-paragraph cadence — same reason
-// for a limit (bounding paid Anthropic calls), just a tighter one since
-// legitimate use never needs many of these in a short window.
+// Fires once per save — every "오늘 일기 마치기" tap, including each
+// separate "이어서 쓰기" sitting on the same day, not just once per entry.
+// Same free-tier cost cap as /api/review-paragraph, same rolling 24-hour
+// window for the same reason (can't be gamed around midnight).
 const RATE_LIMIT = 10;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Same reasoning as /api/review-paragraph's own caps — a hard ceiling on
 // the token cost (and therefore price) of a single request.
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   const { allowed, retryAfterMs } = checkRateLimit(`review-finalize:${user.id}`, RATE_LIMIT, RATE_LIMIT_WINDOW_MS);
   if (!allowed) {
     return NextResponse.json(
-      { error: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." },
+      { error: `오늘 받을 수 있는 총평 횟수(${RATE_LIMIT}회)를 모두 사용했어요. 내일 다시 시도해 주세요.` },
       { status: 429, headers: { "Retry-After": String(Math.ceil(retryAfterMs / 1000)) } }
     );
   }
