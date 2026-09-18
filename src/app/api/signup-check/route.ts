@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 // worked out earlier). Bump via the SIGNUP_CAP env var as capacity grows,
 // no code change needed. A freed slot (회원 탈퇴) counts again immediately,
 // since public.user_signups mirrors auth.users via cascade delete.
-const SIGNUP_CAP = Number(process.env.SIGNUP_CAP) || 10;
+const SIGNUP_CAP = Number(process.env.SIGNUP_CAP) || 30;
 
 /**
  * Called from the login screen right before it would otherwise show the
