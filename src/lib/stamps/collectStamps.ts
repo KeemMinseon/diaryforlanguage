@@ -3,10 +3,15 @@ import { KEYWORD_CATEGORIES, type StampId } from "@/lib/stamps/keywordMap";
 import type { SessionStamp, StampKind } from "@/types/diary";
 
 /** One keyword stamp id and how many sessions (across every entry) it was
- * actually picked for. Only ids that appeared at least once. */
+ * actually picked for. Only ids that appeared at least once. `stampVariant`
+ * is the same first-ever-occurrence variant `allStamps`' own tile for this
+ * keyword carries (see collectStamps's own doc comment) — kept here too so
+ * the "수집우표" tab's grid (which renders straight off this list, not off
+ * `allStamps`) shows the same art as everywhere else this keyword appears. */
 export interface KeywordStampCount {
   stampKey: StampId;
   count: number;
+  stampVariant: number | null;
 }
 
 /** One category's own collected keywords — only the ones that actually
@@ -142,7 +147,7 @@ export function collectStamps(entries: StampSourceEntry[]): StampCollection {
     items: sortMostPickedFirst(
       category.ids
         .filter((id) => countByKey.has(id))
-        .map((id) => ({ stampKey: id, count: countByKey.get(id)! }))
+        .map((id) => ({ stampKey: id, count: countByKey.get(id)!, stampVariant: firstVariantByKey.get(id) ?? null }))
     ),
   })).filter((group) => group.items.length > 0);
 

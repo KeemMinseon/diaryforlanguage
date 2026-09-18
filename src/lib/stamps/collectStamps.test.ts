@@ -23,7 +23,9 @@ describe("collectStamps", () => {
       }),
     ]);
     // "movie" is in the "일상" tier — see KEYWORD_CATEGORIES.
-    expect(keywordCategories).toEqual([{ label: "일상", items: [{ stampKey: "movie", count: 1 }] }]);
+    expect(keywordCategories).toEqual([
+      { label: "일상", items: [{ stampKey: "movie", count: 1, stampVariant: null }] },
+    ]);
   });
 
   it("counts every session's own stamp, not just one per entry", () => {
@@ -38,8 +40,8 @@ describe("collectStamps", () => {
     const allItems = keywordCategories.flatMap((g) => g.items);
     expect(allItems).toEqual(
       expect.arrayContaining([
-        { stampKey: "movie", count: 1 },
-        { stampKey: "cat", count: 1 },
+        { stampKey: "movie", count: 1, stampVariant: null },
+        { stampKey: "cat", count: 1, stampVariant: null },
       ])
     );
   });
@@ -65,15 +67,39 @@ describe("collectStamps", () => {
       }),
     ]);
     const animals = keywordCategories.find((g) => g.label === "동물")!;
-    expect(animals.items[0]).toEqual({ stampKey: "dog", count: 2 });
-    expect(animals.items[1]).toEqual({ stampKey: "cat", count: 1 });
+    expect(animals.items[0]).toEqual({ stampKey: "dog", count: 2, stampVariant: null });
+    expect(animals.items[1]).toEqual({ stampKey: "cat", count: 1, stampVariant: null });
   });
 
   it("falls back to the legacy top-level columns for an entry with no stamps array", () => {
     const { keywordCategories } = collectStamps([
       entry({ stamps: [], stamp_kind: "keyword", stamp_key: "sun" }),
     ]);
-    expect(keywordCategories).toEqual([{ label: "날씨", items: [{ stampKey: "sun", count: 1 }] }]);
+    expect(keywordCategories).toEqual([
+      { label: "날씨", items: [{ stampKey: "sun", count: 1, stampVariant: null }] },
+    ]);
+  });
+
+  it("carries the first-ever occurrence's own stampVariant into keywordCategories too", () => {
+    // The "수집우표" tab renders straight off `keywordCategories`, not off
+    // `allStamps` — this needs the same fix as allStamps's own tile, or
+    // that tab still shows variant 0 no matter what was actually picked.
+    const { keywordCategories } = collectStamps([
+      entry({
+        entry_date: "2026-09-03",
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 3, photoPath: null, createdAt: "2026-09-03T09:00:00" },
+        ],
+      }),
+      entry({
+        entry_date: "2026-09-01",
+        stamps: [
+          { session: 0, stampKind: "keyword", stampKey: "cat", stampVariant: 1, photoPath: null, createdAt: "2026-09-01T09:00:00" },
+        ],
+      }),
+    ]);
+    const animals = keywordCategories.find((g) => g.label === "동물")!;
+    expect(animals.items).toEqual([{ stampKey: "cat", count: 2, stampVariant: 1 }]);
   });
 
   it("leaves out a category with nothing collected in it, rather than showing it empty", () => {
@@ -257,7 +283,9 @@ describe("collectStamps", () => {
         ],
       }),
     ]);
-    expect(keywordCategories).toEqual([{ label: "기타", items: [{ stampKey: "default", count: 1 }] }]);
+    expect(keywordCategories).toEqual([
+      { label: "기타", items: [{ stampKey: "default", count: 1, stampVariant: null }] },
+    ]);
   });
 
   it("reports totalCount/photoCount/keywordCount across both kinds", () => {

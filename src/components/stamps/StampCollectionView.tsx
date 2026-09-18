@@ -22,7 +22,9 @@ const STAMP_ASPECT = 499.78 / 671.48;
 /** What the focused stamp is currently showing — a specific session's own
  * photo, or just a keyword's representative art (no particular day, so no
  * date to show alongside it). */
-type FocusTarget = { kind: "photo"; item: TimelineStampItem } | { kind: "keyword"; stampKey: StampId };
+type FocusTarget =
+  | { kind: "photo"; item: TimelineStampItem }
+  | { kind: "keyword"; stampKey: StampId; stampVariant: number | null };
 
 /** How small the pushed-out stamps shrink to, and how much they fade —
  * both just enough to read as "stepped back", not gone. */
@@ -498,7 +500,12 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     type="button"
                     onClick={(e) => {
                       if (focus) return;
-                      if (item.stampKey) openLightbox(key, { kind: "keyword", stampKey: item.stampKey }, e.currentTarget);
+                      if (item.stampKey)
+                        openLightbox(
+                          key,
+                          { kind: "keyword", stampKey: item.stampKey, stampVariant: item.stampVariant },
+                          e.currentTarget
+                        );
                     }}
                     style={stampButtonStyle(key)}
                     aria-label="우표 크게 보기"
@@ -619,7 +626,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                     </div>
                     <hr className="border-t border-[var(--ink)]" />
                     <div data-stamp-section className="grid grid-cols-4 gap-3">
-                      {group.items.map(({ stampKey }) => {
+                      {group.items.map(({ stampKey, stampVariant }) => {
                         const key = keywordKey(stampKey);
                         return (
                           <button
@@ -628,7 +635,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                             type="button"
                             onClick={(e) => {
                               if (focus) return;
-                              openLightbox(key, { kind: "keyword", stampKey }, e.currentTarget);
+                              openLightbox(key, { kind: "keyword", stampKey, stampVariant }, e.currentTarget);
                             }}
                             style={stampButtonStyle(key)}
                             aria-label="우표 크게 보기"
@@ -637,6 +644,7 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                             <DiaryStamp
                               stampKind="keyword"
                               stampKey={stampKey}
+                              stampVariant={stampVariant}
                               className="h-full w-full drop-shadow-sm"
                             />
                           </button>
@@ -702,7 +710,12 @@ export default function StampCollectionView({ userId }: { userId: string }) {
                   className="h-full w-full"
                 />
               ) : (
-                <DiaryStamp stampKind="keyword" stampKey={focus.target.stampKey} className="h-full w-full" />
+                <DiaryStamp
+                  stampKind="keyword"
+                  stampKey={focus.target.stampKey}
+                  stampVariant={focus.target.stampVariant}
+                  className="h-full w-full"
+                />
               )}
             </div>
             {heroCaption && (
