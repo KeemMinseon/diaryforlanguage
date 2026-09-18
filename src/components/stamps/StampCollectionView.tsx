@@ -7,6 +7,7 @@ import UiIcon from "@/components/icons/UiIcon";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { useToast } from "@/components/toast/ToastProvider";
 import { fetchAllEntriesForStamps, photoPublicUrl } from "@/lib/diary/client";
+import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import { collectStamps, type StampCollection, type TimelineStampItem } from "@/lib/stamps/collectStamps";
 import type { StampId } from "@/lib/stamps/keywordMap";
 import { STAMP_LABELS } from "@/lib/stamps/stampLabels";
@@ -373,6 +374,24 @@ export default function StampCollectionView({ userId }: { userId: string }) {
     // Same fetch-on-mount pattern as WordListView/MonthCalendar's `load`.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+  }, [load]);
+
+  // Without this, a stamp earned elsewhere (write an entry, or add to one
+  // via "이어서 쓰기") only shows up here after a genuinely fresh mount —
+  // Next's client-side router cache can restore this screen's previous
+  // render (this exact component instance, still holding its old
+  // `collection` state) on a back/forward navigation without re-running
+  // the mount effect above, which read as "I just collected a stamp but
+  // it's not in 우표 모음" even though it saved correctly. `notifyDiaryStamped`
+  // is a plain `window` event (see its own doc comment) — it reaches this
+  // listener regardless of whether this component happens to be the
+  // visible route right now, same as MonthCalendar's own subscription. No
+  // date-range filter here (unlike MonthCalendar's, scoped to one visible
+  // month) since this screen aggregates every date at once.
+  useEffect(() => {
+    return onDiaryStamped(() => {
+      load();
+    });
   }, [load]);
 
   /** Inline style for one stamp button *in the grid* (not the hero) — hidden

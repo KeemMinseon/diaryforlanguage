@@ -5,6 +5,7 @@ import Link from "next/link";
 import UiIcon from "@/components/icons/UiIcon";
 import FuriganaText from "@/components/review/FuriganaText";
 import { useToast } from "@/components/toast/ToastProvider";
+import { onDiaryStamped } from "@/lib/events/diaryStamped";
 import {
   fetchAllEntriesForWords,
   fetchWordProgress,
@@ -71,6 +72,19 @@ export default function WordListView({ userId }: { userId: string }) {
     // after its await resolves, not synchronously here.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
+  }, [load]);
+
+  // Same reasoning as StampCollectionView's identical subscription: a
+  // word collected elsewhere (an entry's review landing, which is what
+  // `notifyDiaryStamped` actually signals — same save, just named for its
+  // stamp side) only shows up here after a genuinely fresh mount
+  // otherwise, and Next's client-side router cache can restore this
+  // screen's previous render (still holding its old `words` state) on a
+  // back/forward navigation without re-running the mount effect above.
+  useEffect(() => {
+    return onDiaryStamped(() => {
+      load();
+    });
   }, [load]);
 
   const memorizedCount = useMemo(() => words?.filter((w) => w.memorized).length ?? 0, [words]);
