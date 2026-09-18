@@ -49,7 +49,15 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제3조 (회원가입 및 계정)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제3조 (이용 자격)</h2>
+          <p>
+            서비스는 만 14세 이상만 이용할 수 있습니다. 만 14세 미만인 경우 회원가입 및 서비스
+            이용이 제한됩니다.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="font-bold text-[var(--ink)]">제4조 (회원가입 및 계정)</h2>
           <p>
             이용자는 이메일 주소로 발급받은 인증 코드를 통해 회원가입 및 로그인합니다. 이용자는
             본인의 이메일 계정을 안전하게 관리할 책임이 있으며, 제3자가 무단으로 이용함으로써
@@ -58,7 +66,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제4조 (게시물의 저작권)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제5조 (게시물의 저작권)</h2>
           <p>
             이용자가 작성한 일기, 업로드한 사진의 저작권은 이용자 본인에게 있습니다. 서비스는 첨삭
             결과 생성 등 서비스 제공 목적 범위 내에서만 이를 처리하며, 이용자의 동의 없이 다른
@@ -67,7 +75,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제5조 (AI 첨삭 결과에 관한 유의사항)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제6조 (AI 첨삭 결과에 관한 유의사항)</h2>
           <p>
             첨삭·번역·읽는 법 등은 외부 AI 모델이 자동으로 생성한 결과로, 항상 정확하거나
             완전하다고 보장되지 않습니다. 어학 학습의 참고 자료로 활용해 주시기 바라며, 중요한
@@ -76,7 +84,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제6조 (이용자의 의무)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제7조 (이용자의 의무)</h2>
           <p>이용자는 다음 행위를 해서는 안 됩니다.</p>
           <ul className="list-disc pl-5 [&>li]:mt-1">
             <li>타인의 이메일 계정을 도용하는 행위</li>
@@ -86,7 +94,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제7조 (서비스의 변경, 중단)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제8조 (서비스의 변경, 중단)</h2>
           <p>
             서비스는 운영상·기술상 필요에 따라 제공하는 기능의 전부 또는 일부를 변경하거나
             중단할 수 있으며, 중요한 변경 사항은 서비스 내 공지를 통해 안내합니다.
@@ -94,7 +102,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제8조 (계약 해지)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제9조 (계약 해지)</h2>
           <p>
             이용자는 설정 화면의 &ldquo;회원 탈퇴&rdquo;를 통해 언제든지 자유롭게 이용계약을
             해지할 수 있습니다. 탈퇴 시 처리되는 개인정보의 범위는 개인정보처리방침을 따릅니다.
@@ -102,7 +110,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제9조 (면책조항)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제10조 (면책조항)</h2>
           <p>
             서비스는 천재지변, 외부 인프라(Supabase, Anthropic 등) 장애 등 서비스 운영자가 통제할
             수 없는 사유로 인한 서비스 중단에 대해 책임을 지지 않습니다.
@@ -110,7 +118,7 @@ export default function TermsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">제10조 (문의처)</h2>
+          <h2 className="font-bold text-[var(--ink)]">제11조 (문의처)</h2>
           <p>
             이 약관에 관한 문의는 아래 이메일로 연락해 주세요.
             <br />

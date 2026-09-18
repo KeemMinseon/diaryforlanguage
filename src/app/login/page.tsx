@@ -38,6 +38,7 @@ export default function LoginPage() {
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -130,9 +131,28 @@ export default function LoginPage() {
               className="border border-[var(--paper-line)] bg-[var(--paper-raised)] px-4 py-2.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]"
             />
             {error && <p className="text-sm font-medium text-[var(--ink)]">{error}</p>}
+            <label className="flex items-start gap-2 text-xs leading-relaxed text-[var(--ink-soft)]">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[var(--cta)]"
+              />
+              <span>
+                만 14세 이상이며,{" "}
+                <Link href="/terms" className="underline underline-offset-2">
+                  이용약관
+                </Link>{" "}
+                및{" "}
+                <Link href="/privacy" className="underline underline-offset-2">
+                  개인정보처리방침
+                </Link>
+                에 동의합니다.
+              </span>
+            </label>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !agreed}
               className="bg-[var(--cta)] px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
             >
               {loading ? "보내는 중…" : "이메일로 인증 코드 받기"}
@@ -188,18 +208,6 @@ export default function LoginPage() {
           </form>
         )}
       </div>
-
-      <p className="w-full max-w-sm text-center text-xs text-[var(--ink-soft)]">
-        계속 진행하면{" "}
-        <Link href="/terms" className="underline underline-offset-2">
-          이용약관
-        </Link>{" "}
-        및{" "}
-        <Link href="/privacy" className="underline underline-offset-2">
-          개인정보처리방침
-        </Link>
-        에 동의하는 것으로 간주됩니다.
-      </p>
     </main>
   );
 }

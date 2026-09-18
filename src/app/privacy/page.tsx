@@ -146,7 +146,15 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <h2 className="font-bold text-[var(--ink)]">8. 고지의 의무</h2>
+          <h2 className="font-bold text-[var(--ink)]">8. 만 14세 미만 아동의 개인정보</h2>
+          <p>
+            서비스는 만 14세 이상만 이용할 수 있으며, 만 14세 미만 아동의 개인정보는 수집하지
+            않습니다.
+          </p>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="font-bold text-[var(--ink)]">9. 고지의 의무</h2>
           <p>
             이 방침은 법령, 정책 또는 서비스 변경에 따라 수정될 수 있으며, 변경 시 서비스 내
             공지를 통해 알립니다.
