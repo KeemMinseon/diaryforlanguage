@@ -18,7 +18,7 @@ export default async function HomePage() {
 
   return (
     <Suspense fallback={null}>
-      <MonthCalendar />
+      <MonthCalendar createdAt={session.user.created_at} />
     </Suspense>
   );
 }

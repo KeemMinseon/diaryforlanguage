@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import DayCell from "@/components/calendar/DayCell";
+import FeedbackNudgeBanner from "@/components/calendar/FeedbackNudgeBanner";
 import UiIcon from "@/components/icons/UiIcon";
 import { fetchMonthEntries } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
@@ -19,7 +20,7 @@ function parseMonthParam(value: string | null): { year: number; month: number } 
   return { year: now.getFullYear(), month: now.getMonth() };
 }
 
-export default function MonthCalendar() {
+export default function MonthCalendar({ createdAt }: { createdAt: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -176,6 +177,8 @@ export default function MonthCalendar() {
           </Link>
         </div>
       </header>
+
+      <FeedbackNudgeBanner createdAt={createdAt} />
 
       {/* Counter and month-nav share one row now, instead of stacking as
           two separate lines with a big gap between them. */}
