@@ -70,8 +70,24 @@ export default async function EntryPage({
 
   // "이어서 쓰기" from the review screen: reopen the chat editor pre-filled
   // with what's already saved, rather than the read-only review.
+  //
+  // Refused while the entry is still "pending" — the previous sitting's
+  // own background review (see ChatEditor's own header comment) hasn't
+  // landed its real paragraph yet, only its *stamp* (added synchronously,
+  // before that background save). Opening a second ChatEditor on top of
+  // that would build `lockedRounds` from `typedEntry.paragraphs`, which is
+  // still missing that sitting's text entirely — finishing this second
+  // sitting would then save a `paragraphs` array that silently drops the
+  // first sitting's text while its `stamps` entry (copied through
+  // unchanged) stays, or, if it saves before the first sitting's own
+  // background review lands, that unrelated in-flight call can go on to
+  // clobber this one's fresh work right back out from under it. Bouncing
+  // to the plain (non-continue) review screen instead — which already
+  // polls and auto-refreshes while pending — lets the learner just wait
+  // the few seconds until it's actually safe to continue.
   const { continue: shouldContinue } = await searchParams;
   if (shouldContinue) {
+    if (typedEntry.status === "pending") redirect(`/entry/${date}`);
     return <ChatEditor userId={userId} dateKey={date} initialEntry={typedEntry} />;
   }
 

@@ -314,7 +314,13 @@ export default function ReviewView({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)]"
+              disabled={isPending}
+              // Disabled while pending — see the entry page's own comment
+              // on why "이어 쓰기" refuses this too: the newest sitting's
+              // text hasn't landed in `paragraphs` yet, only its stamp, so
+              // saving any edit here right now would risk silently
+              // dropping that sitting's text.
+              className="text-xs text-[var(--ink-soft)] underline underline-offset-2 hover:text-[var(--ink)] disabled:opacity-40 disabled:no-underline disabled:hover:text-[var(--ink-soft)]"
             >
               수정하기
             </button>
@@ -395,7 +401,7 @@ export default function ReviewView({
           {(isReviewed || isPending || isFailed) && (
             <button
               type="button"
-              disabled={continuePending}
+              disabled={continuePending || isPending}
               onClick={() =>
                 startContinueTransition(() => {
                   router.push(`/entry/${entry.entry_date}?continue=1`);
@@ -403,7 +409,13 @@ export default function ReviewView({
               }
               className="w-full border border-[var(--paper-line)] py-4 text-center text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--paper-line)]/30 disabled:opacity-60"
             >
-              {continuePending ? "불러오는 중…" : isFailed ? "다시 시도" : "이어 쓰기"}
+              {/* Disabled (not just relabeled) while pending — see the
+                  entry page's own comment on why: reopening the writing
+                  screen before the previous sitting's background review
+                  lands risks silently dropping that sitting's text. This
+                  screen already polls and auto-refreshes out of "pending"
+                  on its own once that review actually finishes. */}
+              {continuePending ? "불러오는 중…" : isPending ? "검토 중…" : isFailed ? "다시 시도" : "이어 쓰기"}
             </button>
           )}
         </>
