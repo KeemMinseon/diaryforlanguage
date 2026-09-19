@@ -48,15 +48,3 @@ export function buildHighlightSegments(
   }
   return segments;
 }
-
-/** `content` with every matched suggestion's original phrase swapped for
- * its corrected form — the entry detail screen's "FINAL" section shows
- * this clean, fully-corrected sentence, while "고친 곳" below still lists
- * each individual before → after change for reference. Reuses the same
- * first-occurrence, non-overlapping matching as `buildHighlightSegments`
- * so both agree on exactly which occurrence got corrected. */
-export function applyCorrections(content: string, suggestions: Suggestion[]): string {
-  return buildHighlightSegments(content, suggestions)
-    .map((seg) => (seg.suggestionIndex === null ? seg.text : suggestions[seg.suggestionIndex].suggestion))
-    .join("");
-}

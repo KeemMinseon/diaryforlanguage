@@ -7,7 +7,6 @@ import ParagraphListEditor from "@/components/review/ParagraphListEditor";
 import DiaryStamp from "@/components/stamps/DiaryStamp";
 import { deleteEntry, fetchEntry, photoPublicUrl } from "@/lib/diary/client";
 import { onDiaryStamped } from "@/lib/events/diaryStamped";
-import { applyCorrections } from "@/lib/review/highlight";
 import { formatDateStamp, parseDateKey } from "@/lib/utils/date";
 import type { DiaryEntry, DiaryParagraph, Reading, SessionStamp, Suggestion } from "@/types/diary";
 
@@ -245,7 +244,7 @@ export default function ReviewView({
                     key={pi}
                     className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]"
                   >
-                    {applyCorrections(p.text, p.suggestions)}
+                    {p.text}
                   </p>
                 ))}
               </div>

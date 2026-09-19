@@ -8,7 +8,6 @@ import ReadingsHint from "@/components/review/ReadingsHint";
 import { useToast } from "@/components/toast/ToastProvider";
 import { saveEntry, uploadStampPhoto } from "@/lib/diary/client";
 import { notifyDiaryStamped } from "@/lib/events/diaryStamped";
-import { applyCorrections } from "@/lib/review/highlight";
 import { pickStamp } from "@/lib/stamps/keywordMap";
 import { pickStampVariant } from "@/lib/stamps/stampVariants";
 import { formatSavedAt } from "@/lib/utils/date";
@@ -523,7 +522,7 @@ export default function ParagraphListEditor({
                 {formatSavedAt(p.savedAt, entry.entry_date)}
               </p>
               <p className="whitespace-pre-wrap font-[family-name:var(--font-diary)] text-base leading-loose text-[var(--ink)]">
-                {applyCorrections(p.text, p.suggestions)}
+                {p.text}
               </p>
               {photoUrl && (
                 <div className="aspect-square w-24 overflow-hidden bg-[var(--paper-line)]">
